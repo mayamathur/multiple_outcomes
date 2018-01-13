@@ -1,0 +1,451 @@
+---
+title: ''
+author: ''
+header-includes:
+- \usepackage[T1]{fontenc}
+- \usepackage{microtype}
+- \usepackage[margin=1in]{geometry}
+- \usepackage{fancyhdr}
+- \usepackage{fancyhdr}
+- \pagestyle{fancy}
+- \fancyhead{}
+- \fancyfoot{}
+- \fancyhead[C]{Multiple outcomes}
+- \fancyfoot[RO,LE]{\thepage}
+- \usepackage{booktabs}
+- \usepackage{lettrine}
+- \usepackage{paralist}
+- \usepackage{setspace}\singlespacing
+- \usepackage{url}
+- \usepackage{parskip}
+- \usepackage{color,soul}
+- \usepackage{palatino}
+- \usepackage{float}
+output: pdf_document
+bibliography: refs_fake.bib
+csl: aje_style.csl
+---
+
+\doublespacing
+
+\begin{center}
+\textbf{ \LARGE{Project Log: Multiple Outcomes} }
+\vspace{10mm}
+\end{center}
+
+\doublespacing
+
+
+
+\tableofcontents
+
+\section{Stream of consciousness}
+
+Since we are bootstrapping and then fitting parametric model (OLS), I think we should use Fox's or Westfall's residual resampling approach (and indeed, this seemed to work in the last simulation). Seems like the basic approach automatically violates OLS assumptions, meaning our inference will be wrong and the probability of rejecting the test could be non-nominal. Our application of bootstrapping is unusual in that we need to resample in a way that is compatible with parametric assumptions of the test we're going to apply for each outcome. 
+
+
+\textbf{Metric \#1}: 95\% CI for number of hits above expected value that we see in observed data (resample under original distribution, using first half of my theory)
+
+\textbf{Metric \#2}: 95\% CI under the null for number of hits (resample under null, using second half of my theory)
+
+What about other link functions or hypothesis tests not based on regression? How would we do residual resampling? Davison \& Hinkley talk about other GLMs. I think we'd end up with either some form of residual or $Y$ itself for each outcome, and then we'd jointly resample these things as planned.
+
+Also, there might be models for which you can't resample as planned. For example, with multiple regression, we 
+
+
+<!-- NEW SECTION -->
+\section{Possible resampling algorithms}
+
+Note that all of these methods assume $Var(Y^{*} | X^{*}=0) = Var(Y^{*} | X^{*}=1)$; in the resampled data, this is the average of the original within-stratum variances. I think this is fine since we are \emph{not} avoiding parametric inference for OLS (unlike in other bootstrapping applications). 
+
+\underline{Basic "fix $X$, then resample $Y$"}
+  \begin{enumerate}
+  \item Fix $X$ and resample only $Y$: $(Y^{*}_i, X^{*}_i) = \left( \text{sample}(Y_i), X_i \right)$. So $Y^{*}_i \amalg X^{*}_i$. 
+  \item Regress: $Y^{*}_i = \beta_0 + \beta X^{*}_i + \epsilon$.
+  \item Test $H_0: \beta = 0$.
+  \end{enumerate}
+  
+  
+Has multimodality problem. No guarantee that residuals are normal, so OLS inference will be wrong anytime the original data are generated under $H_A$. 
+
+\begin{figure}[H]
+\centering
+\caption{Original data.}
+\includegraphics[width=100mm]{orig_data.png}
+\end{figure}
+  
+\begin{figure}[H]
+\centering
+\caption{Resampled data under basic algorithm. Loses association between sex and Y, so regression residuals are bimodal.}
+\includegraphics[width=100mm]{tyler.png}
+\end{figure}
+
+\underline{Westfall's "center, then resample $Y$"}
+  \begin{enumerate}
+  \item Fix $X$ and set $Y^{*}_i = \text{sample}\left( Y - \widehat{Y} \right)$. So $Y^{*}_i \amalg X^{*}_i$. 
+  \item Regress: $Y^{*}_i = \beta_0 + \beta X^{*}_i + \epsilon$.
+  \item Test $H_0: \beta = 0$.
+  \end{enumerate}
+  
+  
+Avoids multimodality problem, but could still have non-normal residual distribution, as in the above. So OLS inference could be wrong, but only if original data already violate homoskedasticity. Works well in my simulations. 
+
+\begin{figure}[H]
+\centering
+\caption{Resampled data under Westfall's algorithm. Residuals are normal.}
+\includegraphics[width=100mm]{westfall.png}
+\end{figure}
+  
+
+\underline{Fox/Davison's residual resampling}
+
+See Davison Algorithm 6.1 in "Linear Regression" chapter. 
+\begin{enumerate}
+  \item Fix $X$ and set $Y^{*}_i = \widehat{Y}_i + \text{sample}\left( Y - \widehat{Y} \right)$. So $Y^{*}_i \not\!\perp\!\!\!\perp X^{*}_i$.
+  \item Regress: $Y^{*}_i = \beta_0 + \beta X_i + \epsilon$.
+  \item Test $H_0: \beta = \widehat{\beta}$ (i.e., the fitted coefficient from original sample).
+  \end{enumerate}
+  
+Avoids multimodality problem residuals will be normal as long as they are normal within strata of $X$, so OLS inference should be correct. $Var(Y^{*} | X^{*}=0) = Var(Y^{*} | X^{*}=0)$ and is an average of the original conditional variances. 
+  
+\begin{figure}[H]
+\centering
+\caption{Resampled data under Fox's algorithm. Residuals are normal.}
+\includegraphics[width=100mm]{fox.png}
+\end{figure}
+
+<!-- NEW SECTION -->
+\newpage
+\section{Other online resources}
+
+\subsection{$\star$ CV: Permutation tests vs. bootstrap tests}
+
+What we are doing is similar to a permutation test because we're not centering the observations. In this answer, Snow says "permutation tests test a specific null hypothesis of exchangeability, i.e. that only the random sampling/randomization explains the difference seen". Also, permutation tests are more powerful. 
+
+"Resample $Y$ while fixing $X$" strategy is "similar in spirit" to permutation tests and assumes that the distribution of $Y$ in each group of $X$ is identical. In contrast, "mean-center, then resample within each group of $X$" does not make this assumption. 
+
+
+
+\url{https://stats.stackexchange.com/questions/20217/bootstrap-vs-permutation-hypotheis-testing}
+
+\subsection{$\star$ CV: Center first or resample first?}
+
+\url{https://stats.stackexchange.com/questions/136661/using-bootstrap-under-h0-to-perform-a-test-for-the-difference-of-two-means-repl/187630}
+
+Goes over difference between "resample, then center" (OP's first bootstrap) and "center, then resample" (OP's second bootstrap). 
+
+Accepted answer says that first approach is actually testing whether the distribution of x and y are identical. I DON'T REALLY GET THIS. 
+
+
+\subsection{CV: Cases when naive bootstrap fails}
+
+\url{https://stats.stackexchange.com/questions/9664/what-are-examples-where-a-naive-bootstrap-fails/9722#9722}
+
+
+\subsection{CV: Cases when naive bootstrap fails}
+\url{https://stats.stackexchange.com/questions/11210/assumptions-regarding-bootstrap-estimates-of-uncertainty?noredirect=1&lq=1}
+
+\subsection{CV: Applying bootstrap to arbitrary smooth function of the data}
+\url{https://stats.stackexchange.com/questions/246632/smoothness-of-a-statistic-for-bootstrapping}
+
+
+
+
+
+<!-- NEW SECTION -->
+\newpage
+\section{Notes on past literature}
+
+\subsection{Davison \& Hinkley text}
+
+\begin{itemize}
+\item Linear regression chapter has great explanation of case resampling (Tyler's approach) vs. residual resampling (Fox, sort of Westfall). 
+\item Pg 12 in "Linear Regression" chapter: Says that with case resampling, "the null hypothesis being tested is stronger than just zero slope"
+\end{itemize}
+
+\subsection{Good (2005) book chapter}
+
+\begin{itemize}
+\item Clear explanation of difference in assumptions between nonparametric bootstrap (equal parameters) and permutation test (exchangeability). 
+\item I think the "resample, then center" strategy is closer to a permutation test since it forces equal distributions, while the "center, then resample" or "just resample" strategies are more like bootstrapping. 
+\end{itemize}
+
+\subsection{Fox chapter on bootstrapping regressions}
+
+\begin{itemize}
+\item {In section on bootstrap hypothesis testing, uses this residual-resampling algorithm: 
+  \begin{enumerate}
+  \item Fix $X$ and set $Y^{*}_i = \widehat{Y}_i + \text{sample}\left( Y - \widehat{Y} \right)$. So $Y^{*}_i \not\!\perp\!\!\!\perp X^{*}_i$.
+  \item Regress: $Y^{*}_i = \beta_0 + \beta X_i + \epsilon$.
+  \item Test $H_0: \beta = \widehat{\beta}$ (i.e., the fitted coefficient from original sample).
+  \end{enumerate}
+}
+\end{itemize}
+
+
+\subsection{Hall \& Wilson "Two guidelines"}
+
+\begin{itemize}
+\item {"Sample, then center" algorithm (here, I am extrapolating what they present to the regression setting):
+  \begin{enumerate}
+  \item Resample entire vector $(Y^{*}_i, X^{*}_i) = \text{sample}\left( (Y_i, X_i) \right)$. So $Y^{*}_i \not\!\perp\!\!\!\perp X^{*}_i$. 
+  \item Regress: $Y^{*}_i = \beta_0 + \beta X^{*}_i + \epsilon$.
+  \item Test $H_0: \beta = \widehat{\beta}$ (i.e., the fitted coefficient from original sample).
+  \end{enumerate}
+}
+
+\item The point of using asymptotically pivotal statistics (centered and scaled) is that then the asymptotic distribution of the statistic does not depend on any unknowns.
+
+\item When you can’t estimate variance of estimator in order to create pivot, suggests using accelerated bias correction bootstrap.
+\end{itemize}
+
+
+
+\subsection{$\star$ Troendle 2004 "Slow convergence"}
+
+\begin{itemize}
+
+\item Talks about multiple 2-sample $t$-tests
+
+\item{ Two approaches (see page 3 for very clear overview):
+  \begin{enumerate}
+  \item Permute a subject’s outcome variables while assigning group labels (with \emph{uncentered} variables)  
+  \item Bootstrap by resampling a subject’s entire row (with \emph{centered} outcome variables)
+  \end{enumerate}
+}
+
+
+\item {"Center, then sample" bootstrapping algorithm (here, I am extrapolating what they present to the regression setting):
+  \begin{enumerate}
+  \item Center outcome by setting $\widetilde{Y}_i = Y_i - \widehat{Y}$
+  \item Resample entire vector: $(Y^{*}_i, X^{*}_i) = \text{sample}\left( (\widetilde{Y}_i, X_i) \right)$. So $Y^{*}_i \amalg X^{*}_i$. 
+  \item Regress: $Y^{*}_i = \beta_0 + \beta X^{*}_i + \epsilon$.
+  \item Test $H_0: \beta = 0$.
+  \end{enumerate}
+}
+
+\end{itemize}
+
+
+\subsection{Westfall \& Young textbook}
+
+\begin{itemize}
+
+\item I think their algorithm is closest to the one Tyler initially suggested (fix $X$ while resampling $Y$), except that they first center the outcomes (i.e., resample the residuals). 
+
+
+\item{"Center, then resample" strategy
+  \begin{enumerate}
+  \item Center outcome by setting $\widetilde{Y}_i = Y_i - \widehat{Y}$
+  \item Fix $X$ and resample only $Y$: $(Y^{*}_i, X^{*}_i) = \left( \text{sample}(\widetilde{Y}_i), X_i \right)$. So $Y^{*}_i \amalg X^{*}_i$. 
+  \item Regress: $Y^{*}_i = \beta_0 + \beta X^{*}_i + \epsilon$.
+  \item Test $H_0: \beta = 0$.
+  \end{enumerate}
+}
+
+\item 106-109: More on OLS
+
+\item Page 79: "Resampling from the residuals, rather than the actual data values, is important. If the actual data are pooled and resampled, then the underlying residual distribution will be estimated using a multi-modal empirical distribution function when the means differ. Such resampling violates the first principle of Hall \& Wilson (1991): '...even if the data might be drawn in a way that fails to satisfy $H_0$, resampling should be done in a way that reflects $H_0$'." I DON'T GET WHY UNCENTERED APPROACH VIOLATES H0! 
+
+\item Page 39-41: Analyzes $P( P^* < \alpha )$ in bootstrap iterates
+
+\item Page 92-93: Re-randomization
+
+\item Bootstraps of pivotal statistics converge faster (Section 2.2.2)
+
+\end{itemize}
+
+
+\subsection{Westfall \& Troendle (2008)}
+
+\begin{itemize}
+
+\item Setting: You have multiple outcomes measured on multiple categorical groups and are interested in full exchangeability on the outcome across the groups (not just different means, for example). 
+
+\item Shows that "permutation methods are distribution-free under an appropriate exchangeability assumption and FWER follows mathematically, regardless of sample size"
+
+\item Implemented in SAS’ PROC MULTTEST
+
+\item According to SAS' documentation, this(?) paper shows that: "when subset pivotality holds, the joint distribution of p-values under the subset is identical to that under the complete null"
+
+\end{itemize}
+
+
+\subsection{Bretz, Hothorn, \& Westfall (2008)'s R paper}
+
+\begin{itemize}
+
+\item They are fixing the Y and permuting the Xs (in their application, these are just the group labels), so are keeping the correlation structure of the Ys as we are (pg. 130)
+
+\item Bootstrapping vs. permutation pros and cons (pg. 140)"
+
+\end{itemize}
+
+
+\subsection{Bickel}
+
+\begin{itemize}
+\item Classic paper that goes over basic asymptotics of bootstrap
+\item Uses SLLN
+\end{itemize}
+
+
+\subsection{Chernick textbook}
+
+\begin{itemize}
+\item Great table comparing different CI methods with their assumptions (Ch 3, page 8)
+\end{itemize}
+
+
+\subsection{New reference}
+
+\begin{itemize}
+\item asdf
+\end{itemize}
+
+
+
+\newpage
+\section{Q \& A}
+\subsection{Open questions}
+
+
+
+\subsection{Resolved questions}
+Q: Why does Blakesley/Westfall’s minP bootstrapping work since it is an extreme order statistic?
+A: Probably because minP is not an order statistic of the data themselves. 
+
+Q: If we go the confidence interval route, why not just treat the p-values as our data and resample directly from them to produce CI? 
+A: Because there are only a fixed number of p-values (k), and this is not necessarily asymptotically large. 
+
+Q: Why does bootstrapping work with small samples since we need the ECDF in sample to go to the true CDF? Or does it not work in small samples?
+A: Correct. It does not necessarily work in small samples. 
+
+
+
+<!-- NEW SECTION -->
+\newpage
+\section{Simulation notes}
+
+\subsection{Summary of previous two}
+
+\begin{itemize}
+\item{ Plot1 (CIs)
+  \begin{itemize}
+    \item Shows that the residual resampling is working correctly (since results are same regardless of whether we generate under H0 or under HA)
+    \item As expected, more variable when Y’s are more correlated
+  \end{itemize}
+}
+\end{itemize}
+
+
+\subsection{2017-8-1 (generate under alternative)}
+
+\begin{itemize}
+\item Same as 2017-7-25, but now generating under weak alternative (rho.XY = 0.03) 
+\item Expect same exact results for CIs (since they only use results from resampling under H0), but higher rejection rates
+\end{itemize}
+
+
+\subsection{2017-7-25 (generate under null)}
+
+\begin{itemize}
+\item CIs are 95\% two-sided ones for both values of alpha 
+\item Hypothesis tests are one-sided and have sample alpha as the individual tests
+\item N=1,000 and B=2,000 (j=10 per simulation)
+\item Figure out why file 125 has extra rows (try running it again)
+
+\item{ \textbf{The apparently too-conservative behavior for the uncorrelated case is a benign artifact} of $\widehat{\theta}$'s discreteness.
+  \begin{itemize}
+    \item It occurs because when the Y’s are uncorrelated, the distribution of the number of rejections is less right-skewed, so it drops off more quickly in the tails. Since $\widehat{\theta}$ is discrete, we are forced to pick a quantile that doesn’t have exactly 5\% of the mass above it. By default, R inverts the ECDF, so uses the quantile with LESS than 5\% above it. Because the distribution of $\widehat{\theta}$ drops off quickly around the chosen quantile, we end up with conservative performance (see artifact\_plot1 and artifact\_plot2, where I shade in red the proportion that are above the variable’s own critical value).
+    \item Artifact might improve a little with more simulation reps, but only to a point. 
+    \item For this case, we could benchmark against the truth since $\widehat{\theta}$ is binomial. Indeed, the empirical quantiles of both \texttt{n.rej} and the bootstrap estimates are exactly correct. :) 
+  \end{itemize}
+}
+\end{itemize}
+
+
+\subsection{Summary so far}
+
+\begin{itemize}
+\item Seems like N=1,000 and B=2,000 is enough for good asymptotics 
+\item When data are generated under null, resampling the Y’s or the residuals seems to works. But former theoretically should work only in more limited cases. 
+\end{itemize}
+
+
+\subsection{2017-7-24 “Sherlock sim”}
+
+\begin{itemize}
+\item Huge: N=10,000, B=10,000
+\item Resampling under joint null (Y’s rather than residuals)
+\item This seemed to work based on interim results (though I had trouble with existing stitching script, so stitched results in overall\_stitched folder might be wrong)
+\end{itemize}
+
+
+\subsection{2017-7-24 “Test smaller sim”}
+
+\begin{itemize}
+\item N=1,000, B=2,000 
+\item Switched to resampling residuals instead of Ys themselves for the first time 
+\item Seems to work! Going to try on cluster to have larger simulation
+\end{itemize}
+
+
+\subsection{2017-7-22}
+
+\begin{itemize}
+\item N=100, B=1,000: seems too small based on the below
+\item Looked good at alpha=0.05 (4.4\% rejections) but maybe too conservative for alpha=0.01? (3.6\% rejections)
+\item Took about 1.5 hours locally
+\end{itemize}
+
+\subsection{2017-7-21}
+
+\begin{itemize}
+\item With N=5,000, B=2,000, n.sims = 250, looks good
+\item 5.5\% rejection rate on joint null for alpha = 0.05
+\item 6\% rejection rate for alpha = 0.01
+\item	Took about 30 hours locally
+\item Seems good
+\end{itemize}
+
+
+\subsection{Summary so far}
+
+\begin{itemize}
+\item Resample under H0 by drawing Y’s separately; reject by inverted CI using its percentiles $\Rightarrow$ \textbf{WORKS} (see Sherlock sim)
+
+\item Resample from original with single Y1; look at variance of mean $\Rightarrow$ \textbf{WORKS} 
+
+\item{ Bootstrap from original sample with 100 independent std. normal; reject using z-test that’s only a function of mean $\Rightarrow$ \textbf{DOESN'T WORK} 
+  \begin{itemize}
+    \item	The bootstrapped distribution of the absolute differences is too variable compared to true distribution
+    \item	Hence rejects only 1.8\% of time
+  \end{itemize}
+}
+
+
+\item Conjecture: Hall \& Wilson approach seems to rely on the idea that the standardized estimator is pivotal, i.e., that it comes from a location-scale family. This is why we can get away with only sampling from the original distribution. Since our estimator definitely isn’t from a location-scale distribution, maybe that’s why it does not work. Also, based on the different results between currently running one and very first one, I think B=500 is not enough, and B = 10,000 is enough. Not sure about intermediate ones. 
+
+\end{itemize}
+
+
+
+\subsection{Summary so far}
+
+\begin{itemize}
+\item Seems like N=1,000 and B=2,000 is enough for good asymptotics 
+\item When data are generated under null, resampling the Y’s or the residuals seems to works. But former theoretically should work only in more limited cases. 
+\end{itemize}
+
+For earlier simulation results, see old project log in Word. 
+
+<!--
+\newpage
+Here is a test reference[@evalue]. Use semicolons to separate multiple references. To change reference style, Google for a .csl style sheet for journal of interest of one with similar reference style. 
+-->
+
+\newpage
+\section*{References}
+
+

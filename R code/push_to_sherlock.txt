@@ -1,0 +1,69 @@
+
+# push all the individual files
+scp /Users/mmathur/Dropbox/Personal\ computer/HARVARD/THESIS/Thesis\ paper\ \#2\ \(MO\)/R\ code/For\ Sherlock/* mmathur@sherlock:/share/PI/manishad/multTest
+
+# push just within-prep
+scp /Users/mmathur/Dropbox/Personal\ computer/HARVARD/THESIS/Thesis\ paper\ \#2\ \(MO\)/R\ code/For\ Sherlock/within_prep.R mmathur@sherlock:/share/PI/manishad/multTest
+
+
+
+# see the sbatch files
+# cd /share/PI/manishad/multTest/sbatch_files
+
+# run one of them
+# sbatch -p manishad /share/PI/manishad/multTest/sbatch_files/1.sbatch
+
+
+# see the datasets
+cd /share/PI/manishad/multTest/sim_results/short
+ls -l . | egrep -c '^-'
+
+# see the stitched results
+nano /share/PI/manishad/multTest/sim_results/overall_stitched/sti*
+
+# move all datasets to local machine
+scp -r mmathur@sherlock:/share/PI/manishad/multTest/sim_results ~/Desktop
+scp -r mmathur@sherlock:/share/PI/manishad/multTest/sim_results.zip ~/Desktop
+
+# move stitched dataset to local machine
+scp mmathur@sherlock:/share/PI/manishad/multTest/sim_results/overall_stitched/stitched_results.csv ~/Desktop
+
+
+# zip the results files
+cd /share/PI/manishad/multTest/sim_results
+zip -r short.zip short
+zip -r long.zip long
+
+
+# move all Sherlock files to local machine
+scp mmathur@sherlock:/share/PI/manishad/multTest/sim_results/short.zip ~/Desktop
+scp mmathur@sherlock:/share/PI/manishad/multTest/sim_results/long.zip ~/Desktop
+scp mmathur@sherlock:/share/PI/manishad/multTest/scen_params.csv ~/Desktop
+scp mmathur@sherlock:/share/PI/manishad/multTest/doParallel.csv ~/Desktop
+
+
+# move all Sherlock files to local machine
+
+# clean up the directory
+rm /share/PI/manishad/multTest/sim_results/*
+  rm /share/PI/manishad/multTest/sbatch_files/*
+  
+
+  
+
+
+
+############################ LOOK AT EXAMPLE DATASET ############################ 
+
+# look at example dataset
+d = read.csv("~/Desktop/2015-08-25_job_6_worker_1_dataset_1")
+
+dim(d)
+
+# number subjects
+length(unique(d$id))
+
+# look at vln
+hist(d$log_vln)
+summary(d$log_vln)
+
