@@ -3,28 +3,28 @@
 
 # FOR CLUSTER USE
 # load command line arguments
-args = commandArgs(trailingOnly = TRUE)
-jobname = args[1]
-scen = args[2]  # this will be a letter
-boot.reps = as.numeric( args[3] )
-
-# get scen parameters
-setwd("/share/PI/manishad/multTest")
-scen.params = read.csv( "scen_params.csv" )
-p = scen.params[ scen.params$scen.name == scen, ]
-
-# no longer included in parameters because it's a vector
-alpha = c(0.01, 0.05)
-
-# simulation reps to run within this job
-sim.reps = 10
+# args = commandArgs(trailingOnly = TRUE)
+# jobname = args[1]
+# scen = args[2]  # this will be a letter
+# boot.reps = as.numeric( args[3] )
+# 
+# # get scen parameters
+# setwd("/share/PI/manishad/multTest")
+# scen.params = read.csv( "scen_params.csv" )
+# p = scen.params[ scen.params$scen.name == scen, ]
+# 
+# # no longer included in parameters because it's a vector
+# alpha = c(0.01, 0.05)
+# 
+# # simulation reps to run within this job
+# sim.reps = 10
 
 # FOR LOCAL USE
-# setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/R code/Sandbox/2017-7-21 Test smaller simulation")
-# p = read.csv("scen_params.csv")
-# p$bt.type = "resid"
-# boot.reps = 2000  
-# setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/R code/For Sherlock") # for sourcing functions later
+setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Sandbox/2018-1-13")
+p = read.csv("scen_params.csv")
+p$bt.type = "resid"
+boot.reps = 2000
+setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/R code/For Sherlock") # for sourcing functions later
 
 
 
