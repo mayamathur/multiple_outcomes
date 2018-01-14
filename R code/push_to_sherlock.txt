@@ -1,9 +1,9 @@
 
 # push all the individual files
-scp /Users/mmathur/Dropbox/Personal\ computer/HARVARD/THESIS/Thesis\ paper\ \#2\ \(MO\)/R\ code/For\ Sherlock/* mmathur@sherlock:/share/PI/manishad/multTest
+scp /Users/mmathur/Dropbox/Personal\ computer/HARVARD/THESIS/Thesis\ paper\ \#2\ \(MO\)/git_multiple_outcomes/R\ code/For\ Sherlock/* mmathur@sherlock:/share/PI/manishad/multTest
 
 # push just within-prep
-scp /Users/mmathur/Dropbox/Personal\ computer/HARVARD/THESIS/Thesis\ paper\ \#2\ \(MO\)/R\ code/For\ Sherlock/within_prep.R mmathur@sherlock:/share/PI/manishad/multTest
+scp /Users/mmathur/Dropbox/Personal\ computer/HARVARD/THESIS/Thesis\ paper\ \#2\ \(MO\)/git_multiple_outcomes/R\ code/For\ Sherlock/within_prep.R mmathur@sherlock:/share/PI/manishad/multTest
 
 
 
@@ -45,8 +45,8 @@ scp mmathur@sherlock:/share/PI/manishad/multTest/doParallel.csv ~/Desktop
 # move all Sherlock files to local machine
 
 # clean up the directory
-rm /share/PI/manishad/multTest/sim_results/*
-  rm /share/PI/manishad/multTest/sbatch_files/*
+rm -r /share/PI/manishad/multTest/sim_results/*
+rm -r /share/PI/manishad/multTest/sbatch_files/*
   
 
   

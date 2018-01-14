@@ -145,7 +145,7 @@ fit_model = function( Y.name, .dat, .resid ) {
 
 ########################### FN: GIVEN DATASET, RETURN STATS ###########################
 
-# residualize: should it return dataset with residuals (for resampling under null)?
+# .resid: should it return dataset with residuals (for resampling under null)?
 
 dataset_result = function( .dat, .alpha, .resid = FALSE ) {
 
@@ -154,7 +154,7 @@ dataset_result = function( .dat, .alpha, .resid = FALSE ) {
   Y.names = names( .dat )[ grep( "Y", names(.dat) ) ]
   
   # for each outcome, fit regression model
-  # see if each has p < 0.05 for covariate of interest
+  # see if each has p < alpha for covariate of interest
 
   # this is a list of lists:
   #  length is equal to number of outcomes

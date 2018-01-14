@@ -4,11 +4,11 @@
 
 # FOR CLUSTER USE
 path = "/share/PI/manishad/multTest"
+setwd(path)
 
 # FOR LOCAL USE
-path = "~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Sandbox/2018-1-13"
-
-setwd(path)
+# path = "~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Sandbox/2018-1-13"
+# setwd(path)
 
 # from previous simulation
 # n = 1000
@@ -18,17 +18,16 @@ setwd(path)
 # rho.YY = c(0, 0.25, 0.5, 0.75)
 # rho.XY = 0.03  # null hypothesis: 0
 
-n = 50
+n = 1000
 nX = 1
 nY = 100
 rho.XX = 0
 rho.YY = c(0, 0.25, 0.5, 0.75)
-rho.XY = 0.03  # null hypothesis: 0
+rho.XY = c(0.08, 0.03, 0)  # null hypothesis: 0
 
 # bootstrap iterates and type
-# boot.reps = 2000
-boot.reps = 5
-bt.type = c( "fcr", "resid" )  # fcr: resample under HA; resid: resample under H0
+boot.reps = 2000
+bt.type = c( "resid", "fcr" )  # fcr: resample under HA; resid: resample under H0
 
 
 # matrix of scenario parameters
@@ -88,9 +87,9 @@ sbatch_params <- data.frame(jobname,
 
 
 # run them all
-#works
+# works
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in 1:n.files) {
+for (i in 2:n.files) {
   system( paste("sbatch -p normal,owners /share/PI/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
 }
 
