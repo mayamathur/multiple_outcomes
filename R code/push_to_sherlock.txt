@@ -26,7 +26,10 @@ scp -r mmathur@sherlock:/share/PI/manishad/multTest/sim_results ~/Desktop
 scp -r mmathur@sherlock:/share/PI/manishad/multTest/sim_results.zip ~/Desktop
 
 # move stitched dataset to local machine
-scp mmathur@sherlock:/share/PI/manishad/multTest/sim_results/overall_stitched/stitched_results.csv ~/Desktop
+scp mmathur@sherlock:/share/PI/manishad/multTest/sim_results/stitched.csv ~/Desktop
+
+# move parameters to Desktop
+scp mmathur@sherlock:/share/PI/manishad/multTest/scen_params.csv ~/Desktop
 
 
 # zip the results files

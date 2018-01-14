@@ -20,22 +20,39 @@ alpha = c( crit.bonf, 0.01, 0.05 )
 # simulation reps to run within this job
 sim.reps = 10
 
-# ######### FOR LOCAL USE ######### 
+######### FOR LOCAL USE #########
 # setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Sandbox/2018-1-13")
 # p = read.csv("scen_params.csv")  # should be a single row, I think
-# p$bt.type = "resid"
-# #boot.reps = 2000
-# boot.reps = 100
-# sim.reps = 5
-# 
-# # add alpha corresponding to Bonferroni as first one
-# # NOTE THAT CODE ASSUMES BONFERRONI IS THE FIRST ONE
-# crit.bonf = 0.05 / p$nY
-# alpha = c( crit.bonf, 0.01, 0.05 )
-# 
-# # for sourcing functions later
-# setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/git_multiple_outcomes/R code/For Sherlock")
-# ######### END OF LOCAL PART ######### 
+n = 1000
+nX = 1
+nY = 100
+rho.XX = 0
+rho.YY = c(0)
+rho.XY = c(0)  # null hypothesis: 0
+
+# bootstrap iterates and type
+boot.reps = 200
+bt.type = c( "fcr" )  # fcr: resample under HA; resid: resample under H0
+
+
+# matrix of scenario parameters
+scen.params = expand.grid( bt.type, n, nX, nY, rho.XX, rho.YY, rho.XY )
+names(scen.params) = c( "bt.type", "n", "nX", "nY", "rho.XX", "rho.YY", "rho.XY" )
+
+# name the scenarios
+# remove letters that are privileged variables in R
+letter.names = c(letters, LETTERS)[ ! c(letters, LETTERS) %in% c("i","T","F") ]
+scen.params$scen.name = letter.names[ 1:dim(scen.params)[1] ]
+p = scen.params
+
+# add alpha corresponding to Bonferroni as first one
+# NOTE THAT CODE ASSUMES BONFERRONI IS THE FIRST ONE
+crit.bonf = 0.05 / p$nY
+alpha = c( crit.bonf, 0.01, 0.05 )
+
+# for sourcing functions later
+setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/git_multiple_outcomes/R code/For Sherlock")
+######### END OF LOCAL PART #########
 
 
 ########################### THIS SCRIPT COMPLETELY RUNS 1 SIMULATION  ###########################
@@ -75,6 +92,10 @@ for ( j in 1:sim.reps ) {
   ##### Bootstrapping Loop ######
   rep.time = system.time( {
     
+    # ~~~~~ FOR TESTING ONLY
+    # TO ELIMINATE FLOOR EFFECTS
+    alpha = 0.5
+    
   # make initial dataset from which to bootstrap
   cor = make_corr_mat( .nX = p$nX, .nY = p$nY, .rho.XX = p$rho.XX, .rho.YY = p$rho.YY, .rho.XY = p$rho.XY)
   d = sim_data( .n = p$n, .cor = cor )
@@ -83,9 +104,12 @@ for ( j in 1:sim.reps ) {
   X.names = names(d)[ grep( "X", names(d) ) ]
   Y.names = names(d)[ grep( "Y", names(d) ) ]
   
+ 
+  
   # get number rejected for observed dataset
   # vector with same length as .alpha
-  samp.res = dataset_result( .dat = d, .alpha = alpha, .resid = ifelse( p$bt.type == "resid", TRUE, FALSE) )
+  samp.res = dataset_result( .dat = d, .alpha = alpha,
+                             .resid = ifelse( p$bt.type %in% c("resid", "ha.resid"), TRUE, FALSE) )
   n.rej = samp.res$rej  # first one is Bonferroni
   names(n.rej) = paste( "n.rej.", as.character(alpha), sep="" )
   
@@ -124,6 +148,15 @@ for ( j in 1:sim.reps ) {
         b = d[ ids, ]
       }
       
+      ##### Bootstrap From Original #2 #####
+      # re-attach residuals
+      if ( p$bt.type == "ha.resid" ) {
+        # resample residuals
+        resid.random = samp.res$resid[ ids, ]
+        # WOULD NEED FITTED VALUES HERE...
+        b = as.data.frame( cbind( Xs, resid[ids,] ) )
+      }
+      
       # get number rejected for bootstrap sample
       # we don't need to return residuals for this one
       dataset_result( .dat = b, .alpha = alpha, .resid = FALSE )$rej
@@ -131,7 +164,7 @@ for ( j in 1:sim.reps ) {
       # one column for each value of alpha
       # r[["0.01"]] is the vector with length boot.reps of number rejected at alpha = 0.01
 
-    } # end parallelized bootstrap loop
+    } # end r-loop (parallelized bootstrap)
 
   } )[3]  # end timer
   
@@ -176,6 +209,8 @@ for ( j in 1:sim.reps ) {
       # expected rejections under H0
       expect = alpha * length(Y.names)
       
+      # ~~~~~~ BOOKMARK: SOMETHING IS WRONG HERE...
+      # maybe expectations are wrong?
       jt.pval.bonf = sum( r[,1] - expect[1] <= 0 ) / length( r[,1] )
       jt.pval.0.01 = sum( r$n.rej.bt.0.01 - expect[2] <= 0 ) / length(r$n.rej.bt.0.01)
       jt.pval.0.05 = sum( r$n.rej.bt.0.05 - expect[3] <= 0 ) / length( r$n.rej.bt.0.05 )

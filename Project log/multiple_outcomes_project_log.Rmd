@@ -41,6 +41,11 @@ csl: aje_style.csl
 
 \section{Stream of consciousness}
 
+2018-1-15
+Mysteries: 
+* Understand why FCR resampling doesn't work (these resamples reject more often than the original data). I found that prob of rejection even when there is only 1 covariate is too high. In my simple script, try resampling residuals and re-attaching them to fitted values. Does that work?
+* Is it theoretically valid to use the weird CI for excess hits using the observed hits and the CI under the null?
+
 Since we are bootstrapping and then fitting parametric model (OLS), I think we should use Fox's or Westfall's residual resampling approach (and indeed, this seemed to work in the last simulation). Seems like the basic approach automatically violates OLS assumptions, meaning our inference will be wrong and the probability of rejecting the test could be non-nominal. Our application of bootstrapping is unusual in that we need to resample in a way that is compatible with parametric assumptions of the test we're going to apply for each outcome. 
 
 
@@ -327,6 +332,15 @@ A: Correct. It does not necessarily work in small samples.
 \newpage
 \section{Simulation notes}
 
+\subsection{2017-8-1 (generate under $H_0$ and $H_A$)}
+
+\begin{itemize}
+\item FCR resampling doesn't seem to work because even when data generated under the null, the resamples have more than the expected number of rejections
+\item Not due to lower truncation because using alpha = 0.5 doesn't help
+\item Seems like correlations are preserved in individual resamples?
+\item But I think the correlations are more variable, even if their mean is still 0, because sometimes we draw samples that have a lot of repetition
+\end{itemize}
+
 \subsection{Summary of previous two}
 
 \begin{itemize}
@@ -417,7 +431,7 @@ A: Correct. It does not necessarily work in small samples.
 
 \item Resample from original with single Y1; look at variance of mean $\Rightarrow$ \textbf{WORKS} 
 
-\item{ Bootstrap from original sample with 100 independent std. normal; reject using z-test that’s only a function of mean $\Rightarrow$ \textbf{DOESN'T WORK} 
+\item{ Bootstrap from original sample with 100 independent std. normal; reject using z-test that’s only a function of mean because SD is treated as known $\Rightarrow$ \textbf{DOESN'T WORK} 
   \begin{itemize}
     \item	The bootstrapped distribution of the absolute differences is too variable compared to true distribution
     \item	Hence rejects only 1.8\% of time
