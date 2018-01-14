@@ -4,37 +4,73 @@
 # LOCAL TEST
 setwd("~/Desktop")
 scen.params = read.csv("scen_params.csv")
+names(scen.params)[ names(scen.params) == "scen.name" ] = "scen"
 
 # just use a single file instead of stitched one
 s = read.csv("short_results_1_.csv", header=TRUE)
 
 # remove columns from individual bootstrap results
-kill = c( names(s)[ grepl( "n.rej.bt", names(s) ) ], "n.rej.5e.04.1" )
+kill = c( names(s)[ grepl( "n.rej.bt", names(s) ) ], "n.rej.5e.04" )
 s = s[ , !names(s) %in% kill ]
+
+# did naive Bonferroni reject?
+s$naive_bonf_rej = s$n.rej.5e.04.1 > 0
 
 
 # TEMP: see if reshape problem fixed by random noise
 #s[,11:30] = s[,11:30] + rnorm(n=100, mean=0, sd=0.01)
-temp = s[,c(10,14,15,16)]
+#temp = s[,c(10,14,15,16)]
 
 
+########################### MAKE DATASETS FOR FIRST PLOT (RESIDUAL RESAMPLING) ###########################
+
+# http://www.milanor.net/blog/reshape-data-r-tidyr-vs-reshape2/
 library(tidyr)
+library(dplyr)
+# replace underscores (for use with separate function)
+#names(temp) = sub( pattern = "t[.]", replacement = "t_", x=names(temp) )
+names(s)[ grepl( "crit", names(s) ) ] = sub( pattern = "t[.]",
+                                             replacement = "t_", x=names(s)[ grepl( "crit", names(s) ) ] )
+names(s)[ grepl( "rej.jt", names(s) ) ] = sub( pattern = "t[.]",
+                                             replacement = "t_", x=names(s)[ grepl( "rej.jt", names(s) ) ] )
 
-# for use with separate function
-names(temp) = sub( pattern = "t[.]", replacement = "t_", x=names(temp) )
+
+######## Aggregated Dataset 1: Our Method's Power ######## 
+# only keep residual resamples and useful columns
+crit.names = names(s)[ grepl( "crit", names(s) ) ]
+rej.jt.names = names(s)[ grepl( "rej.jt", names(s) ) ]
+temp = s[ s$bt.type == "resid", names(s) %in% c( "scen", "rho.YY", "rho.XY", crit.names, rej.jt.names ) ] 
 
 # ~~~~~ HARD-CODES BONFERRONI!!!!
 options(scipen=999)
 bonf = 0.05/100
 names(temp) = sub( pattern = "bonf", replacement = bonf, x=names(temp) )
 
-gathered.messy <- gather(temp, key, value, -scen)
+# get in tidy format
+gathered.messy = gather(temp, key, value, -scen, -rho.YY, -rho.XY )
 head(gathered.messy)
 
-# BOOKMARK: STRUGGLING WITH THIS! IT CUTS OFF THE ALPHA LEVEL DIGITS
 tidy = separate( gathered.messy, key, into = c("stat", "alpha"), sep = "_", convert=FALSE )
 
-# http://www.milanor.net/blog/reshape-data-r-tidyr-vs-reshape2/
+# make summary datasets
+power = tidy %>% group_by( scen, alpha ) %>% filter( stat == "rej.jt" ) %>% summarise( power = mean(value) )
+power = merge( scen.params, power )
+power$group = paste( "X-Y correlation: ", power$rho.XY )  # for plotting joy
+
+######## Aggregated Dataset 2: Naive Bonferroni Power ######## 
+
+temp = s[ s$bt.type == "resid", names(s) %in% c( "scen", "naive_bonf_rej" ) ] 
+
+# get in tidy format
+gathered.messy = gather(temp, key, value, -scen )
+
+# make summary datasets
+naive.power = gathered.messy %>% group_by( scen ) %>% summarise( power = mean(value) )
+naive.power = merge( scen.params, naive.power )
+naive.power$group = paste( "X-Y correlation: ", naive.power$rho.XY )  # for plotting joy
+
+
+########################### MAKE DATASETS FOR SECOND PLOT (FCR RESAMPLING) ###########################
 
 
 
@@ -43,11 +79,49 @@ tidy = separate( gathered.messy, key, into = c("stat", "alpha"), sep = "_", conv
 # SO, FOR TEST CASE, WILL BE JUST 3 ROWS
 
 
-# add expected number of hits
-agg$expect = agg$alpha * agg$nY
+# # add expected number of hits
+# agg$expect = agg$alpha * agg$nY
+# 
+# # for plotting
+# agg$group = paste( "nX: ", agg$nX, "; nY: ", agg$nY, sep="" )
+# 
 
-# for plotting
-agg$group = paste( "nX: ", agg$nX, "; nY: ", agg$nY, sep="" )
+
+
+########################### PLOT 1: JOINT NULL HYPOTHESIS TEST ###########################
+
+# X-axis: Strength of YY correlation
+# Y-axis: Power to reject joint null
+# Panels: Strength of XY correlation
+# Lines: Different alpha levels for our method and a single line for naive Bonferroni
+
+
+library(ggplot2)
+y.breaks = seq(0, 0.05, 0.01)
+
+colors = c( "black", "orange", "red", "blue" )
+
+p1 = ggplot( ) +
+  geom_point( data=power, aes(x=rho.YY, y=power, shape=alpha ) ) +
+  # geom_line( data=power, aes(x=rho.YY, y=power, shape=alpha ) ) + 
+  geom_point( data = naive.power, aes( x = rho.YY, y = power, shape="Naive") ) +
+  theme_bw() + facet_wrap(~ group ) +
+  ylab("Power") +
+  # HAVEN'T DEALT WITH LOWER LINES YET:
+  #scale_color_manual(values=colors) +
+  #scale_x_continuous( breaks = x.breaks ) + 
+  scale_y_continuous( limits = c(0,0.05), breaks = y.breaks ) +
+  guides(color=guide_legend(title="Alpha")) +
+  xlab( "Correlation between each pair of Ys" ) +
+  ggtitle("Performance of bootstrap CIs as hypothesis test of joint H0")
+
+ggsave( filename = paste("plot1.png"),
+        plot=p1, path=NULL, width=10, height=10, units="in")
+
+
+
+
+
 
 
 
