@@ -1,6 +1,63 @@
 
 ########################### READ IN DATA ###########################
 
+# LOCAL TEST
+setwd("~/Desktop")
+scen.params = read.csv("scen_params.csv")
+
+# just use a single file instead of stitched one
+s = read.csv("short_results_1_.csv", header=TRUE)
+
+# remove columns from individual bootstrap results
+kill = c( names(s)[ grepl( "n.rej.bt", names(s) ) ], "n.rej.5e.04.1" )
+s = s[ , !names(s) %in% kill ]
+
+
+# TEMP: see if reshape problem fixed by random noise
+#s[,11:30] = s[,11:30] + rnorm(n=100, mean=0, sd=0.01)
+temp = s[,c(10,14,15,16)]
+
+
+library(tidyr)
+
+# for use with separate function
+names(temp) = sub( pattern = "t[.]", replacement = "t_", x=names(temp) )
+
+# ~~~~~ HARD-CODES BONFERRONI!!!!
+options(scipen=999)
+bonf = 0.05/100
+names(temp) = sub( pattern = "bonf", replacement = bonf, x=names(temp) )
+
+gathered.messy <- gather(temp, key, value, -scen)
+head(gathered.messy)
+
+# BOOKMARK: STRUGGLING WITH THIS! IT CUTS OFF THE ALPHA LEVEL DIGITS
+tidy = separate( gathered.messy, key, into = c("stat", "alpha"), sep = "_", convert=FALSE )
+
+# http://www.milanor.net/blog/reshape-data-r-tidyr-vs-reshape2/
+
+
+
+# TAKE MEANS BY SCENARIO AND BY ALPHA
+# ALSO EMPIRICAL QUANTILES
+# SO, FOR TEST CASE, WILL BE JUST 3 ROWS
+
+
+# add expected number of hits
+agg$expect = agg$alpha * agg$nY
+
+# for plotting
+agg$group = paste( "nX: ", agg$nX, "; nY: ", agg$nY, sep="" )
+
+
+
+
+
+##### ~~~~~~~~~~~ FROM BEFORE
+
+
+########################### READ IN DATA ###########################
+
 # check overall progress
 #setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2/Simulation results/2017-7-10")
 setwd("~/Desktop")
@@ -87,46 +144,6 @@ mean(s$bt.rej)
 # make simulation rep variable
 s$sim.rep = 1:dim(s)[1]
 
-########################### CAN WE TRANSFORM N-HAT TO MAKE MORE NORMAL? ###########################
-
-library(car)
-lambda = powerTransform(s$n.rej+0.001)$lambda
-lambda = coef(trans, round=TRUE)
-
-trans = bcPower(s$n.rej+0.001, lambda=lambda)
-
-hist( log(s$n.rej+0.001) )
-
-
-########################### DOES N-HAT HAVE AN APPROXIMATE DISTRIBUTION THAT IS KNOWN? ###########################
-
-# plot the histogram
-hist(s$n.rej, prob=TRUE, breaks=145)
-
-# load library
-library(fitdistrplus)
-
-# fit the negative binomial distribution
-fit <- fitdist(s$n.rej, "nbinom")
-
-# get the fitted densities. mu and size from fit.
-fitD <- dnbinom(0:145, size=25.05688, mu=31.56127)
-
-# add fitted line (blue) to histogram
-lines(fitD, lwd="3", col="blue")
-
-# Goodness of fit with the chi squared test  
-# get the frequency table
-t <- table(data[[1]])   
-
-# convert to dataframe
-df <- as.data.frame(t)
-
-# get frequencies
-observed_freq <- df$Freq
-
-# perform the chi-squared test
-chisq.test(observed_freq, p=fitD)
 
 ########################### PLOT: BOOTSTRAP CIS ACROSS SCENARIOS ###########################
 
