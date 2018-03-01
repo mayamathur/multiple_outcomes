@@ -3,7 +3,7 @@
 
 # ~~~ CHECK BEHAVIOR WITH ALPHA VECTOR LONGER THAN 1
 
-
+ 
 
 # ######### FOR CLUSTER USE #########
 # # load command line arguments
