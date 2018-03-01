@@ -3,19 +3,51 @@
 
 path = "/share/PI/manishad/multTest"
 setwd(path)
+source("functions.R")
 
+######## FOR STITCHING LONG FILES ########
+
+s = stitch_files(.results.singles.path = "/share/PI/manishad/multTest/sim_results/long",
+                 .results.stitched.write.path = "/share/PI/manishad/multTest/sim_results",
+                 .name.prefix = "long",
+                 .stitch.file.name="stitched.csv")
+
+# write results
+write.csv( s, "stitched.csv" )
+
+
+
+#### Sneak-Peek Analyes
+mean(s$covers.raw)
+mean(s$covers)
+mean(s$covers.correct)
+
+summary(s$rate)
+
+# symmetry of CIs
+mean( abs( s$ci.hi.raw - s$excess ) - abs( s$ci.lo.raw - s$excess ) )
+mean( abs( s$ci.hi.correct - s$excess ) - abs( s$ci.lo.correct - s$excess ) )
+
+
+
+
+
+
+# zip the entire results folder
+setwd("/share/PI/manishad/multTest")
+system( paste("zip -r sim_results.zip sim_results") )
+
+
+######## FOR STITCHING SHORT FILES ########
 source("functions.R")
 s = stitch_files(.results.singles.path = "/share/PI/manishad/multTest/sim_results/short",
                  .results.stitched.write.path = "/share/PI/manishad/multTest/sim_results",
              .name.prefix = "short",
              .stitch.file.name="stitched.csv")
 
-# # write results
-# write.csv( s, "stitched_prepped.csv" )
-# 
-# # zip the entire results folder
-# setwd("/share/PI/manishad/multTest")
-# system( paste("zip -r sim_results.zip sim_results") )
-# 
+# zip the entire results folder
+setwd("/share/PI/manishad/multTest")
+system( paste("zip -r sim_results.zip sim_results") )
+
 
 

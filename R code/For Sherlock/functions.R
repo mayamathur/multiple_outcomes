@@ -115,7 +115,7 @@ sim_data = function( .n, .cor ) {
 # fit regression model for a single outcome Y regressed on all Xs
 # return p-value for the exposure of interest (X1)
 
-fit_model = function( Y.name, .dat, .resid ) {
+fit_model = function( Y.name, .dat, .resid, .sigma, .tval, .intercept ) {
 
   # extract names
   X.names = names( .dat )[ grep( "X", names( .dat ) ) ]
@@ -131,10 +131,27 @@ fit_model = function( Y.name, .dat, .resid ) {
   # extract p-value for exposure of interest (X1)
   m = lm( eval( parse(text=formula) ), data=.dat )
   pval = summary(m)$coefficients[ "X1", 4 ]
-
-  # get residuals if needed for bootstrapping
-  if ( ! .resid ) return( list( pval = pval ) )
-  else if ( .resid ) return( list( pval = pval, resid = residuals(m) ) )
+  
+  if ( ! .resid ) resid.return = NA
+  else resid.return = residuals(m)
+    
+  if ( ! .sigma ) sigma.return = NA
+  else sigma.return = summary(m)$sigma
+  
+  if ( ! .intercept ) intercept.return = NA
+  else intercept.return = coef(m)[["(Intercept)"]]
+  
+  # extract test stat for this test
+  # for use with Romano's code
+  if ( ! .tval ) tval.return = NA
+  else tval.return = summary(m)$coefficients[ "X1", 3 ]
+  
+  return( list( pval = pval,
+                resid = resid.return,
+                sigma = sigma.return, 
+                intercept = intercept.return,
+                tval = tval.return ) )
+  
 }
 
 # test drive
@@ -144,10 +161,12 @@ fit_model = function( Y.name, .dat, .resid ) {
 
 
 ########################### FN: GIVEN DATASET, RETURN STATS ###########################
-
-# .resid: should it return dataset with residuals (for resampling under null)?
-
-dataset_result = function( .dat, .alpha, .resid = FALSE ) {
+# .resid: should it return dataset with residuals (for regenerating residuals)?
+# . sigma: should it return fitted error SD (for regenerating residuals)?
+# .intercept: should it return fitted intercept (for regenerating residuals)?
+dataset_result = function( .dat, .alpha,
+                           .resid = FALSE, .sigma = FALSE, .intercept = FALSE,
+                           .tval = FALSE ) {
 
   # extract names of outcome variables
   X.names = names( .dat )[ grep( "X", names(.dat) ) ]
@@ -161,20 +180,36 @@ dataset_result = function( .dat, .alpha, .resid = FALSE ) {
   #  each entry is another list
   # with elements "pval" (scalar) and "resid" (length matches number of subjects)
   lists = lapply( X = Y.names,
-                  FUN = function(y) fit_model( Y.name = y, .dat = .dat, .resid = .resid ) )
+                  FUN = function(y) fit_model( Y.name = y,
+                                               .dat = .dat,
+                                               .resid = .resid,
+                                               .sigma = .sigma,
+                                               .tval = .tval,
+                                               .intercept = .intercept ) )
   
   # "flatten" the list of lists
   u = unlist(lists)
   pvals = as.vector( u[ names(u) == "pval" ] )
 
-  # if we won't need residuals for later bootstrapping
-  if ( .resid ) {  # if we WILL 
-    # cbind all the residuals together from each list (lapply?)
-    mat = matrix( u[ !names(u) == "pval" ], byrow=FALSE, ncol=length(Y.names) ) 
+  # if we will need residuals for later bootstrapping
+  if ( .resid ) {
+    # names of object u are resid.1, resid.2, ..., hence use of grepl 
+    mat = matrix( u[ grepl( "resid", names(u) ) ], byrow=FALSE, ncol=length(Y.names) ) 
     resid = as.data.frame(mat)
     names(resid) = Y.names
   }
-
+  
+  # if we are returning the estimated error SD
+  if ( .sigma ) sigmas = as.vector( u[ names(u) == "sigma" ] )
+  
+  # if we are returning the estimated intercept
+  if ( .intercept ) intercepts = as.vector( u[ names(u) == "intercept" ] )
+  
+  # ~~~ BOOKMARK: I WAS STEPPING THROUGH THIS FN TO SEE IF INTERCEPTS GET RETURNED PROPERLY
+  
+  # if we are returning the test stats for use with Romano
+  if ( .tval ) tvals = as.vector( u[ names(u) == "tval" ] )
+  
   ##### For looking at distribution of p-values within a single sample #####
   # first call browser to stop within a given simulation
 #   browser()
@@ -191,9 +226,22 @@ dataset_result = function( .dat, .alpha, .resid = FALSE ) {
   # values are the number of rejections at that .alpha level
   rej = as.data.frame( matrix( n.reject, nrow=1 ) )
   names(rej) = as.character(.alpha)
+
   
-  if ( ! .resid ) return( list( rej = rej ) )
-  else if ( .resid ) return( list( rej = rej, resid = resid ) ) 
+  if ( ! .resid ) resid.return = NA
+  else resid.return = resid
+  
+  if ( ! .sigma ) sigmas.return = NA
+  else sigmas.return = sigmas
+  
+  if ( ! .tval ) tvals.return = NA
+  else tvals.return = tvals
+  
+  return( list( rej = rej,
+                resid = resid.return,
+                sigmas = sigmas.return,
+                tvals = tvals.return,
+                pvals = pvals ) )
 }
 
 

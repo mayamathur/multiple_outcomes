@@ -1,24 +1,31 @@
 
 ########################### LOAD COMMAND-LINE ARGUMENTS  ###########################
 
-# FOR CLUSTER USE
-# load command line arguments
-args = commandArgs(trailingOnly = TRUE)
-jobname = args[1]
-scen = args[2]  # this will be a letter
-boot.reps = as.numeric( args[3] )
+# ~~~ CHECK BEHAVIOR WITH ALPHA VECTOR LONGER THAN 1
 
-# get scen parameters
-setwd("/share/PI/manishad/multTest")
-scen.params = read.csv( "scen_params.csv" )
-p = scen.params[ scen.params$scen.name == scen, ]
 
-# no longer included in parameters because it's a vector
-crit.bonf = 0.05 / p$nY
-alpha = c( crit.bonf, 0.01, 0.05 )
 
-# simulation reps to run within this job
-sim.reps = 10
+# ######### FOR CLUSTER USE #########
+# # load command line arguments
+# args = commandArgs(trailingOnly = TRUE)
+# jobname = args[1]
+# scen = args[2]  # this will be a letter
+# boot.reps = as.numeric( args[3] )
+# 
+# # get scen parameters
+# setwd("/share/PI/manishad/multTest")
+# scen.params = read.csv( "scen_params.csv" )
+# p = scen.params[ scen.params$scen.name == scen, ]
+# 
+# # no longer included in parameters because it's a vector
+# crit.bonf = 0.05 / p$nY
+# alpha = c( crit.bonf, 0.01, 0.05 )
+# 
+# # simulation reps to run within this job
+# # this need to match n.reps.in.doParallel in the genSbatch script
+# sim.reps = 1
+# ######### END OF CLUSTER PART #########
+
 
 ######### FOR LOCAL USE #########
 # setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Sandbox/2018-1-13")
@@ -31,8 +38,10 @@ rho.YY = c(0)
 rho.XY = c(0)  # null hypothesis: 0
 
 # bootstrap iterates and type
-boot.reps = 200
-bt.type = c( "fcr" )  # fcr: resample under HA; resid: resample under H0
+boot.reps = 500
+sim.reps = 1
+scen = "a"
+bt.type = c( "ha.resid.2" )  # fcr: resample under HA; resid: resample under H0
 
 
 # matrix of scenario parameters
@@ -58,7 +67,7 @@ setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/git_multi
 ########################### THIS SCRIPT COMPLETELY RUNS 1 SIMULATION  ###########################
 
 # draws a new dataset
-# runs all 500 bootstrapping iterations
+# runs all bootstrapping iterations
 # writes 1-row csv with number rejected and bootstrap CI
 
 library(doParallel)
@@ -74,7 +83,7 @@ registerDoParallel(cores=16)
 # j is the number of simulation iterations to run sequentially
 # so for j=10, we are generating 10 observed datasets, along with 500 bootstrap iterates for each
 
-# I think that on Sherlock, this for-loop is supposed to receive a single ROW of parameters
+# on Sherlock, this for-loop is supposed to receive a single ROW of parameters
 
 for ( j in 1:sim.reps ) {
   
@@ -91,30 +100,28 @@ for ( j in 1:sim.reps ) {
 
   ##### Bootstrapping Loop ######
   rep.time = system.time( {
-    
-    # ~~~~~ FOR TESTING ONLY
-    # TO ELIMINATE FLOOR EFFECTS
-    alpha = 0.5
-    
+
   # make initial dataset from which to bootstrap
-  cor = make_corr_mat( .nX = p$nX, .nY = p$nY, .rho.XX = p$rho.XX, .rho.YY = p$rho.YY, .rho.XY = p$rho.XY)
+  cor = make_corr_mat( .nX = p$nX, .nY = p$nY, .rho.XX = p$rho.XX,
+                       .rho.YY = p$rho.YY, .rho.XY = p$rho.XY)
   d = sim_data( .n = p$n, .cor = cor )
   
   # extract names of outcome variables
   X.names = names(d)[ grep( "X", names(d) ) ]
   Y.names = names(d)[ grep( "Y", names(d) ) ]
   
- 
-  
   # get number rejected for observed dataset
   # vector with same length as .alpha
   samp.res = dataset_result( .dat = d, .alpha = alpha,
-                             .resid = ifelse( p$bt.type %in% c("resid", "ha.resid"), TRUE, FALSE) )
+                             .resid = ifelse( p$bt.type %in% c("resid", "ha.resid", "ha.resid.2"),
+                                              TRUE, FALSE), # don't return residuals unless we need them later
+                             .sigma = TRUE,
+                             .intercept = TRUE )
   n.rej = samp.res$rej  # first one is Bonferroni
   names(n.rej) = paste( "n.rej.", as.character(alpha), sep="" )
   
   # Bonferroni test of joint null using just original data
-  # i.e., do we reject at least one outcome under Bonferroni threshold?
+  # i.e., do we reject at least one outcome using Bonferroni threshold?
   jt.rej.bonf.naive = n.rej[1] > 0
   
   # run all bootstrap iterates
@@ -122,14 +129,15 @@ for ( j in 1:sim.reps ) {
       # draw bootstrap sample 
       ids = sample( 1:nrow(d), replace=TRUE )
       
-      ##### Bootstrap Under Null #1 #####
+      
+      ##### Bootstrap Under Null #1 (Resample Y; Fix X) #####
       # for bootstrap dataset, replace just the Y columns with the Y columns sampled with replacement
       if( p$bt.type == "Y" ) {
         b = d
         b[ , ( length(X.names) + 1 ) : dim(b)[2] ] = b[ ids, ( length(X.names) + 1 ) : dim(b)[2] ]
       }
     
-      ##### Bootstrap Under Null #2 (Residuals) #####
+      ##### Bootstrap Under Null #2 (Resample Residuals) #####
       # see Westfall, pg. 133
       if ( p$bt.type == "resid" ) {
         # fix the existing covariates
@@ -142,21 +150,81 @@ for ( j in 1:sim.reps ) {
         b = as.data.frame( cbind( Xs, resid[ids,] ) )
       }
       
-      ##### Bootstrap From Original #####
+      ##### Bootstrap Under Null #3 - Regenerate Y Parametrically #####
+      # re-attach residuals
+      if ( p$bt.type == "h0.parametric" ) {
+        # extract fitted model parameters
+        sigma = samp.res$sigma
+        intercept = samp.res$intercept
+
+        # fix the existing covariates
+        Xs = as.data.frame( d[ , 1 : length(X.names) ] )
+        names(Xs) = X.names
+        
+        # regenerate Ys using fitted values
+        new.Ys = matrix( NA, nrow = nrow(d), ncol = length(Y.names) )
+        
+        # parametrically generate Ys, setting beta of interest to 0
+        new.Ys = sapply( 1:ncol(resid),
+                             function(x) rnorm( n=n.cells, mean = intercept[x], sd = sigma[x] ) )
+        b = as.data.frame( cbind( Xs, new.Ys ) )
+      }
+      
+      ##### Bootstrap Under HA #1 - FCR #####
+      # doesn't work! 
       # full-case resampling
       if ( p$bt.type == "fcr" ) {
         b = d[ ids, ]
       }
       
-      ##### Bootstrap From Original #2 #####
+      ##### Bootstrap Under HA #2 - Reattach Residuals #####
       # re-attach residuals
       if ( p$bt.type == "ha.resid" ) {
-        # resample residuals
-        resid.random = samp.res$resid[ ids, ]
-        # WOULD NEED FITTED VALUES HERE...
-        b = as.data.frame( cbind( Xs, resid[ids,] ) )
+        # extract residuals from original data
+        # matrix with same dimensions as the outcomes matrix
+        resid = samp.res$resid
+      
+        # compute Y-hat using residuals
+        Ys = d[ , (p$nX + 1) : ncol(d) ]  # remove covariates
+        Yhat = Ys - resid
+        
+        # fix the existing covariates
+        Xs = as.data.frame( d[ , 1 : length(X.names) ] )
+        names(Xs) = X.names
+        
+        # resample residuals and add them to fitted values
+        b = as.data.frame( cbind( Xs, Yhat + resid[ids,] ) )
       }
       
+      ##### Bootstrap Under HA #3 - Regenerate Residuals #####
+      # re-attach residuals
+      if ( p$bt.type == "ha.resid.2" ) {
+        # extract residuals from original data
+        # matrix with same dimensions as the outcomes matrix
+        resid = samp.res$resid
+        sigma = samp.res$sigma
+        
+        # compute Y-hat using residuals
+        Ys = d[ , (p$nX + 1) : ncol(d) ]  # remove covariates
+        Yhat = Ys - resid
+        
+        # fix the existing covariates
+        Xs = as.data.frame( d[ , 1 : length(X.names) ] )
+        names(Xs) = X.names
+
+        # regenerate residuals using fitted values
+        n.cells = dim(resid)[1] * dim(resid)[2]
+        # generate columns of new residuals using the appropriate sigma
+        new.resids = sapply( 1:ncol(resid), function(x) rnorm( n=n.cells, sd = sigma[x] ) )
+        
+        # # regenerate residuals using fitted values
+        # n.cells = dim(resid)[1] * dim(resid)[2]
+        # # TEST ONLY - LATER WILL NEED TO SAVE VECTOR OF SIGMA-HATS FOR EACH REGRESSION
+        # new.resids = matrix( rnorm( n = n.cells, mean = 0, sd = 1 ),
+        #                      nrow = nrow(resid), ncol = ncol(resid) )
+        b = as.data.frame( cbind( Xs, Yhat + new.resids ) )
+      }
+
       # get number rejected for bootstrap sample
       # we don't need to return residuals for this one
       dataset_result( .dat = b, .alpha = alpha, .resid = FALSE )$rej
@@ -164,12 +232,14 @@ for ( j in 1:sim.reps ) {
       # one column for each value of alpha
       # r[["0.01"]] is the vector with length boot.reps of number rejected at alpha = 0.01
 
-    } # end r-loop (parallelized bootstrap)
+    } ###### end r-loop (parallelized bootstrap)
+    
+    # ~~~ EDIT THIS TO SAVE BOTH P-VALS AND REJECTIONS, AS IN LOCAL CODE
 
   } )[3]  # end timer
   
   
-  ###### Results for This Simulation Rep #####
+  ###### Joint Test Results for This Simulation Rep #####
 
     names(r) = paste( "n.rej.bt.", as.character(alpha), sep="" )
     
@@ -190,6 +260,8 @@ for ( j in 1:sim.reps ) {
     bt.lo.0.05 = quantile( r$n.rej.bt.0.05, 0.025 )
     bt.hi.0.05 = quantile( r$n.rej.bt.0.05, 0.975 )
     
+    # ~~~ IN HERE, DO WESTFALL? WE HAVE THE BOOTSTRAPPED P-VALUES AT THIS POINT
+    
     # p-values for observed rejections
     # if we resampled under H0, want prob of observing at least as many rejections as we did
     if ( p$bt.type == "resid" ) {
@@ -200,20 +272,6 @@ for ( j in 1:sim.reps ) {
       jt.pval.0.05 = sum( r$n.rej.bt.0.05 >= n.rej[["n.rej.0.05"]] ) /
                         length( r$n.rej.bt.0.05 )
 
-    }
-    
-    # I BELIEVE THE BELOW P-VALUES AREN'T THEORETICALLY VALID
-    # if we resampled under HA, want prob that observed rejections - expected > 0
-    else if ( p$bt.type == "fcr" ) {
-      
-      # expected rejections under H0
-      expect = alpha * length(Y.names)
-      
-      # ~~~~~~ BOOKMARK: SOMETHING IS WRONG HERE...
-      # maybe expectations are wrong?
-      jt.pval.bonf = sum( r[,1] - expect[1] <= 0 ) / length( r[,1] )
-      jt.pval.0.01 = sum( r$n.rej.bt.0.01 - expect[2] <= 0 ) / length(r$n.rej.bt.0.01)
-      jt.pval.0.05 = sum( r$n.rej.bt.0.05 - expect[3] <= 0 ) / length( r$n.rej.bt.0.05 )
     }
    
     # did joint tests reject?

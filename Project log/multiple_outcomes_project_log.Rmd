@@ -1,6 +1,11 @@
 ---
 title: ''
 author: ''
+csl: aje_style.csl
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
 header-includes:
 - \usepackage[T1]{fontenc}
 - \usepackage{microtype}
@@ -21,9 +26,7 @@ header-includes:
 - \usepackage{color,soul}
 - \usepackage{palatino}
 - \usepackage{float}
-output: pdf_document
 bibliography: refs_fake.bib
-csl: aje_style.csl
 ---
 
 \doublespacing
@@ -41,13 +44,43 @@ csl: aje_style.csl
 
 \section{Stream of consciousness}
 
-2018-1-15
-Mysteries: 
-* Understand why FCR resampling doesn't work (these resamples reject more often than the original data). I found that prob of rejection even when there is only 1 covariate is too high. In my simple script, try resampling residuals and re-attaching them to fitted values. Does that work?
-* Is it theoretically valid to use the weird CI for excess hits using the observed hits and the CI under the null?
+\subsection{FWER control methods we should compare for power of joint test}
 
-Since we are bootstrapping and then fitting parametric model (OLS), I think we should use Fox's or Westfall's residual resampling approach (and indeed, this seemed to work in the last simulation). Seems like the basic approach automatically violates OLS assumptions, meaning our inference will be wrong and the probability of rejecting the test could be non-nominal. Our application of bootstrapping is unusual in that we need to resample in a way that is compatible with parametric assumptions of the test we're going to apply for each outcome. 
+\begin{enumerate}
+\item Westfall's single-step minP and maxT methods (pg 47): Easy to code manually
+\item Westfall's step-down free method (pg 66): Moderate to code manually
+\item Romano: Implemented in StepwiseTest package, but needs debugging
+\item Holm (step-down): Easy to code manually; UMP than Bonferroni
+\item Bonferroni (single-step): Easy to code manually
+\end{enumerate}
 
+
+\subsection{Should we compare our joint test to joint tests based on non-FWER procedures?}
+
+If we reject joint null based on FWER control method, then we can conclude with 95\% confidence that this rejection is real, which implies that the joint null is false. 
+
+With $k$-FWER control, we can conclude with 95\% confidence that there are fewer than $k$ false positives, so $R-k+1$ of the observed rejections are real (don't know which ones), where $R$ is the number of adjusted rejections. So, as long as $R>k-1$, we can reject the joint null with 95\% confidence. PROBLEM: WOULD HAVE TO TRY EVERY $k$??
+
+With FDP control, we can reject the joint null if the proportion of adjusted rejections exceeds the allowed amount ($\gamma$). Again, problem because we'd have to try every $\gamma$?
+
+FDR does not work for a joint test because it uses expected proportion of rejections. 
+
+The problem is that $k$-FWER and FDP would probably lead to more powerful joint test than the FWER control method, but not clear which parameters to choose. So maybe we should not worry about them?
+
+
+\subsection{What we can learn from different procedures}
+
+Say we observe 18 rejections at the 0.05 level. Then, with increasing stringency, we can say:
+\begin{itemize}
+\item Our null CI is $[0, 10]$. "We observed $18-10 = 8$ more hits than we would expect in 95\% of samples taken under the strong null (every null holds)."
+\item $8-$FWER controlling procedure (Romano) rejects 11. "There are fewer than 8 false positives, so of these 14 rejections, at least $14-7 = 7$ are real effects, but we don't know which ones." (How should we decide which $k$ to use here?)
+\item FWER-controlling procedure (Bonferroni or preferably Romano/Westfall/another resampling method) rejects 3. "All 3 of these rejections are real effects with 95\% confidence", or alternatively: "We reject the strong null with >95\% confidence."
+\end{itemize}
+
+In practice, you could get the first two from the same bootstrap resamples (taken parametrically under the strong null). Then you'd have to resample under the original distribution to get the third one. 
+
+
+\subsection{Our two metrics}
 
 \textbf{Metric \#1}: 95\% CI for number of hits above expected value that we see in observed data (resample under original distribution, using first half of my theory)
 
@@ -55,11 +88,13 @@ Since we are bootstrapping and then fitting parametric model (OLS), I think we s
 
 What about other link functions or hypothesis tests not based on regression? How would we do residual resampling? Davison \& Hinkley talk about other GLMs. I think we'd end up with either some form of residual or $Y$ itself for each outcome, and then we'd jointly resample these things as planned.
 
-Also, there might be models for which you can't resample as planned. For example, with multiple regression, we 
 
 
 <!-- NEW SECTION -->
 \section{Possible resampling algorithms}
+
+\textbf{Conclusion:} Since we are bootstrapping and then fitting parametric model (OLS), I think we should use Fox's or Westfall's residual resampling approach (and indeed, this seemed to work in the last simulation). Full-case resampling violates the iid error assumption in OLS regression, meaning the probability of rejecting the null within each resample is not $\alpha$. Our application of bootstrapping is unusual in that we need to resample in a way that is compatible with parametric assumptions of the test we're going to apply for each outcome. 
+
 
 Note that all of these methods assume $Var(Y^{*} | X^{*}=0) = Var(Y^{*} | X^{*}=1)$; in the resampled data, this is the average of the original within-stratum variances. I think this is fine since we are \emph{not} avoiding parametric inference for OLS (unlike in other bootstrapping applications). 
 
@@ -146,13 +181,8 @@ Accepted answer says that first approach is actually testing whether the distrib
 
 \url{https://stats.stackexchange.com/questions/9664/what-are-examples-where-a-naive-bootstrap-fails/9722#9722}
 
-
-\subsection{CV: Cases when naive bootstrap fails}
-\url{https://stats.stackexchange.com/questions/11210/assumptions-regarding-bootstrap-estimates-of-uncertainty?noredirect=1&lq=1}
-
 \subsection{CV: Applying bootstrap to arbitrary smooth function of the data}
 \url{https://stats.stackexchange.com/questions/246632/smoothness-of-a-statistic-for-bootstrapping}
-
 
 
 
@@ -160,6 +190,68 @@ Accepted answer says that first approach is actually testing whether the distrib
 <!-- NEW SECTION -->
 \newpage
 \section{Notes on past literature}
+
+
+\subsection{Other "global tests" (i.e., of joint null)}
+
+\begin{itemize}
+\item Fisher's Combination Test aggregates all the p-values instead of just using the smallest one; better than Bonferroni joint test if many small effects, but worse if there are a few large effects. Assumes independent tests. 
+\end{itemize}
+
+
+\subsection{Frane (per-family error rates)}
+
+\begin{itemize}
+\item Per-family error rate (PFER): Number of expected false positives 
+\item Controlling PFER implies controlling FWER (so PFER is more stringent)
+\item Bonferroni also controls PFER to $\alpha$, which is partly why it's more "conservative"
+\end{itemize}
+
+Talks about *another interesting interpretation of Bonferroni*, which is that (unlike other FWER-control procedures), it also controls the more stringent "per-family error rate" (PFER), which is the expected number of false positives. 
+
+With other FWER procedures that don't control PFER, which is most of them, there is a <5\% probability of at least one false positive, but that could be 1 false positive or it could be 100. With Bonferroni, if there are false positives (<5\% chance), it's also the case that the expected number of them is $< 0.05 \times$ (# of tests) with <5\% probability.
+
+So to build upon Tyler's earlier statement, I believe Bonferroni lets us say:
+
+*"We did 100 tests and rejected 20. With >95\% confidence, all 20 are true effects (FWER). Even if we are in the 5% of instances where we actually do have false positives, there aren't very many of them: only 5 or fewer with 95\% confidence (PFER)."*
+
+
+\subsection{Yekutieli \& Benjamini}
+
+A parametric bootstrap correction for LMM.
+
+\subsection{Yekutieli \& Benjamini}
+
+A resampling-based procedure for FDR control. Very readable! 
+
+\begin{itemize}
+\item Pg. 7: Outlines residual resampling under $H_0$, exactly as we will be doing
+\item Talks a lot about Westfall and also uses subset pivotality
+\item Pg 7: "Subset pivotality is achieved if the distribution of [the p-values of the true null hypotheses] is unaffected by the truth or falsehood of the remaining hypotheses"
+\item Seems to be very closely related to Westfall, but cares about FDR instead of FWER. 
+\end{itemize}
+
+\subsection{van der Laan, Dudoit, Pollard (2004) - not saved}
+
+A resampling-based multiple testing control procedure. 
+
+\begin{itemize}
+\item $k-$FWER control procedure where you first reject hypotheses based on a procedure that controls regular FWER, but then also "augment" by rejecting an additional $k=1$ hypotheses (summarized by Romano \& Wolf, pg 1396)
+\end{itemize}
+
+\subsection{Romano \& Wolf}
+
+A resampling-based multiple testing control procedure for FWER, k-FWER, or FDP. 
+
+\begin{itemize}
+\item $k-$FWER control: With 95\% confidence, the number of false positives is $< k$
+\item FDP control: With 95\% confidence, the proportion of rejections that are false positives is $< \gamma$
+\item FDR control: with 95\% confidence, the EXPECTED proportion of rejections that are false positives is $< \gamma$ 
+\item They bootstrap under the original data distribution and use this to get quantiles of the distribution of the $k^{th}$-largest test statistic for various subsets of the test statistics, allowing control of the $k-$FWER through a step-down procedure. 
+\item Why resample not under the null? Since we don't know which hypotheses are true, assume the data really were generated under the null because this is conservative. If the data aren't generated under the null, then the critical values will just be more stringent because the kth-largest test stat will be larger (page 1383). Basically this "exploits the duality between CIs and hypothesis tests" (pg 1388). Apparently resampling not under the null avoids subset pivotality (pg 1388). 
+\item Page 1396: Talks about other resampling methods in some detail, including Westfall
+\item Does not use subset pivotality, unlike Westfall
+\end{itemize}
 
 \subsection{Davison \& Hinkley text}
 
@@ -234,10 +326,9 @@ Accepted answer says that first approach is actually testing whether the distrib
 
 \subsection{Westfall \& Young textbook}
 
+Resampling-based procedures for FWER control. 
+
 \begin{itemize}
-
-\item I think their algorithm is closest to the one Tyler initially suggested (fix $X$ while resampling $Y$), except that they first center the outcomes (i.e., resample the residuals). 
-
 
 \item{"Center, then resample" strategy
   \begin{enumerate}
@@ -248,9 +339,15 @@ Accepted answer says that first approach is actually testing whether the distrib
   \end{enumerate}
 }
 
+\item \hl{Single-step adjusted p-value, aka "minP" method (page 46, 51): For each test $j$, set its adjusted p-value equal to the probability in the resamples (generated under the strong null) that the minimum p-value is less than the observed p-value for test $j$. So, it's like a p-value of the p-value (probability of observing a p-value at this small under the strong null)}
+
+\item \hl{Free step-down resampling method (pg 66): Not very intuitive...}
+
+\item Strong FWER control
+
 \item 106-109: More on OLS
 
-\item Page 79: "Resampling from the residuals, rather than the actual data values, is important. If the actual data are pooled and resampled, then the underlying residual distribution will be estimated using a multi-modal empirical distribution function when the means differ. Such resampling violates the first principle of Hall \& Wilson (1991): '...even if the data might be drawn in a way that fails to satisfy $H_0$, resampling should be done in a way that reflects $H_0$'." I DON'T GET WHY UNCENTERED APPROACH VIOLATES H0! 
+\item Page 79: "Resampling from the residuals, rather than the actual data values, is important. If the actual data are pooled and resampled, then the underlying residual distribution will be estimated using a multi-modal empirical distribution function when the means differ. Such resampling violates the first principle of Hall \& Wilson (1991): '...even if the data might be drawn in a way that fails to satisfy $H_0$, resampling should be done in a way that reflects $H_0$'." 
 
 \item Page 39-41: Analyzes $P( P^* < \alpha )$ in bootstrap iterates
 
@@ -264,6 +361,10 @@ Accepted answer says that first approach is actually testing whether the distrib
 \subsection{Westfall \& Troendle (2008)}
 
 \begin{itemize}
+
+\item \hl{Subset pivotality assumption:} Take any subset of the hypotheses to be tested. The distribution of the max test statistic within this group, given that all the nulls in that subset hold, is the same as its distribution given the strong null (all the nulls for ALL the hypothesis tests hold). In other words, once you know that all nulls within the subset are true, knowing that all the other nulls are true doesn't change anything about distribution of max test statistic in that subset. 
+
+\item Reason for using subset pivotality: To avoid having to resample under every intersection null (i.e., subsets of nulls being true) so that we can just resample under the joint null. 
 
 \item Setting: You have multiple outcomes measured on multiple categorical groups and are interested in full exchangeability on the outcome across the groups (not just different means, for example). 
 
@@ -317,6 +418,9 @@ Accepted answer says that first approach is actually testing whether the distrib
 
 
 \subsection{Resolved questions}
+Q: Why do datasets created through full-case resampling reject the null too often?
+A: See my Cross Validated question (\url{https://stats.stackexchange.com/questions/323455/why-do-hypothesis-tests-on-resampled-datasets-reject-the-null-too-often}). Basically, when we resample full cases, we violate the OLS assumption of iid errors because every repeated pair $(X,Y)$ has exactly the same residual, so the residuals are highly correlated with $X$. If we fix $X$ and resample residuals, then even though there are repeated observations, the errors of the model newly fit to the resampled data are iid because we are breaking any association between the resampled residuals and $X$. Why do Davison \& Hinkley recommend this approach if it's wrong? Because it's only wrong if you need to meet parametric assumptions within each resample. Our application of bootstrapping is unusual in that we need to resample in a way that is compatible with parametric assumptions of the test we're going to apply for each outcome. 
+
 Q: Why does Blakesley/Westfall’s minP bootstrapping work since it is an extreme order statistic?
 A: Probably because minP is not an order statistic of the data themselves. 
 
@@ -331,6 +435,87 @@ A: Correct. It does not necessarily work in small samples.
 <!-- NEW SECTION -->
 \newpage
 \section{Simulation notes}
+
+Next up: Try regenerating residuals on Sherlock with multiple outcomes and huge sample size. Trying n = 100,000 and B = 2,000 and 5-hr time limit?
+
+Seems like when rejection prob is low, bootstraps do worse? E.g., rho.XY = 0.03 worked perfectly with $n=10,000$, but rho.XY = 0.01 did not. 
+
+\subsection{2018-1-23 unsaved local sims}
+
+Revisiting residual resampling for CI: Fix design matrix, then re-generate residuals using $\widehat{\beta}$ and $\widehat{\sigma^2}$. (Maybe resampling the residuals would also work, but should we be worried about non-independence?)
+
+\begin{itemize}
+\item Tried a single outcome and different correlation strengths
+\item Compared average rejection probability in bootstraps to average in original data
+\item Need large $n$ for this! Using $n=1000$ didn't work because regression estimates aren't precise enough. Using $n=10,000$ seemed okay.
+\item Not yet assessing CIs for number of rejections because would need multiple outcomes for that
+\end{itemize}
+
+Went back to debug fcr script and found that reattaching residuals works under null. 
+
+Under alternative, though, got 25% rejections across all bootstrap resamples vs. 15% across 1000 sim reps in original datasets.
+
+Still got 25% even when generating new residuals and adding them to the original fitted values!!!!!! Whyyyyyyyyyy???????????
+
+
+\subsection{2018-1-22}
+
+\begin{itemize}
+\item Reduced number of outcomes to 30 to reduce computation time
+\item Now also computing CIs based on raw percentiles (below) scaled by the estimated rate
+\item And am trying with data generated under alternative
+\item Still using uncorrelated outcomes
+\item Rates are again almost perfectly estimated
+\item \hl{We can't use subsampling when data are generated under $H_A$ because the number of rejections will be lower due to lower power. So the sampling distribution isn't just wider in the smaller samples; it doesn't even have the same expected value.}
+\end{itemize}
+
+\subsection{2018-1-20 round 2 subsampling}
+
+\begin{itemize}
+\item Running same as below, but with the real code instead of raw quantiles. "covers.correct" uses exactly rate = 0 as below; "covers" uses the rate estimate. 
+\item Rates basically always estimated as 0 now because of larger $B$ 
+\item Coverage now 80% instead of 70%
+\item $\ast$Conclusion: $B=20,000$ instead of $B=2,000$ results in exactly correct rate estimation, at least for data generated under $H_0$. Can probably find middle ground of simulation reps.
+\item Based on local simulations (debug\_subsampling), seems like a CI based just on percentiles of the subsamples is better than the one in the lab handout, where it's centered on the point estimate. 
+\end{itemize}
+
+One-sided CI idea to improve coverage a little
+
+\subsection{2018-1-20 subsampling}
+
+\begin{itemize}
+\item Based on the exact variance I derived, when the null is true, the SE of $\widehat{\theta}$ doesn't depend on $n$ because tests maintain $\alpha$ probability of rejecting regardless of $n$. So in this case, the rate is exactly 0 (as correctly estimated by the last round of simulations).
+\item So these simulations simplify things by not estimating the rate, but just taking the quantiles of the iterates for the third sample size ($n=900$). Seems like this should work fine. 
+\item $\ast$Giving it the exact rate yields 100% coverage, up from 70% in previous simulation
+\item Sample sizes same as below
+\item Rep time 90th percentile: 1700 seconds with $B=2000$
+\end{itemize}
+
+\subsection{2018-1-19 - results not saved}
+
+\begin{itemize}
+\item Same as 2018-1-18, but increased all sample sizes by order of magnitude
+\item Mean rate exactly 0 with min/max $pm 0.10$ and 25th, 75th percentiles $\pm 0.015$
+\item Still 70% coverage
+\item Used $n=100,000$ and subsample sizes $n_s = (400, 600, 900, 1350)$ to match lab handout, but I have $B = 2,000$ instead of $B = 20,000$
+\end{itemize}
+
+\subsection{2018-1-18 - results not saved}
+
+\begin{itemize}
+\item Trying subsampling with rate estimation in a null scenario and no correlation between outcomes
+\item Only getting 70% coverage
+\item Used $n=10,000$ and subsample sizes $n_s = (40, 60, 90, 135)$ to match lab handout, but I have $B = 2,000$ instead of $B = 20,000$
+\item Each sbatch took ~3.5 hours to run (upper limit)
+\end{itemize}
+
+\subsection{2018-1-16 "under $H_0$ and FCR"}
+
+\begin{itemize}
+\item Joint test plot shows power of our joint test (i.e., resample residuals under $H_0$ and see if observed hits are extreme in this distribution) and compares to power of a naïve Bonferroni joint test (i.e., reject the joint null if any of the 100 Bonferroni-adjusted tests rejects).
+\item Above results make sense: e.g., we are near the nominal joint alpha level (0.05 regardless of alpha level for individual tests) when data were generated under joint null. 
+\item Excess hits plot shows average excess hits (hits above expectation) and CIs averaged across bootstraps. The CIs are sometimes completely above the observed excess hits. \textbf{This is because the FCR resampling approach is wrong.} See the resolved questions. 
+\end{itemize}
 
 \subsection{2017-8-1 (generate under $H_0$ and $H_A$)}
 
@@ -369,7 +554,7 @@ A: Correct. It does not necessarily work in small samples.
 \item N=1,000 and B=2,000 (j=10 per simulation)
 \item Figure out why file 125 has extra rows (try running it again)
 
-\item{ \textbf{The apparently too-conservative behavior for the uncorrelated case is a benign artifact} of $\widehat{\theta}$'s discreteness.
+\item {\textbf{The apparently too-conservative behavior for the uncorrelated case is a benign artifact} of $\widehat{\theta}$'s discreteness.
   \begin{itemize}
     \item It occurs because when the Y’s are uncorrelated, the distribution of the number of rejections is less right-skewed, so it drops off more quickly in the tails. Since $\widehat{\theta}$ is discrete, we are forced to pick a quantile that doesn’t have exactly 5\% of the mass above it. By default, R inverts the ECDF, so uses the quantile with LESS than 5\% above it. Because the distribution of $\widehat{\theta}$ drops off quickly around the chosen quantile, we end up with conservative performance (see artifact\_plot1 and artifact\_plot2, where I shade in red the proportion that are above the variable’s own critical value).
     \item Artifact might improve a little with more simulation reps, but only to a point. 

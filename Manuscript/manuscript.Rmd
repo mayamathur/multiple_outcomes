@@ -1,0 +1,348 @@
+---
+title: ''
+author: ''
+header-includes:
+- \usepackage[T1]{fontenc}
+- \usepackage{microtype}
+- \usepackage[margin=1in]{geometry}
+- \usepackage{fancyhdr}
+- \usepackage{fancyhdr}
+- \pagestyle{fancy}
+- \fancyhead{}
+- \fancyfoot{}
+- \fancyhead[C]{Multiple Outcomes}
+- \fancyfoot[RO,LE]{\thepage}
+- \usepackage{booktabs}
+- \usepackage{lettrine}
+- \usepackage{paralist}
+- \usepackage{setspace}\singlespacing
+- \usepackage{url}
+- \usepackage{parskip}
+- \usepackage{color,soul}
+- \usepackage{palatino}
+- \usepackage{amsmath,amsfonts,amsthm, textcomp}
+- \usepackage{bm}
+- \usepackage{caption}
+- \usepackage{subcaption}
+- \usepackage{tikz}
+- \usepackage{verbatim}
+- \usetikzlibrary{matrix}
+- \usepackage{float}
+output: pdf_document
+bibliography: refs_fake.bib
+csl: aje_style.csl
+---
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{corollary}{Corollary}
+\newtheorem{lemma}{Lemma}
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+\newtheorem{fact}{Fact}
+\newtheorem{example}{Example}
+\newtheorem{algorithm}{Algorithm}
+
+
+<!--
+\doublespacing
+
+\begin{center}
+\textbf{ \LARGE{Title line one:} } \\ \vspace{5mm}
+\textbf{ \LARGE{title line two} }
+\vspace{10mm}
+\end{center}
+
+\doublespacing
+
+\vspace{10mm}
+\begin{center}
+\large{ \emph{ Maya B. Mathur$^{1, 2\ast}$, Peng Ding$^{3}$, and Tyler J. VanderWeele$^{1,4}$ } }
+\end{center}
+
+\vspace{15mm}
+
+\small{$^{1}$ Department of Biostatistics, Harvard T. H. Chan School of Public Health, Boston, MA, USA}
+
+\small{$^{2}$Quantitative Sciences Unit, Stanford University, Palo Alto, CA, USA}
+
+\small{$^{3}$Department of Statistics, University of California at Berkeley, Berkeley, CA, USA}
+
+\small{$^{4}$Department of Epidemiology, Harvard T. H. Chan School of Public Health, Boston, MA, USA}
+
+
+\vspace{15mm}
+\begin{singlespacing} 
+\small{$\ast$: Corresponding author:
+
+mmathur@stanford.edu
+
+Quantitative Sciences Unit (c/o Inna Sayfer)
+
+1070 Arastradero Road
+
+Palo Alto, CA
+
+94305
+
+}
+\end{singlespacing}
+
+\vspace{10mm}
+
+
+\newpage
+-->
+
+\section{Notes to self}
+
+
+<!-------------------------- --------------------------------->
+<!-------------- SECTION: SETTING AND NOTATION --------------->
+<!-------------------------- --------------------------------->
+
+\section{Setting and notation}
+
+Suppose that $K$ random variables are measured on $N$ subjects, with the resulting matrix denoted $\mathbf{Z} \in \mathbb{R}_{N \times K}$. Let $Z_{nk}$ denote, for the $n^{th}$ subject, the $k^{th}$ random variable. Consider a bootstrapping algorithm (which is defined below) that generates, for iterate $j$, a dataset containing the random variables $\left( Z_{n1}^{(j)}, \dotsb, Z_{nK}^{(j)} \right)$ for each subject $n$. There are a total of $B$ bootstrapped datasets. 
+
+We refer to probability density functions as $f$ and cumulative distribution functions as $F$. Specifically, we refer to the joint distribution of the data as follows. With $\mathcal{B} \in \mathbb{R}_{N \times K}$ denoting a matrix of constants with entries $\left( b_{11}, \dotsb, b_{NK} \right)$, let:
+\begin{align*}
+F_{\mathbf{Z}} \left( \mathbf{B} \right) &= P \left( Z_{11} \le b_{11}, \dotsb, Z_{NK} \le b_{NK} \right)
+\end{align*}
+
+<!-- Define the joint CDF of $\left( Z_{n1}^{(j)}, \dotsb, Z_{nK}^{(j)} \right)$ as:
+
+\begin{align*}
+F_{\left( Z_{n1}^{(j)}, \dotsb, Z_{nK}^{(j)} \right)} \left( r_1, \dotsb, r_K \right) &= P \left( Z_{n1}^{(j)} < r_1, \dotsb, Z_{nK}^{(j)} < r_K \right)
+\end{align*}
+-->
+
+We will usually refer simply to $\mathbf{Z}$ and $F_{\mathbf{Z}}$ for brevity and will denote their counterparts in bootstrapped dataset $j$ as $\mathbf{Z}^{(j)}$ and $F_{\mathbf{Z}^{(j)}}$.
+
+Further suppose that we conduct $W$ hypothesis tests, each with level $\alpha$. Let $c_{w,\alpha}$ be the critical value for the test statistic, $T_w$, of the $w^{th}$ test. We refer to the vector of test statistics as $\mathbf{T}$. Assume that each test concerns a point null hypothesis (\textbf{Assumption 1}), that each test statistic is a continuous function of the data with continuous first derivatives, $\mathbf{Z}$ (\textbf{Assumption 2}), and that each test is parametric with consistent estimates of all parameters in the likelihood identifiable from the observed data (\textbf{Assumption 3}). We define the "strong null" as the case in which all $W$ point null hypotheses hold and use the superscript $^0$ to denote variables generated under the strong null. 
+
+Define the statistic corresponding to the total number of rejections in $W$ tests in a sample generated under the strong null as $\widehat{\theta}^0 = \sum_{w=1}^W 1 \big\{ T_w^0 > c_{w,\alpha} \big\}$. Similarly, the total number of rejections in bootstrap sample $j$ is $\widehat{\theta}^{(j)} = \sum_{w=1}^W 1 \big\{ T_w^{(j)} > c_{w,\alpha} \big\}$. 
+
+Respectively define the true distribution of the number of rejections under the strong null, its counterpart in the bootstrap samples, and its empirical estimator in the bootstrap samples as:
+\begin{align*}
+F_{\widehat{\theta}^0}(r) &= P \left( \widehat{\theta}^0 \le r \right) \\
+F_{\widehat{\theta}^{(j)}}(r) &= P \left( \widehat{\theta}^{(j)} \le r \right) \\
+\widehat{F}_{\widehat{\theta}^{(j)}} \left( r \right) &= \frac{1}{B} \sum_{j^{*}=1}^B 1 \Big\{ \widehat{\theta}^{(j^{*})} \le r \Big\}
+\end{align*}
+
+
+<!------------- --------------------------------->
+<!-------------- SECTION: RESULTS --------------->
+<!------------- --------------------------------->
+
+\section{Results}
+
+We now show that under a parametric bootstrapping algorithm defined below, the empirical distribution of the number of rejections in the bootstrap samples converges in distribution to the true distribution of the number of rejections in sample generated under the strong null. Figure \ref{roadmap} depicts the structure of the proofs. 
+
+
+\begin{figure}[H]
+\caption{Overview of theory to follow. The dashed arrows denote convergence in probability in either $N$ or both $N$ and $B$. The solid arrow denotes almost sure convergence in $B$. Parenthetical acronyms refer to remarks, a lemma, and a theorem developed below.}
+\label{roadmap}
+\begin{center}
+\begin{tikzpicture}
+  \matrix (m) [matrix of math nodes,row sep=3em,column sep=4em,minimum width=2em]
+  {
+     F_{ \mathbf{T}^{(j)} } & F_{ \mathbf{T}^0 } \\
+      %& F_{ \mathbf{Z} }
+      \\};
+  \path[-stealth]
+  % the - argument removes the arrowhead
+    (m-1-1) edge[dashed] node [below] {(R1)} (m-1-2)
+    
+    % diagonal line
+	%(m-1-1) edge[dashed] node [below] {(C1)} (m-2-2)
+    
+    %(m-1-2) edge[dotted] node [right] {(L2)} (m-2-2)
+            ;
+\end{tikzpicture} % pic 1
+\qquad
+\begin{tikzpicture}
+  \matrix (m) [matrix of math nodes,row sep=3em,column sep=4em,minimum width=2em]
+  {
+     F_{ \widehat{\theta}^{(j)} } & F_{ \widehat{\theta}^0 }  \\
+      \widehat{F}_{ \widehat{\theta}^{(j)} } & \\};
+  \path[-stealth]
+  % the - argument removes the arrowhead
+    (m-1-1) edge[dashed] node [below] {(L1)} (m-1-2)
+    
+    % diagonal line
+	(m-2-1) edge[] node [left] {(R2)} (m-1-1)
+    
+    (m-2-1) edge [dashed] node [below] {(T1)} (m-1-2)
+            ;
+\end{tikzpicture}
+\end{center}
+\end{figure}
+
+
+
+<!-------------- Definition 1 --------------->
+\bigskip \begin{algorithm}[Parametric bootstrap under the strong null] 
+\label{cbt_def}
+We will refer throughout to bootstrap samples generated as follows:
+\begin{enumerate}
+\item Use the observed data to obtain consistent point estimates of any unknown parameters in the likelihood. 
+\item For any parameters in the likelihood that are constrained under the null hypothesis, set them equal to their null values (which are uniquely defined under Assumption 1 regarding point null hypotheses). For nuisance parameters, set them equal to their consistent estimates.  
+\item For any covariates treated as fixed in the likelihood, set them equal to their observed values.
+\item Generate outcome data from the estimated likelihood under the strong null as defined above. 
+\end{enumerate}
+\end{algorithm}
+
+(\hl{CITE ME - e.g., Fox, Romano}.)
+Note that unlike some resampling schemes that can induce \hl{XXX} problems, this algorithm guarantees that the bootstrapped data satisfy all parametric assumptions of the hypothesis tests to be conducted, preserving the nominal $\alpha$ of each test.
+
+
+<!-------------- Example 1 --------------->
+\bigskip
+\begin{example}[Parametric bootstrap for multiple linear regression] 
+Suppose that one of the hypothesis tests is conducted using an OLS model regressing the $w^{th}$ variable on the first variable, adjusting for the second variable:
+$$Z_{nw} = \beta_0 + \beta_1 Z_{n1} + \beta_2 Z_{n2} + \epsilon_{nw}$$
+with $H_0: \beta_1 = 0$ and $\epsilon \sim N(0, \sigma^2)$. Then we can apply Algorithm \ref{cbt_def} as follows:
+\begin{enumerate}
+\item Fit the model to the observed data to estimate the three nuisance parameters as $\widehat{\beta}_0$, $\widehat{\beta}_2$, and $\widehat{\sigma}^2$. 
+\item For each bootstrap iterate, set the design matrix equal to that of the observed data.
+\item Set $\beta_1 = 0$ (invoking the strong null), and set nuisance parameters $\beta_0 = \widehat{\beta}_0$, $\beta_2 = \widehat{\beta}_2$, and $\sigma^2 = \widehat{\sigma}^2$. 
+\item Thus, for each bootstrap iterate, generate the bootstrapped outcomes as $Z_{nw}^{(j)} = \widehat{\beta}_0 + \widehat{\beta}_2 Z_{n2} + \epsilon^{(j)}_{nw}$, where $\epsilon^{(j)}_{nw} \sim N(0,\widehat{\sigma}^2)$. 
+\end{enumerate}
+\end{example}
+
+
+<!-------------- Example 2 --------------->
+\bigskip
+\begin{example}[Parametric bootstrap for linear mixed model] 
+The approach in Definition \ref{cbt_def} can accommodate parametric models with correlated observations, such as a linear mixed model with random intercepts by subject. One could obtain consistent estimates of the random intercepts using, for example, empirical Bayesian estimation, and these estimates can be plugged into the estimated likelihood under the strong null. 
+\end{example}
+
+
+<!-------------- Remark 1 --------------->
+\bigskip
+\begin{remark}
+\label{CMT_results}
+The distribution of the bootstrapped test statistics is consistent in $N$ for the true distribution of the test statistics under the strong null. By repeatedly invoking the Continuous Mapping Theorem (CMT):
+\begin{align}
+\label{consistent}
+f_{\mathbf{Z}^{(j)}} &\xrightarrow[N \to \infty]{P} f_{\mathbf{Z}^0} \tag{CMT; Assumption 3} \\
+f_{\mathbf{T}^{(j)}} &\xrightarrow[N \to \infty]{P} f_{\mathbf{T}^0} \tag{CMT; Assumption 2} \\
+F_{\mathbf{T}^{(j)}} &\xrightarrow[N \to \infty]{P} F_{\mathbf{T}^0} \tag{CMT; integration preserves continuity} \\
+\end{align}
+\end{remark}
+
+<!-------------- Remark 2 --------------->
+\bigskip \begin{remark}
+\label{glivenko}
+By the i.i.d construction of the bootstrap samples and the Glivenko-Cantelli theorem, the empirical distribution of the number of rejections in the bootstrap samples converges almost surely in $B$ to its true distribution under the strong null:
+$$\widehat{F}_{\widehat{\theta}^{(j)}} \xrightarrow[B \to \infty]{A.S.} F_{\widehat{\theta}^{(j)}} $$
+\end{remark}
+
+
+<!-------------- Fact 2 --------------->
+<!-- has been replaced by Glivenko-Cantelli -->
+<!--
+\bigskip \begin{fact}
+\label{glivenko}
+
+The empirical distribution of the number of rejections in the bootstrap samples converges almost surely in $B$ to its true distribution under the strong null:
+$$\widehat{F}_{\widehat{\theta}^{(j)}} \xrightarrow[B \to \infty]{A.S.} F_{\widehat{\theta}^{(j)}} $$
+\begin{proof}
+Since the $B$ bootstrap samples are i.i.d. and $E \big[ \vert \widehat{F}_{\widehat{\theta}^{(j)}} \left( r \right) \vert \big] < \infty$, this follows directly from the SLLN:
+%--
+\begin{align*}
+\widehat{F}_{\widehat{\theta}^{(j)}} \left( r \right) &= \frac{1}{B} \sum_{j^{*}=1}^B 1 \Big\{ \widehat{\theta}^{(j^{*})} \le r \Big\} \\
+& \xrightarrow[N \to \infty]{A.S.} E \Big[ 1 \big\{ \widehat{\theta}^{(j)} \le r \big\} \Big] \\
+&= P \left( \widehat{\theta}^{(j)} \le r \right) \\
+&= F_{\widehat{\theta}^{(j)}}(r)
+\end{align*}
+\end{proof}
+\hl{NOTE TO SELF: For paper, should just invoke Glivenko-Cantelli.}
+\end{fact}
+-->
+
+<!-------------- Lemma 1 --------------->
+\bigskip \begin{lemma}
+\label{lemma3}
+The number of rejections in the bootstrap samples converges in distribution in $N$ to the number of rejections in samples from the original population under the strong null: $$F_{{ \widehat{\theta} }^{(j)}} \xrightarrow[N \to \infty]{P} F_{{ \widehat{\theta} }^0}$$
+
+\begin{proof}
+Define the $r$-family of ``rejection sets'' as all possible configurations of the $W$ test statistics that lead to $r$ rejections: $$\mathcal{A}_r = \Big\{ \left( A_1, \dotsb, A_W \right) \in \mathbb{R}^W : \left( T_1 \in A_1, \dotsb, T_W \in A_W \right) \; \Rightarrow \; \widehat{\theta} = r\Big\}$$
+(For example, $\mathcal{A}_5$ contains all the 5-vectors of sets such that, if $\left( T_1 \in A_1, \dotsb, T_5 \in A_5 \right)$, then there are 5 total rejections across the $W$ tests. Suppose, for example, that $T_w \in (-\infty, \infty) \; \forall \; w$ and that each null hypothesis is rejected when $T_w > c_{\alpha}$. Then there are ${W \choose r}$ vectors in $\mathcal{A}_5$, representing the number of ways to select $r$ rejections from $W$ tests. One such vector corresponds to rejecting the first 5 tests and failing to reject all remaining tests:\\ $\left( (c_\alpha, \infty), (c_\alpha, \infty), (c_\alpha, \infty), (c_\alpha, \infty), (c_\alpha, \infty), (-\infty, c_\alpha], \dotsb, (-\infty, c_\alpha] \right)$.)
+
+\bigskip Now consider the distribution of $\widehat{\theta}^{(j)}$:
+\begin{align*}
+P \left( \widehat{\theta}^{(j)} = r \right) &= P \left( \sum_{w=1}^W 1 \Big\{ T_w^{(j)} > c_{w,\alpha} \Big\} = r \right) \\
+&= \sum_{ \left( A_1, \dotsb, A_W \right) \in \mathcal{A} } P \left( T_1^{(j)} \in A_1, \dotsb, T_W^{(j)} \in A_W \right) \\
+&\xrightarrow[N \to \infty]{P} \sum_{ \left( A_1, \dotsb, A_W \right) \in \mathcal{A} } P \left( T^0_1 \in A_1, \dotsb, T^0_W \in A_W \right) \tag{\text{from Remark} \ref{CMT_results}}\\
+&= P \left( \widehat{\theta}^0 = r \right)
+\end{align*}
+\end{proof}
+\end{lemma}
+
+
+
+
+
+<!-------------- Theorem 1 --------------->
+\bigskip \begin{theorem} 
+\label{theorem1}
+The empirical distribution of the number of rejections in the bootstrap samples is consistent in $N$ and $B$ for the true distribution of the number of rejections under the strong null:
+$$\widehat{F}_{\widehat{\theta}^{(j)}} \xrightarrow[B, N \to \infty]{P} F_{\widehat{\theta}^0} $$
+\begin{proof}
+Fix an arbitrarily small $\epsilon > 0$ and $\epsilon' > 0$. Remark \ref{glivenko} implies consistency, so there exists a $B^{*}$ such that, for all $B > B^{*}$:
+\begin{align*}
+P \left( \vert \widehat{F}_{ \widehat{\theta}^{(j)} } - F_{ \widehat{\theta}^{(j)} } \vert > \epsilon / 2 \right) &< \epsilon'/2
+\end{align*}
+Similarly, from Lemma \ref{lemma3}, there exists an $N^{*}$ such that, for all $N > N^{*}$:
+\begin{align*}
+P \left( \vert F_{ \widehat{\theta}^{(j)} } - F_{ \widehat{\theta}^0 } \vert > \epsilon / 2 \right) &< \epsilon' / 2
+\end{align*}
+Thus, for all $B$ and $N$ such that $B > B^{*}$ and $N > N^{*}$:
+\begin{align*}
+P \left( \vert \widehat{F}_{ \widehat{\theta}^{(j)} } - F_{ \widehat{\theta}^0 } \vert > \epsilon \right) &= P \left( \vert  \widehat{F}_{ \widehat{\theta}^{(j)} } - F_{ \widehat{\theta}^{(j)} } + F_{ \widehat{\theta}^{(j)} } - F_{ \widehat{\theta}^0 } \vert > \epsilon \right) \\
+&\le P \left( \vert \widehat{F}_{ \widehat{\theta}^{(j)} } - F_{ \widehat{\theta}^{(j)} } \vert + \vert F_{ \widehat{\theta}^{(j)} } - F_{ \widehat{\theta}^0 } \vert > \epsilon \right)  \tag{triangle inequality}\\
+&\le P \left( \vert \widehat{F}_{ \widehat{\theta}^{(j)} } - F_{ \widehat{\theta}^{(j)} } \vert > \epsilon/2 \; \text{ or } \; \vert F_{ \widehat{\theta}^{(j)} } - F_{ \widehat{\theta}^0 } \vert > \epsilon/2 \right) \\
+&\le P \left( \vert \widehat{F}_{ \widehat{\theta}^{(j)} } - F_{ \widehat{\theta}^{(j)} } \vert > \epsilon/2 \right) + P \left( \vert F_{ \widehat{\theta}^{(j)} } - F_{ \widehat{\theta}^0 } \vert > \epsilon/2 \right) \\
+&< \epsilon' 
+\end{align*}
+\end{proof}
+\end{theorem}
+
+
+<!-------------------------- --------------------------------->
+<!-------------- SECTION: SIMULATION STUDY --------------->
+<!-------------------------- --------------------------------->
+
+\section{Simulation study}
+
+See simulations from 2017-8-1 (written up in "multiple_outcomes (4).pdf"). Maybe use these these scenarios again? Generate at least some data under null to show that power of joint test is <5\%, as intended.  
+
+\subsection{Width of 95\% CI generated under null}
+
+\begin{itemize}
+\item Figure 1: Mean number of rejections and average of CI limits to show width
+\item Figure 2: Average distance of observed rejections from upper CI limit
+\end{itemize}
+
+\subsection{Power of joint test}
+
+\begin{itemize}
+\item Figure 3 with panels: Prob of rejecting joint null in samples generated under null (should be <5\% for all) and under various alternative scenarios
+\end{itemize}
+
+
+
+<!-------------------------- --------------------------------->
+<!-------------- SECTION: APPLIED EXAMPLE --------------->
+<!-------------------------- --------------------------------->
+
+\section{Applied example}
+
+
+
+<!--
+\newpage
+\section*{References}
+-->
+

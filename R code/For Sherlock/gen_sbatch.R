@@ -10,24 +10,24 @@ setwd(path)
 # path = "~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Sandbox/2018-1-13"
 # setwd(path)
 
-# from previous simulation
+n = 5e4
+nX = 1
+nY = 100
+rho.XX = 0
+rho.YY = c(0.3)
+rho.XY = 0.008  # null hypothesis: 0
+
 # n = 1000
 # nX = 1
 # nY = 100
 # rho.XX = 0
 # rho.YY = c(0, 0.25, 0.5, 0.75)
-# rho.XY = 0.03  # null hypothesis: 0
-
-n = 1000
-nX = 1
-nY = 100
-rho.XX = 0
-rho.YY = c(0, 0.25, 0.5, 0.75)
-rho.XY = c(0.08, 0.03, 0)  # null hypothesis: 0
+# rho.XY = c(0, 0.03, 0.08)  # null hypothesis: 0
 
 # bootstrap iterates and type
 boot.reps = 2000
-bt.type = c( "resid", "fcr" )  # fcr: resample under HA; resid: resample under H0
+# boot.reps = 2000
+bt.type = c( "ha.resid.2" )  # fcr: resample under HA; resid: resample under H0
 
 
 # matrix of scenario parameters
@@ -52,7 +52,7 @@ source("functions.R")
 
 # number of sbatches to generate (i.e., iterations within each scenario)
 n.reps.per.scen = 1000
-n.reps.in.doParallel = 10
+n.reps.in.doParallel = 1
 n.files = ( n.reps.per.scen / n.reps.in.doParallel ) * n.scen
 
 
@@ -64,7 +64,6 @@ outfile = paste("rm_", 1:n.files, ".out", sep="")
 errorfile = paste("rm_", 1:n.files, ".err", sep="")
 write_path = paste(path, "/sbatch_files/", 1:n.files, ".sbatch", sep="")
 runfile_path = paste(path, "/testRunFile.R", sep="")
-
 
 sbatch_params <- data.frame(jobname,
                             outfile,
@@ -83,13 +82,13 @@ sbatch_params <- data.frame(jobname,
                             stringsAsFactors = F,
                             server_sbatch_path = NA)
 
-# generateSbatch(sbatch_params, runfile_path)
+generateSbatch(sbatch_params, runfile_path)
 
 
 # run them all
 # works
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in 2:n.files) {
+for (i in 1:n.files) {
   system( paste("sbatch -p normal,owners /share/PI/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
 }
 
@@ -97,44 +96,44 @@ for (i in 2:n.files) {
 
 ########################### AFTER SIMULATION IS DONE ###########################
 
-path = "/share/PI/manishad/multTest"
-setwd(path)
-
-source("functions.R")
-stitch_files(.results.singles.path = "/share/PI/manishad/multTest/sim_results",
-                        .name.prefix = "results",
-                        .stitch.file.name="stitched_results.csv")
-
-# move stitched files to desktop
-# scp mmathur@sherlock:/share/PI/manishad/multTest/sim_results/stitched_results.csv ~/Desktop
-
-# move all files to desktop for local stitching
-# scp mmathur@sherlock:/share/PI/manishad/multTest/sim_results/* ~/Desktop/sim_results
-
-# check overall progress
-setwd("~/Desktop")
-setwd("/share/PI/manishad/multTest/sim_results") # from within Sherlock
-s = read.csv("stitched_results.csv")
-
-# percent finished
-dim(s)[1] / 1000
-
-# which scenarios are done?
-table(s$scen)
-
-
-# get the job files that have NOT run
-job.files.all = paste("/share/PI/manishad/multTest/sim_results/results_job_", 1:1000, "_.csv", sep="")
-jobs.not.run = job.files.all[ ! job.files.all %in% as.character(s$job.file) ]
-
-# just the numbers of the jobs that have NOT run
-matches = regmatches( jobs.not.run, gregexpr("[[:digit:]]+", jobs.not.run ) )  # extracts just the numeric part of string
-job.nums.not.run = as.numeric(unlist(matches))
-
-
-# run the ones that haven't run yet
-setwd( paste(path, "/sbatch_files", sep="") )
-for (i in job.nums.not.run) {
-  system( paste("sbatch /share/PI/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
-}
-
+# path = "/share/PI/manishad/multTest"
+# setwd(path)
+# 
+# source("functions.R")
+# stitch_files(.results.singles.path = "/share/PI/manishad/multTest/sim_results",
+#                         .name.prefix = "results",
+#                         .stitch.file.name="stitched_results.csv")
+# 
+# # move stitched files to desktop
+# # scp mmathur@sherlock:/share/PI/manishad/multTest/sim_results/stitched_results.csv ~/Desktop
+# 
+# # move all files to desktop for local stitching
+# # scp mmathur@sherlock:/share/PI/manishad/multTest/sim_results/* ~/Desktop/sim_results
+# 
+# # check overall progress
+# setwd("~/Desktop")
+# setwd("/share/PI/manishad/multTest/sim_results") # from within Sherlock
+# s = read.csv("stitched_results.csv")
+# 
+# # percent finished
+# dim(s)[1] / 1000
+# 
+# # which scenarios are done?
+# table(s$scen)
+# 
+# 
+# # get the job files that have NOT run
+# job.files.all = paste("/share/PI/manishad/multTest/sim_results/results_job_", 1:1000, "_.csv", sep="")
+# jobs.not.run = job.files.all[ ! job.files.all %in% as.character(s$job.file) ]
+# 
+# # just the numbers of the jobs that have NOT run
+# matches = regmatches( jobs.not.run, gregexpr("[[:digit:]]+", jobs.not.run ) )  # extracts just the numeric part of string
+# job.nums.not.run = as.numeric(unlist(matches))
+# 
+# 
+# # run the ones that haven't run yet
+# setwd( paste(path, "/sbatch_files", sep="") )
+# for (i in job.nums.not.run) {
+#   system( paste("sbatch /share/PI/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
+# }
+# 

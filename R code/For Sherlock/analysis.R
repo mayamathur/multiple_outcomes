@@ -19,13 +19,16 @@ table( s$scen )
 kill = c( names(s)[ grepl( "n.rej.bt", names(s) ) ], "n.rej.5e.04" )
 s = s[ , !names(s) %in% kill ]
 
-# did naive Bonferroni reject?
-s$naive_bonf_rej = s$n.rej.5e.04.1 > 0
+# is coverage different from 95%?
+mean(s$covers)
+mean(s$covers.correct)
+prop.test( sum(s$covers), length(s$covers), p=0.95 )
 
-
-# TEMP: see if reshape problem fixed by random noise
-#s[,11:30] = s[,11:30] + rnorm(n=100, mean=0, sd=0.01)
-#temp = s[,c(10,14,15,16)]
+# what happens we we only 
+s$sim.rep = rep( 1:(nrow(s)/2000), each = 2000 )
+first = s[ !duplicated( s$sim.rep ), ]
+mean(s$n.rej.0.05); mean(s$n.rej.bt.0.05)
+s$covers = 
 
 
 ########################### MAKE DATASETS FOR FIRST PLOT (RESIDUAL RESAMPLING) ###########################
@@ -69,7 +72,7 @@ power$group = paste( "X-Y correlation: ", power$rho.XY )  # for plotting joy
 crit = tidy %>% group_by( scen, alpha, rho.XY, rho.YY ) %>% filter( stat == "crit" & bt.type == "resid" ) %>% summarise( crit = mean(value) )
 crit$group = paste( "X-Y correlation: ", power$rho.XY )  # for plotting joy
 crit$expect = as.numeric( crit$alpha ) * 100
-crit$crit.excess = crit$crit - 
+#crit$crit.excess = crit$crit - 
 
 
 ######## Aggregated Dataset 2: Naive Bonferroni Power ######## 
