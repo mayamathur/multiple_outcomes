@@ -30,15 +30,15 @@
 ######### FOR LOCAL USE #########
 # setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Sandbox/2018-1-13")
 # p = read.csv("scen_params.csv")  # should be a single row, I think
-n = 1000
+n = 250
 nX = 1
-nY = 100
+nY = 10
 rho.XX = 0
 rho.YY = c(0)
-rho.XY = c(0)  # null hypothesis: 0
+rho.XY = c(0.05)  # null hypothesis: 0
 
 # bootstrap iterates and type
-boot.reps = 500
+boot.reps = 5
 sim.reps = 1
 scen = "a"
 bt.type = c( "h0.parametric" )
@@ -127,7 +127,7 @@ for ( j in 1:sim.reps ) {
   jt.rej.bonf.naive = n.rej[1] > 0
   
   # run all bootstrap iterates
-    r = foreach( icount( boot.reps ), .combine=rbind ) %dopar% {
+    r = foreach( i = 1:boot.reps, .combine=rbind ) %dopar% {
       # draw bootstrap sample 
       ids = sample( 1:nrow(d), replace=TRUE )
       
@@ -165,8 +165,9 @@ for ( j in 1:sim.reps ) {
         
         # parametrically generate Ys, setting beta of interest to 0
         new.Ys = matrix( NA, nrow = nrow(d), ncol = length(Y.names) )
-        new.Ys = sapply( 1:ncol(resid),
-                             function(x) rnorm( n=n.cells, mean = intercept[x], sd = sigma[x] ) )
+        n.cells = length(new.Ys)
+        new.Ys = sapply( 1:ncol(new.Ys),
+                             function(x) rnorm( n = n.cells, mean = intercept[x], sd = sigma[x] ) )
         b = as.data.frame( cbind( Xs, new.Ys ) )
       }
       
@@ -217,73 +218,96 @@ for ( j in 1:sim.reps ) {
         # generate columns of new residuals using the appropriate sigma
         new.resids = sapply( 1:ncol(resid), function(x) rnorm( n=n.cells, sd = sigma[x] ) )
         
-        # # regenerate residuals using fitted values
-        # n.cells = dim(resid)[1] * dim(resid)[2]
-        # # TEST ONLY - LATER WILL NEED TO SAVE VECTOR OF SIGMA-HATS FOR EACH REGRESSION
-        # new.resids = matrix( rnorm( n = n.cells, mean = 0, sd = 1 ),
-        #                      nrow = nrow(resid), ncol = ncol(resid) )
+        # regenerate residuals using fitted values
         b = as.data.frame( cbind( Xs, Yhat + new.resids ) )
       }
+      
+      # important for dataset_result to be able to find the right names
+      names(b) = c(X.names, Y.names)
+      
+      bt.res = dataset_result( .dat = b, .alpha = alpha, .resid = FALSE, .tval=TRUE )
+      
+      # return all the things
+      list( rej = bt.res$rej,
+            pvals = bt.res$pvals )
 
       # get number rejected for bootstrap sample
       # we don't need to return residuals for this one
-      dataset_result( .dat = b, .alpha = alpha, .resid = FALSE )$rej
+      # dataset_result( .dat = b, .alpha = alpha, .resid = FALSE )$rej
       # so the returned r is a dataframe of number rejected for each bootstrap iterate 
       # one column for each value of alpha
       # r[["0.01"]] is the vector with length boot.reps of number rejected at alpha = 0.01
 
     } ###### end r-loop (parallelized bootstrap)
     
-    # ~~~ EDIT THIS TO SAVE BOTH P-VALS AND REJECTIONS, AS IN LOCAL CODE
-
   } )[3]  # end timer
+  
+  
+  ###### Data Wrangling for This Simulation Rep #####
+  
+  # organize rejections by alpha level
+  u = unlist( r[,"rej"] )
+  n.rej.bt.0.05 = u[ grepl( "0.05", names(u) ) ]
+  n.rej.bt.0.01 = u[ grepl( "0.01", names(u) ) ]
+  n.rej.bt.0.005 = u[ grepl( "0.005", names(u) ) ]
+  
+  # resampled p-value matrix
+  # rows = Ys
+  # cols = resamples
+  p.bt = do.call( cbind, r[ , "pvals" ] )
   
   
   ###### Joint Test Results for This Simulation Rep #####
 
-    names(r) = paste( "n.rej.bt.", as.character(alpha), sep="" )
-    
+    # names(r) = paste( "n.rej.bt.", as.character(alpha), sep="" )
+    # 
     # performance: rejection of joint null hypothesis
     # alpha for joint test is set to 0.05 regardless of alpha for individual tests
-    crit.bonf = quantile( r[,1], 1 - 0.05 )  
-    crit.0.05 = quantile( r$n.rej.bt.0.05, 1 - 0.05 )
-    crit.0.01 = quantile( r$n.rej.bt.0.01, 1 - 0.05 )
+    crit.bonf = quantile( n.rej.bt.0.005, 1 - 0.05 )  
+    crit.0.05 = quantile( n.rej.bt.0.05, 1 - 0.05 )
+    crit.0.01 = quantile( n.rej.bt.0.01, 1 - 0.05 )
 
     # performance: confidence interval for N-hat under joint null
     # this is a 95% CI regardless of which alpha is used for the individual tests
-    bt.lo.bonf = quantile( r[,1], 0.025 )
-    bt.hi.bonf = quantile( r[,1], 0.975 )
+    bt.lo.bonf = quantile( n.rej.bt.0.005, 0.025 )
+    bt.hi.bonf = quantile( n.rej.bt.0.005, 0.975 )
     
-    bt.lo.0.01 = quantile( r$n.rej.bt.0.01, 0.025 )
-    bt.hi.0.01 = quantile( r$n.rej.bt.0.01, 0.975 )
+    bt.lo.0.01 = quantile( n.rej.bt.0.01, 0.025 )
+    bt.hi.0.01 = quantile( n.rej.bt.0.01, 0.975 )
     
-    bt.lo.0.05 = quantile( r$n.rej.bt.0.05, 0.025 )
-    bt.hi.0.05 = quantile( r$n.rej.bt.0.05, 0.975 )
-    
-    # ~~~ IN HERE, DO WESTFALL? WE HAVE THE BOOTSTRAPPED P-VALUES AT THIS POINT
+    bt.lo.0.05 = quantile( n.rej.bt.0.05, 0.025 )
+    bt.hi.0.05 = quantile( n.rej.bt.0.05, 0.975 )
     
     # p-values for observed rejections
     # if we resampled under H0, want prob of observing at least as many rejections as we did
-    if ( p$bt.type == "resid" ) {
+    if ( p$bt.type == "h0.parametric" ) {
       
-      jt.pval.bonf = sum( r[,1] >= n.rej[,1] ) / length( r[,1] )
-      jt.pval.0.01 = sum( r$n.rej.bt.0.01 >= n.rej[["n.rej.0.01"]] ) /
-                        length( r$n.rej.bt.0.01 )
-      jt.pval.0.05 = sum( r$n.rej.bt.0.05 >= n.rej[["n.rej.0.05"]] ) /
-                        length( r$n.rej.bt.0.05 )
-
+      jt.pval.bonf = sum( n.rej.bt.0.005 >= n.rej[,1] ) / length( n.rej.bt.0.005 )
+      jt.pval.0.01 = sum( n.rej.bt.0.01 >= n.rej[["n.rej.0.01"]] ) /
+                        length( n.rej.bt.0.01 )
+      jt.pval.0.05 = sum( n.rej.bt.0.05 >= n.rej[["n.rej.0.05"]] ) /
+                        length( n.rej.bt.0.05 )
     }
    
     # did joint tests reject?
     rej.jt.bonf = jt.pval.bonf < 0.05
     rej.jt.0.01 = jt.pval.0.01 < 0.05
     rej.jt.0.05 = jt.pval.0.05 < 0.05
+    
+    
+    ###### Run Westfall #####
+    
+    
+    
+    
+    ###### Write Results #####
 
     # return entire results of this sim rep
     # with a row for each boot iterate
     # these variables will be same for each bootstrap iterate
     # the individual bootstrap results are merged in after this
-    new.rows = data.frame( scen = rep( scen, boot.reps ),
+    # suppressWarnings because it whines about row names from a short variable
+    new.rows = suppressWarnings( data.frame( scen = rep( scen, boot.reps ),
                       bt.iterate = 1:boot.reps,
                       rep.minutes = as.vector(rep.time) / 60,
                       
@@ -304,11 +328,11 @@ for ( j in 1:sim.reps ) {
                       rej.jt.bonf,
                       rej.jt.0.01,
                       rej.jt.0.05
-                      )
+                      ) )
   
 
     # merge in the individual bootstrap results and parameters
-    new.rows = cbind( p, new.rows, n.rej, r )
+    # new.rows = cbind( p, new.rows, n.rej, r )
 
     # remove redundant parameters row
     new.rows = new.rows[ , !names(new.rows) == "scen.name" ]
@@ -319,6 +343,12 @@ for ( j in 1:sim.reps ) {
     # res should have boot.reps rows per "j" in the for-loop
   
 }  # end loop over j simulation reps
+
+
+
+
+### ATTEMPT LOCAL TEST
+
 
 
 ########################### WRITE LONG RESULTS  ###########################
