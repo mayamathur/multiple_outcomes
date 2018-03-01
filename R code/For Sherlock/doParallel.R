@@ -41,7 +41,7 @@ rho.XY = c(0)  # null hypothesis: 0
 boot.reps = 500
 sim.reps = 1
 scen = "a"
-bt.type = c( "ha.resid.2" )  # fcr: resample under HA; resid: resample under H0
+bt.type = c( "h0.parametric" )
 
 
 # matrix of scenario parameters
@@ -112,11 +112,13 @@ for ( j in 1:sim.reps ) {
   
   # get number rejected for observed dataset
   # vector with same length as .alpha
+  # only return residuals and/or model estimates if we need them later for resampling
   samp.res = dataset_result( .dat = d, .alpha = alpha,
                              .resid = ifelse( p$bt.type %in% c("resid", "ha.resid", "ha.resid.2"),
-                                              TRUE, FALSE), # don't return residuals unless we need them later
-                             .sigma = TRUE,
-                             .intercept = TRUE )
+                                              TRUE, FALSE), 
+                             .sigma = ifelse( p$bt.type %in% c( "h0.parametric", "ha.resid.2"),
+                                              TRUE, FALSE),
+                             .intercept = (p$bt.type == "h0.parametric") )
   n.rej = samp.res$rej  # first one is Bonferroni
   names(n.rej) = paste( "n.rej.", as.character(alpha), sep="" )
   
@@ -161,10 +163,8 @@ for ( j in 1:sim.reps ) {
         Xs = as.data.frame( d[ , 1 : length(X.names) ] )
         names(Xs) = X.names
         
-        # regenerate Ys using fitted values
-        new.Ys = matrix( NA, nrow = nrow(d), ncol = length(Y.names) )
-        
         # parametrically generate Ys, setting beta of interest to 0
+        new.Ys = matrix( NA, nrow = nrow(d), ncol = length(Y.names) )
         new.Ys = sapply( 1:ncol(resid),
                              function(x) rnorm( n=n.cells, mean = intercept[x], sd = sigma[x] ) )
         b = as.data.frame( cbind( Xs, new.Ys ) )

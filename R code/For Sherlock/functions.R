@@ -165,7 +165,9 @@ fit_model = function( Y.name, .dat, .resid, .sigma, .tval, .intercept ) {
 # . sigma: should it return fitted error SD (for regenerating residuals)?
 # .intercept: should it return fitted intercept (for regenerating residuals)?
 dataset_result = function( .dat, .alpha,
-                           .resid = FALSE, .sigma = FALSE, .intercept = FALSE,
+                           .resid = FALSE,
+                           .sigma = FALSE,
+                           .intercept = FALSE,
                            .tval = FALSE ) {
 
   # extract names of outcome variables
@@ -205,8 +207,6 @@ dataset_result = function( .dat, .alpha,
   # if we are returning the estimated intercept
   if ( .intercept ) intercepts = as.vector( u[ names(u) == "intercept" ] )
   
-  # ~~~ BOOKMARK: I WAS STEPPING THROUGH THIS FN TO SEE IF INTERCEPTS GET RETURNED PROPERLY
-  
   # if we are returning the test stats for use with Romano
   if ( .tval ) tvals = as.vector( u[ names(u) == "tval" ] )
   
@@ -234,12 +234,16 @@ dataset_result = function( .dat, .alpha,
   if ( ! .sigma ) sigmas.return = NA
   else sigmas.return = sigmas
   
+  if ( ! .intercept ) intercept.return = NA
+  else intercept.return = intercepts
+  
   if ( ! .tval ) tvals.return = NA
   else tvals.return = tvals
   
   return( list( rej = rej,
                 resid = resid.return,
                 sigmas = sigmas.return,
+                intercepts = intercept.return,
                 tvals = tvals.return,
                 pvals = pvals ) )
 }
