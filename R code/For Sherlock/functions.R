@@ -1,5 +1,121 @@
 
 
+
+######################## FNS FOR WESTFALL's SINGLE-STEP ########################
+
+# returns minP-adjusted p-values (single-step)
+
+# p = original p-values
+# p.bt = bootstrapped p-values (vector) - an m X B matrix
+adjust_minP = function( p, p.bt ) {
+  
+  n.boot = ncol(p.bt)
+  
+  # keep only minimum p-value in each resample
+  minP.bt = apply( p.bt, MARGIN = 2, FUN = min )
+  
+  # for each element of p, get the proportion of resamples
+  #  whose minP was less than the present p-value
+  p.adj = unlist( lapply( p, FUN = function(x) sum( minP.bt <= x ) / n.boot ) )
+  
+  return(p.adj)
+}
+
+# test
+# B = 200
+# n.tests = 10
+# p.bt = matrix( runif(B*n.tests, 0, 1), nrow = n.tests)
+# p = runif( n.tests, 0, .1)
+# 
+# p.adj = adjust_minP( p, p.bt )
+# plot(p,p.adj)
+
+
+######################## FNS FOR WESTFALL's STEP-DOWN ########################
+
+# Westfall textbook, pages 66-67
+adj_Wstep = function( p, p.bt ) {
+  
+  # TEST ONLY
+  # p = structure(c(0.636112475277457, 0.116408752390887, 0.260603159221029, 
+  #                 0.575086408582202, 0.625789849782125), .Dim = c(5L, 1L))
+  # p.bt = structure(c(0.728140113074014, 0.828557135138776, 0.728464927503583, 
+  #                    0.376518353153738, 0.241363541131996, 0.415330227654616, 0.75686321503498, 
+  #                    0.865494617532842, 0.839819273240726, 0.540707408457488, 0.149482739547785, 
+  #                    0.506274953008223, 0.122605643925883, 0.747018941160177, 0.168076477020114, 
+  #                    0.0582566955778811, 0.284459435324328, 0.561050485854955, 0.13839444320949, 
+  #                    0.641335055023296, 0.195313599009888, 0.174692123827015, 0.982035588216878, 
+  #                    0.713525352129964, 0.548770486028363), .Dim = c(5L, 5L), .Dimnames = list(
+  #                      NULL, c("result.1", "result.2", "result.3", "result.4", "result.5"
+  #                      )))
+  
+  # if using read-in or simulated dat
+  # p = pvals
+  
+  
+  # attach indices to original p-values
+  # to keep track of their original order
+  p.dat = data.frame( ind = 1:length(p), p )
+  
+  # sort original p-values
+  p.dat = p.dat[ order( p.dat$p, decreasing = FALSE ), ]
+  
+  # in this order, ind is now the same as Westfall's r_i on pg 67:
+  #  e.g., r_1 is the location in the original list of the 
+  #  smallest p-value
+  r.ind = p.dat$ind
+  
+  # critical values
+  # they get smaller and smaller, as do the sorted p-vals
+  # pass one resample's bootstrapped p-values to get_crit
+  crit.mat = apply( p.bt, MARGIN = 2,
+                    FUN = function(x) get_crit( p.dat, x) )
+  
+  # for each column of crit values (i.e., each resample), 
+  # see if the sorted p-value is greater than its crit value
+  less = apply( crit.mat, MARGIN = 2, 
+                FUN = function(x) x <= p.dat$p )
+  
+  # adjusted p-values are means of the above
+  p.adj.1 = apply( less, MARGIN = 1, mean )
+  
+  # enforce monotonicity
+  p.adj.2 = rep( NA, length(p.adj.1) )
+  
+  for ( i in 1:length(p.adj.1) ) {
+    if (i == 1) p.adj.2[i] = p.adj.1[1]
+    else p.adj.2[i] = max( p.adj.2[i-1], p.adj.1[i] )
+  }
+  p.dat$p.adj = p.adj.2
+  
+  # put back in order of original p-values
+  p.dat = p.dat[ order( p.dat$ind, decreasing = FALSE ), ]
+  
+  return( p.dat$p.adj )
+  #plot( p.dat$p, p.dat$p.adj )
+}
+
+# p.adj.Wstep = adj_Wstep(pvals, p.bt)
+# plot( p, p.adj.Wstep )
+
+get_crit = function( p.dat, col.p ) {
+  
+  # sort bootstrapped p-values according to original ones
+  col.p.sort = col.p[ p.dat$ind ]
+  
+  qstar = rep( NA, length(col.p.sort) )
+  
+  for ( i in 1:length(col.p.sort) ) {
+    if (i == 1) qstar[i] = col.p.sort[1]
+    else qstar[i] = min( qstar[i-1], col.p.sort[i] )
+  }
+  
+  return(qstar)
+}
+
+
+
+
 ########################### FN: RETURN CORRELATION BETWEEN TWO ARBITRARY CELLS ###########################
 
 # eventually could make this an argument in the scen_params matrix somehow so that it can be varied
