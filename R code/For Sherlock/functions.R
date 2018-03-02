@@ -122,7 +122,12 @@ get_crit = function( p.dat, col.p ) {
 # assume that X1 is the covariate of interest
 # assume that none of the other covariates are associated with any outcomes
 
-cell_corr = function( vname.1, vname.2, .rho.XX, .rho.YY, .rho.XY ) {
+# .half: Should only the last half the outcomes have the specified correlation?
+#  (if FALSE, correlation matrix is exchangeable; otherwise first half are 0 and 
+#  second half are rho.XY)
+
+cell_corr = function( vname.1, vname.2, .rho.XX, .rho.YY, .rho.XY,
+                      .nY, .half = FALSE ) {
   
   # use grep to figure out if variables are covariates or outcomes
   if ( length( grep("X", vname.1 ) ) == 1 ) {
@@ -147,15 +152,34 @@ cell_corr = function( vname.1, vname.2, .rho.XX, .rho.YY, .rho.XY ) {
   # case 3: both are outcomes
   if ( vtype.1 == "outcome" & vtype.2 == "outcome" ) return( .rho.YY )
   
+  # browser()
+
   # case 4: one is a covariate and one is an outcome
   if ( vtype.1 != vtype.2 ) {
     # check if this is the covariate of interest
     # equal correlation between X1 and all outcomes
     # all other covariates have correlation 0 with outcome
-    if( "X1" %in% c(vname.1, vname.2) ) return( .rho.XY )  # use 0 for null hypothesis
+    if( "X1" %in% c( vname.1, vname.2 ) ) {
+      # exchangeable case
+      if ( !.half ) return( .rho.XY )
+      
+      # "half are correlated" case
+      if (.half) {
+        # find the one that is the outcome
+        outcome.name = ifelse( vtype.1 == "outcome", vname.1, vname.2 )
+        
+        # extract its number (4 for "Y4")
+        num = substring( outcome.name, first = 2 )
+        
+        # see if its number is greater than halfway or not
+        return( ifelse( num > .nY / 2, .rho.XY, 0 ) )
+        # bookmark
+      }
+    }
+    
+    # if we have multiple covariates and this isn't the one of interest
     else return(0)
   }
-  
 }
 
 # test drive
@@ -168,7 +192,9 @@ cell_corr = function( vname.1, vname.2, .rho.XX, .rho.YY, .rho.XY ) {
 # .nX: number of covariates including the one of interest
 # .nY: number of outcomes
 
-make_corr_mat = function( .nX, .nY, .rho.XX, .rho.YY, .rho.XY ) {
+# if correlation matrix isn't positive definite, try reducing some of the correlations
+
+make_corr_mat = function( .nX, .nY, .rho.XX, .rho.YY, .rho.XY, .half = FALSE ) {
   
   nVar = .nX + .nY
   
@@ -184,7 +210,7 @@ make_corr_mat = function( .nX, .nY, .rho.XX, .rho.YY, .rho.XY ) {
   # populate each cell 
   for ( r in 1:dim(cor)[1] ) {
     for ( c in 1:dim(cor)[2] ) {
-      cor[ r, c ] = cell_corr( vnames[r], vnames[c], .rho.XX, .rho.YY, .rho.XY )
+      cor[ r, c ] = cell_corr( vnames[r], vnames[c], .rho.XX, .rho.YY, .rho.XY, .nY, .half )
     }
   }
   
@@ -195,10 +221,11 @@ make_corr_mat = function( .nX, .nY, .rho.XX, .rho.YY, .rho.XY ) {
   return( cor )  # this is still a data.frame in order to keep names
 }
 
-# if correlation matrix isn't positive definite, try reducing some of the correlations
-# cor = make_corr_mat(3, 40)
-
-
+# # test: exchangeable
+# make_corr_mat( .nX = 1, .nY = 6, .rho.XX = 0, .rho.YY = .1, .rho.XY = -.1, .half = FALSE )
+# 
+# # test: half are correlated
+# make_corr_mat( .nX = 1, .nY = 6, .rho.XX = 0, .rho.YY = .1, .rho.XY = -.1, .half = TRUE )
 
 ########################### FN: SIMULATE 1 DATASET ###########################
 
