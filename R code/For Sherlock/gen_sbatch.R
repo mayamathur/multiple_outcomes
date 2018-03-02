@@ -10,12 +10,12 @@ setwd(path)
 # path = "~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Sandbox/2018-1-13"
 # setwd(path)
 
-n = 5e4
+n = 500
 nX = 1
 nY = 100
 rho.XX = 0
-rho.YY = c(0.3)
-rho.XY = 0.008  # null hypothesis: 0
+rho.YY = c(0.25)
+rho.XY = 0.03  # null hypothesis: 0
 
 # n = 1000
 # nX = 1
@@ -25,9 +25,8 @@ rho.XY = 0.008  # null hypothesis: 0
 # rho.XY = c(0, 0.03, 0.08)  # null hypothesis: 0
 
 # bootstrap iterates and type
-boot.reps = 2000
-# boot.reps = 2000
-bt.type = c( "ha.resid.2" )  # fcr: resample under HA; resid: resample under H0
+boot.reps = 500
+bt.type = c( "h0.parametric" )
 
 
 # matrix of scenario parameters
@@ -44,14 +43,15 @@ n.scen = length(scen.params[,1])
 write.csv( scen.params, "scen_params.csv" )
 
 
-########################### FN: SIMULATE 1 DATASET ###########################
+########################### GENERATE SBATCHES ###########################
 
 # load functions for generating sbatch files
 source("functions.R")
 
 
 # number of sbatches to generate (i.e., iterations within each scenario)
-n.reps.per.scen = 1000
+# n.reps.per.scen = 1000
+n.reps.per.scen = 1
 n.reps.in.doParallel = 1
 n.files = ( n.reps.per.scen / n.reps.in.doParallel ) * n.scen
 
@@ -65,10 +65,11 @@ errorfile = paste("rm_", 1:n.files, ".err", sep="")
 write_path = paste(path, "/sbatch_files/", 1:n.files, ".sbatch", sep="")
 runfile_path = paste(path, "/testRunFile.R", sep="")
 
+# was 5 hours with 2K bootstrap and n = 5e4
 sbatch_params <- data.frame(jobname,
                             outfile,
                             errorfile,
-                            jobtime = "5:00:00",
+                            jobtime = "1:00:00",
                             quality = "normal",
                             node_number = 1,
                             mem_per_node = 64000,

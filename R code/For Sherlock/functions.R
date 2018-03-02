@@ -131,7 +131,7 @@ cell_corr = function( vname.1, vname.2, .rho.XX, .rho.YY, .rho.XY ) {
     vtype.1 = "outcome"
   }
   
-  if ( length( grep("X", vname.2 ) ) == 1 ) {
+  if ( length( grep("X", vname.2 ) ) == 1 ) { 
     vtype.2 = "covariate"
   } else if ( length( grep("Y", vname.2 ) ) == 1 ) {
     vtype.2 = "outcome"

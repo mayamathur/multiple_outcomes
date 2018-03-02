@@ -1,67 +1,62 @@
 
-########################### LOAD COMMAND-LINE ARGUMENTS  ###########################
+######### FOR CLUSTER USE #########
+# load command line arguments
+args = commandArgs(trailingOnly = TRUE)
+jobname = args[1]
+scen = args[2]  # this will be a letter
+boot.reps = as.numeric( args[3] )
 
-# ~~~ CHECK BEHAVIOR WITH ALPHA VECTOR LONGER THAN 1
+# get scen parameters
+setwd("/share/PI/manishad/multTest")
+scen.params = read.csv( "scen_params.csv" )
+p = scen.params[ scen.params$scen.name == scen, ]
 
- 
-
-# ######### FOR CLUSTER USE #########
-# # load command line arguments
-# args = commandArgs(trailingOnly = TRUE)
-# jobname = args[1]
-# scen = args[2]  # this will be a letter
-# boot.reps = as.numeric( args[3] )
-# 
-# # get scen parameters
-# setwd("/share/PI/manishad/multTest")
-# scen.params = read.csv( "scen_params.csv" )
-# p = scen.params[ scen.params$scen.name == scen, ]
-# 
-# # no longer included in parameters because it's a vector
-# crit.bonf = 0.05 / p$nY
-# alpha = c( crit.bonf, 0.01, 0.05 )
-# 
-# # simulation reps to run within this job
-# # this need to match n.reps.in.doParallel in the genSbatch script
-# sim.reps = 1
-# ######### END OF CLUSTER PART #########
-
-
-######### FOR LOCAL USE #########
-# setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Sandbox/2018-1-13")
-# p = read.csv("scen_params.csv")  # should be a single row, I think
-n = 250
-nX = 1
-nY = 10
-rho.XX = 0
-rho.YY = c(0)
-rho.XY = c(0.05)  # null hypothesis: 0
-
-# bootstrap iterates and type
-boot.reps = 5
-sim.reps = 1
-scen = "a"
-bt.type = c( "h0.parametric" )
-
-
-# matrix of scenario parameters
-scen.params = expand.grid( bt.type, n, nX, nY, rho.XX, rho.YY, rho.XY )
-names(scen.params) = c( "bt.type", "n", "nX", "nY", "rho.XX", "rho.YY", "rho.XY" )
-
-# name the scenarios
-# remove letters that are privileged variables in R
-letter.names = c(letters, LETTERS)[ ! c(letters, LETTERS) %in% c("i","T","F") ]
-scen.params$scen.name = letter.names[ 1:dim(scen.params)[1] ]
-p = scen.params
-
-# add alpha corresponding to Bonferroni as first one
-# NOTE THAT CODE ASSUMES BONFERRONI IS THE FIRST ONE
+# no longer included in parameters because it's a vector
 crit.bonf = 0.05 / p$nY
 alpha = c( crit.bonf, 0.01, 0.05 )
 
-# for sourcing functions later
-setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/git_multiple_outcomes/R code/For Sherlock")
-######### END OF LOCAL PART #########
+# simulation reps to run within this job
+# this need to match n.reps.in.doParallel in the genSbatch script
+sim.reps = 1
+######### END OF CLUSTER PART #########
+
+
+# ######### FOR LOCAL USE #########
+# # setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Sandbox/2018-1-13")
+# # p = read.csv("scen_params.csv")  # should be a single row, I think
+# 
+# n = 500
+# nX = 1
+# nY = 100
+# rho.XX = 0
+# rho.YY = c(0)
+# rho.XY = c(0.03)  # null hypothesis: 0
+# 
+# # bootstrap iterates and type
+# boot.reps = 200
+# sim.reps = 1
+# scen = "a"
+# bt.type = c( "h0.parametric" )
+# 
+# 
+# # matrix of scenario parameters
+# scen.params = expand.grid( bt.type, n, nX, nY, rho.XX, rho.YY, rho.XY )
+# names(scen.params) = c( "bt.type", "n", "nX", "nY", "rho.XX", "rho.YY", "rho.XY" )
+# 
+# # name the scenarios
+# # remove letters that are privileged variables in R
+# letter.names = c(letters, LETTERS)[ ! c(letters, LETTERS) %in% c("i","T","F") ]
+# scen.params$scen.name = letter.names[ 1:dim(scen.params)[1] ]
+# p = scen.params
+# 
+# # add alpha corresponding to Bonferroni as first one
+# # NOTE THAT CODE ASSUMES BONFERRONI IS THE FIRST ONE
+# crit.bonf = 0.05 / p$nY
+# alpha = c( crit.bonf, 0.01, 0.05 )
+# 
+# # for sourcing functions later
+# setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/git_multiple_outcomes/R code/For Sherlock")
+# ######### END OF LOCAL PART #########
 
 
 ########################### THIS SCRIPT COMPLETELY RUNS 1 SIMULATION  ###########################
@@ -120,6 +115,7 @@ for ( j in 1:sim.reps ) {
                                               TRUE, FALSE),
                              .intercept = (p$bt.type == "h0.parametric") )
   n.rej = samp.res$rej  # first one is Bonferroni
+  pvals = samp.res$pvals
   names(n.rej) = paste( "n.rej.", as.character(alpha), sep="" )
   
   # Bonferroni test of joint null using just original data
@@ -130,7 +126,6 @@ for ( j in 1:sim.reps ) {
     r = foreach( i = 1:boot.reps, .combine=rbind ) %dopar% {
       # draw bootstrap sample 
       ids = sample( 1:nrow(d), replace=TRUE )
-      
       
       ##### Bootstrap Under Null #1 (Resample Y; Fix X) #####
       # for bootstrap dataset, replace just the Y columns with the Y columns sampled with replacement
@@ -166,6 +161,9 @@ for ( j in 1:sim.reps ) {
         # parametrically generate Ys, setting beta of interest to 0
         new.Ys = matrix( NA, nrow = nrow(d), ncol = length(Y.names) )
         n.cells = length(new.Ys)
+        
+        # go through each outcome (column)
+        #  and generate using appropriate parameter estimates
         new.Ys = sapply( 1:ncol(new.Ys),
                              function(x) rnorm( n = n.cells, mean = intercept[x], sd = sigma[x] ) )
         b = as.data.frame( cbind( Xs, new.Ys ) )
@@ -251,7 +249,7 @@ for ( j in 1:sim.reps ) {
   n.rej.bt.0.01 = u[ grepl( "0.01", names(u) ) ]
   n.rej.bt.0.005 = u[ grepl( "0.005", names(u) ) ]
   
-  # resampled p-value matrix
+  # resampled p-value matrix for Westfall
   # rows = Ys
   # cols = resamples
   p.bt = do.call( cbind, r[ , "pvals" ] )
@@ -263,14 +261,14 @@ for ( j in 1:sim.reps ) {
     # 
     # performance: rejection of joint null hypothesis
     # alpha for joint test is set to 0.05 regardless of alpha for individual tests
-    crit.bonf = quantile( n.rej.bt.0.005, 1 - 0.05 )  
+    # crit.bonf = quantile( n.rej.bt.0.005, 1 - 0.05 )  
     crit.0.05 = quantile( n.rej.bt.0.05, 1 - 0.05 )
     crit.0.01 = quantile( n.rej.bt.0.01, 1 - 0.05 )
 
     # performance: confidence interval for N-hat under joint null
     # this is a 95% CI regardless of which alpha is used for the individual tests
-    bt.lo.bonf = quantile( n.rej.bt.0.005, 0.025 )
-    bt.hi.bonf = quantile( n.rej.bt.0.005, 0.975 )
+    # bt.lo.bonf = quantile( n.rej.bt.0.005, 0.025 )
+    # bt.hi.bonf = quantile( n.rej.bt.0.005, 0.975 )
     
     bt.lo.0.01 = quantile( n.rej.bt.0.01, 0.025 )
     bt.hi.0.01 = quantile( n.rej.bt.0.01, 0.975 )
@@ -282,7 +280,7 @@ for ( j in 1:sim.reps ) {
     # if we resampled under H0, want prob of observing at least as many rejections as we did
     if ( p$bt.type == "h0.parametric" ) {
       
-      jt.pval.bonf = sum( n.rej.bt.0.005 >= n.rej[,1] ) / length( n.rej.bt.0.005 )
+      # jt.pval.bonf = sum( n.rej.bt.0.005 >= n.rej[,1] ) / length( n.rej.bt.0.005 )
       jt.pval.0.01 = sum( n.rej.bt.0.01 >= n.rej[["n.rej.0.01"]] ) /
                         length( n.rej.bt.0.01 )
       jt.pval.0.05 = sum( n.rej.bt.0.05 >= n.rej[["n.rej.0.05"]] ) /
@@ -290,14 +288,33 @@ for ( j in 1:sim.reps ) {
     }
    
     # did joint tests reject?
-    rej.jt.bonf = jt.pval.bonf < 0.05
+    # rej.jt.bonf = jt.pval.bonf < 0.05
     rej.jt.0.01 = jt.pval.0.01 < 0.05
     rej.jt.0.05 = jt.pval.0.05 < 0.05
     
+
+    ######## Westfall's single-step ######## 
     
-    ###### Run Westfall #####
+    # do adjusted p-vals make sense?
+    p.adj.minP = adjust_minP( pvals, p.bt )
+    cbind( pvals, p.adj.minP )
+    # plot( pvals, p.adj.minP )
+    
+    ( jt.rej.minP = any( p.adj.minP < 0.05 ) )
+    
+    # sanity check: how many does Westfall reject?
+    table( p.adj.minP < 0.05 )
     
     
+    ######## Westfall's step-down ######## 
+    
+    ( p.adj.stepdown = adj_Wstep( pvals, p.bt ) )
+    plot( pvals, p.adj.stepdown )
+    
+    ( jt.rej.Wstep = any( p.adj.minP < 0.05 ) )
+    
+    # should reject more than either procedure above
+    table( p.adj.stepdown < 0.05 )
     
     
     ###### Write Results #####
@@ -311,26 +328,30 @@ for ( j in 1:sim.reps ) {
                       bt.iterate = 1:boot.reps,
                       rep.minutes = as.vector(rep.time) / 60,
                       
-                      jt.rej.bonf.naive,
+                      jt.rej.bonf.naive = ifelse( as.numeric(jt.rej.bonf.naive) == 1, TRUE, FALSE ),
+                      jt.rej.minP,
+                      jt.rej.Wstep,
                       
-                      crit.bonf,
+                      # crit.bonf,
                       crit.0.05,
                       crit.0.01,
                       
-                      bt.lo.bonf, bt.hi.bonf,
+                      # bt.lo.bonf, bt.hi.bonf,
                       bt.lo.0.01, bt.hi.0.01,
                       bt.lo.0.05, bt.hi.0.05,
                       
-                      jt.pval.bonf,
+                      # jt.pval.bonf,
                       jt.pval.0.01,
                       jt.pval.0.05,
                       
-                      rej.jt.bonf,
+                      # rej.jt.bonf,
                       rej.jt.0.01,
                       rej.jt.0.05
                       ) )
   
-
+    # ALL ROWS ARE STATIC VARIABLES BECAUSE WE'RE NOT MERGING IN RESAMPLE-LEVEL
+    #  RESULTS. 
+    
     # merge in the individual bootstrap results and parameters
     # new.rows = cbind( p, new.rows, n.rej, r )
 
@@ -344,10 +365,6 @@ for ( j in 1:sim.reps ) {
   
 }  # end loop over j simulation reps
 
-
-
-
-### ATTEMPT LOCAL TEST
 
 
 
