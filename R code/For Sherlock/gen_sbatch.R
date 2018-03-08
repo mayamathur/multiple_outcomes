@@ -10,12 +10,13 @@ setwd(path)
 # path = "~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Sandbox/2018-1-13"
 # setwd(path)
 
-n = 500
+n = 1000
 nX = 1
-nY = 100
+nY = 40
 rho.XX = 0
-rho.YY = c(0.25)
-rho.XY = 0.03  # null hypothesis: 0
+rho.YY = c(0.25, 0.5, 0)
+rho.XY = c(0.02, 0.05, 0) # null hypothesis: 0
+half = c(0, 1)  # exchangeable vs. half-correlated matrix
 
 # n = 1000
 # nX = 1
@@ -25,13 +26,16 @@ rho.XY = 0.03  # null hypothesis: 0
 # rho.XY = c(0, 0.03, 0.08)  # null hypothesis: 0
 
 # bootstrap iterates and type
-boot.reps = 500
+boot.reps = 2000
 bt.type = c( "h0.parametric" )
 
+# ~~~ FOR NEXT TIME, DON'T HAVE SCENARIOS WITH HALF=0 AND HALF=1 WHEN 
+#  RHO.XY=0 BECAUSE SAME THING
+# SCENARIOS Q, R, S
 
 # matrix of scenario parameters
-scen.params = expand.grid( bt.type, n, nX, nY, rho.XX, rho.YY, rho.XY )
-names(scen.params) = c( "bt.type", "n", "nX", "nY", "rho.XX", "rho.YY", "rho.XY" )
+scen.params = expand.grid( bt.type, n, nX, nY, rho.XX, rho.YY, rho.XY, half )
+names(scen.params) = c( "bt.type", "n", "nX", "nY", "rho.XX", "rho.YY", "rho.XY", "half" )
 
 # name the scenarios
 # remove letters that are privileged variables in R
@@ -40,7 +44,7 @@ scen.params$scen.name = letter.names[ 1:dim(scen.params)[1] ]
 n.scen = length(scen.params[,1])
 
 # write the csv file of params (to Sherlock)
-write.csv( scen.params, "scen_params.csv" )
+# write.csv( scen.params, "scen_params.csv" )
 
 
 ########################### GENERATE SBATCHES ###########################
@@ -50,9 +54,8 @@ source("functions.R")
 
 
 # number of sbatches to generate (i.e., iterations within each scenario)
-# n.reps.per.scen = 1000
-n.reps.per.scen = 1
-n.reps.in.doParallel = 1
+n.reps.per.scen = 500
+n.reps.in.doParallel = 5
 n.files = ( n.reps.per.scen / n.reps.in.doParallel ) * n.scen
 
 
@@ -69,7 +72,7 @@ runfile_path = paste(path, "/testRunFile.R", sep="")
 sbatch_params <- data.frame(jobname,
                             outfile,
                             errorfile,
-                            jobtime = "1:00:00",
+                            jobtime = "5:30:00",
                             quality = "normal",
                             node_number = 1,
                             mem_per_node = 64000,
@@ -83,13 +86,13 @@ sbatch_params <- data.frame(jobname,
                             stringsAsFactors = F,
                             server_sbatch_path = NA)
 
-generateSbatch(sbatch_params, runfile_path)
+# generateSbatch(sbatch_params, runfile_path)
 
 
 # run them all
 # works
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in 1:n.files) {
+for (i in 251:500) {
   system( paste("sbatch -p normal,owners /share/PI/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
 }
 

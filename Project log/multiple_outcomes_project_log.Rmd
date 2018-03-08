@@ -644,6 +644,41 @@ For earlier simulation results, see old project log in Word.
 Here is a test reference[@evalue]. Use semicolons to separate multiple references. To change reference style, Google for a .csl style sheet for journal of interest of one with similar reference style. 
 -->
 
+
+<!-- NEW SECTION -->
+\section{Notes on Ying's MIDUS paper}
+
+\subsection{Variables}
+\begin{itemize}
+\item Parental warmth ($X$): average of separate maternal and paternal warmth scales (so $\in [1,4]$)
+\item {Flourishing (main $Y$)
+  \begin{itemize}
+  \item Continuous version: Sum of standardized subscales for emotional, psychological, and social well-being
+  \item Binary version: Are you in top tertile on enough subscales?
+  \item Count version: For how many subscales are you in top tertile? ($\in [0,13]$?)
+  \end{itemize}
+}
+\item Subdomains comprising flourishing: 13 continuous measures (T3)
+\item Bad outcomes (secondary $Y$s): 7 mental health problems and bad behaviors, all binary (T4)
+\end{itemize}
+
+\subsection{Analyses}
+\begin{itemize}
+\item Continuous flourishing and other continuous $Y$s: Normal GEE (cluster by siblings)
+\item Binary flourishing: Poisson GEE with log link (risk ratios) (\hl{Did log-binomial not converge or other reason for choosing this?})
+\item Count flourishing: Normal GEE (\hl{Why not, e.g., Poisson or NB?})
+\item Bad binary outcomes: Poisson GEE for non-rare (RRs) or logistic regression for common (ORs)
+\end{itemize}
+
+\subsection{Our analyses}
+\begin{itemize}
+\item Multiple imputation for main analyses?
+\item Randomly choose 1 sibling from each sibship to avoid clustering? Then just use OLS and regular log-linear model. Or could do mixed model, but then parametric bootstrap is more complicated.
+\item Maybe treat outcomes as: 3 different flourishing variables + 7 binary bad outcomes? Also addresses model specification angle. 
+\item 
+\end{itemize}
+
+
 \newpage
 \section*{References}
 

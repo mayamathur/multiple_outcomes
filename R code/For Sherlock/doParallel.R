@@ -11,13 +11,15 @@ setwd("/share/PI/manishad/multTest")
 scen.params = read.csv( "scen_params.csv" )
 p = scen.params[ scen.params$scen.name == scen, ]
 
+print(p)
+
 # no longer included in parameters because it's a vector
 crit.bonf = 0.05 / p$nY
 alpha = c( crit.bonf, 0.01, 0.05 )
 
 # simulation reps to run within this job
 # this need to match n.reps.in.doParallel in the genSbatch script
-sim.reps = 1
+sim.reps = 5
 ######### END OF CLUSTER PART #########
 
 
@@ -25,23 +27,26 @@ sim.reps = 1
 # # setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Sandbox/2018-1-13")
 # # p = read.csv("scen_params.csv")  # should be a single row, I think
 # 
-# n = 500
+# n = 100
 # nX = 1
-# nY = 100
+# nY = 40
 # rho.XX = 0
-# rho.YY = c(0)
-# rho.XY = c(0.03)  # null hypothesis: 0
+# rho.YY = c(0.75)
+# rho.XY = c(0.08)  # null hypothesis: 0
+# half = 0
 # 
 # # bootstrap iterates and type
-# boot.reps = 200
-# sim.reps = 1
+# boot.reps = 5
+# sim.reps = 2
 # scen = "a"
 # bt.type = c( "h0.parametric" )
 # 
 # 
 # # matrix of scenario parameters
-# scen.params = expand.grid( bt.type, n, nX, nY, rho.XX, rho.YY, rho.XY )
-# names(scen.params) = c( "bt.type", "n", "nX", "nY", "rho.XX", "rho.YY", "rho.XY" )
+# scen.params = expand.grid( bt.type, n, nX, nY, rho.XX,
+#                            rho.YY, rho.XY, half )
+# names(scen.params) = c( "bt.type", "n", "nX", "nY", "rho.XX",
+#                         "rho.YY", "rho.XY", "half" )
 # 
 # # name the scenarios
 # # remove letters that are privileged variables in R
@@ -98,7 +103,8 @@ for ( j in 1:sim.reps ) {
 
   # make initial dataset from which to bootstrap
   cor = make_corr_mat( .nX = p$nX, .nY = p$nY, .rho.XX = p$rho.XX,
-                       .rho.YY = p$rho.YY, .rho.XY = p$rho.XY)
+                       .rho.YY = p$rho.YY, .rho.XY = p$rho.XY,
+                       .half = as.numeric(p$half) )
   d = sim_data( .n = p$n, .cor = cor )
   
   # extract names of outcome variables
@@ -247,7 +253,7 @@ for ( j in 1:sim.reps ) {
   u = unlist( r[,"rej"] )
   n.rej.bt.0.05 = u[ grepl( "0.05", names(u) ) ]
   n.rej.bt.0.01 = u[ grepl( "0.01", names(u) ) ]
-  n.rej.bt.0.005 = u[ grepl( "0.005", names(u) ) ]
+  # n.rej.bt.0.005 = u[ grepl( "0.005", names(u) ) ]
   
   # resampled p-value matrix for Westfall
   # rows = Ys
@@ -297,24 +303,21 @@ for ( j in 1:sim.reps ) {
     
     # do adjusted p-vals make sense?
     p.adj.minP = adjust_minP( pvals, p.bt )
-    cbind( pvals, p.adj.minP )
+    # cbind( pvals, p.adj.minP )
     # plot( pvals, p.adj.minP )
     
     ( jt.rej.minP = any( p.adj.minP < 0.05 ) )
-    
-    # sanity check: how many does Westfall reject?
-    table( p.adj.minP < 0.05 )
     
     
     ######## Westfall's step-down ######## 
     
     ( p.adj.stepdown = adj_Wstep( pvals, p.bt ) )
-    plot( pvals, p.adj.stepdown )
+    # plot( pvals, p.adj.stepdown )
     
-    ( jt.rej.Wstep = any( p.adj.minP < 0.05 ) )
+    ( jt.rej.Wstep = any( p.adj.stepdown < 0.05 ) )
     
     # should reject more than either procedure above
-    table( p.adj.stepdown < 0.05 )
+    # table( p.adj.stepdown < 0.05 )
     
     
     ###### Write Results #####
@@ -328,6 +331,16 @@ for ( j in 1:sim.reps ) {
                       bt.iterate = 1:boot.reps,
                       rep.minutes = as.vector(rep.time) / 60,
                       
+                      # rejections in original dataset
+                      n.rej.bonf = n.rej[1],
+                      n.rej.0.01 = n.rej[["n.rej.0.01"]],
+                      n.rej.0.05 = n.rej[["n.rej.0.05"]],
+                      
+                      # mean rejections in bootstraps at 2 different alpha levels
+                      n.rej.bt.0.05.mean = mean(n.rej.bt.0.05),
+                      n.rej.bt.0.01.mean = mean(n.rej.bt.0.01),
+                      
+                      # joint test results for entire study
                       jt.rej.bonf.naive = ifelse( as.numeric(jt.rej.bonf.naive) == 1, TRUE, FALSE ),
                       jt.rej.minP,
                       jt.rej.Wstep,
