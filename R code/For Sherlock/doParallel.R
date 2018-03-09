@@ -168,6 +168,7 @@ for ( j in 1:sim.reps ) {
         new.Ys = matrix( NA, nrow = nrow(d), ncol = length(Y.names) )
         n.cells = length(new.Ys)
         
+        # ~~~ NOOOOO - THIS IS GENERATING UNCORRELATED YS!!!!!!
         # go through each outcome (column)
         #  and generate using appropriate parameter estimates
         new.Ys = sapply( 1:ncol(new.Ys),
@@ -201,7 +202,9 @@ for ( j in 1:sim.reps ) {
         b = as.data.frame( cbind( Xs, Yhat + resid[ids,] ) )
       }
       
+      
       ##### Bootstrap Under HA #3 - Regenerate Residuals #####
+      # ~~~~ I THINK THIS ALSO LOSES THE CORRELATION???
       # re-attach residuals
       if ( p$bt.type == "ha.resid.2" ) {
         # extract residuals from original data
@@ -306,15 +309,18 @@ for ( j in 1:sim.reps ) {
     # cbind( pvals, p.adj.minP )
     # plot( pvals, p.adj.minP )
     
-    ( jt.rej.minP = any( p.adj.minP < 0.05 ) )
+    jt.rej.minP = any( p.adj.minP < 0.05 )
     
     
     ######## Westfall's step-down ######## 
     
-    ( p.adj.stepdown = adj_Wstep( pvals, p.bt ) )
+    p.adj.stepdown = adj_Wstep( pvals, p.bt )
     # plot( pvals, p.adj.stepdown )
     
-    ( jt.rej.Wstep = any( p.adj.stepdown < 0.05 ) )
+    jt.rej.Wstep = any( p.adj.stepdown < 0.05 )
+    
+    # compare to minP
+    # cbind( p.adj.minP, p.adj.stepdown )
     
     # should reject more than either procedure above
     # table( p.adj.stepdown < 0.05 )
@@ -337,8 +343,8 @@ for ( j in 1:sim.reps ) {
                       n.rej.0.05 = n.rej[["n.rej.0.05"]],
                       
                       # mean rejections in bootstraps at 2 different alpha levels
-                      n.rej.bt.0.05.mean = mean(n.rej.bt.0.05),
                       n.rej.bt.0.01.mean = mean(n.rej.bt.0.01),
+                      n.rej.bt.0.05.mean = mean(n.rej.bt.0.05),
                       
                       # joint test results for entire study
                       jt.rej.bonf.naive = ifelse( as.numeric(jt.rej.bonf.naive) == 1, TRUE, FALSE ),

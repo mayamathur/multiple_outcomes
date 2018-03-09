@@ -103,15 +103,15 @@ get_crit = function( p.dat, col.p ) {
   # sort bootstrapped p-values according to original ones
   col.p.sort = col.p[ p.dat$ind ]
   
-  # OLD VERSION
-  # qstar1 = rep( NA, length(col.p.sort) )
+  # # OLD VERSION (wrong)
+  # qstar = rep( NA, length(col.p.sort) )
   # for ( i in 1:length(col.p.sort) ) {
-  #   if (i == 1) qstar1[i] = col.p.sort[1]
-  #   else qstar1[i] = min( qstar1[i-1], col.p.sort[i] )
+  #   if (i == 1) qstar[i] = col.p.sort[1]
+  #   else qstar[i] = min( qstar[i-1], col.p.sort[i] )
   # }
   
   qstar = rep( NA, length(col.p.sort) )
-  
+
   k = length(col.p.sort)
   for ( i in k:1 ) {  # count backwards
     if (i == k) qstar[i] = col.p.sort[k]

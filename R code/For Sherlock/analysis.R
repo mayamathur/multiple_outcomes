@@ -17,6 +17,11 @@ nrow(s) / (500 * nrow(scen.params))
 table( s$scen )
 
 
+# PROBLEMS
+#  POWER SHOULD DECREASE WITH INCREASING RHO.XY
+#  CIS SHOULD GET WIDER WITH INCREASING RHO.XY
+#  POINTS IN NULL CI SCREWED UP
+
 
 ########################### COMPARATIVE POWER PLOT ###########################
 
@@ -31,7 +36,7 @@ table( s$scen )
 library(reshape2)
 
 
-# 
+# names of joint rejection variables for all methods
 ( jt.rej.names = c( names(s)[ grep( "jt.rej.", names(s) ) ],
                     names(s)[ grep( "rej.jt", names(s) ) ] ) )
   
@@ -59,39 +64,62 @@ pwr = lp %>% group_by(scen, method) %>%
 
 pwr = merge(pwr, scen.params, by = "scen" )
 
-pwr$group = paste( "X-Y correlation: ", pwr$rho.XY )  # for plotting joy
+# for plotting joy
+pwr$group = paste( "X-Y correlation: ", pwr$rho.XY,
+                   " for ",
+                   ifelse( pwr$half, "half of", "all" ),
+                   " pairs", 
+                   sep = "" )
+
+# for more plotting joy
+library(car)
+pwr$method.label = recode( pwr$method, 
+                           " 'bonf.naive' = 'NB';
+                           'minP' = 'MP'; 
+                           'ours.0.01' = 'J1';
+                           'ours.0.05' = 'J5';
+                           'Wstep' = 'WS' " )
+
 
 ##### Make Plot ##### 
 
 # X-axis: Strength of YY correlation
 # Y-axis: Power to reject joint null
 # Panels: Strength of XY correlation
-# Lines: Different alpha levels for our method and a single line for naive Bonferroni
+# Lines: Different methods
 
 library(ggplot2)
+#x.breaks = seq(-0.1, 0.6, 0.1)
 y.breaks = seq(0, 1, 0.1)
 
-colors = c( "black", "green", "blue", "lightblue", "darkgreen" )
+colors = c( "#999999", "#009E73", "#E69F00", "#D55E00", "darkgreen" )
 legend.labs = c("Naive Bonferroni", "Westfall minP",
                 "Ours (alpha = 0.01)", "Ours (alpha = 0.05)",
                 "Westfall step-down")
 
-ggplot( data = pwr, aes( x = rho.YY, y = power, color=method ) ) +
-  geom_point( size=3.2 ) +
-  geom_line( ) +
+# shapes = c(20, 17, 18, 1, 2)
+
+
+ggplot( data = pwr, aes( x = rho.YY, y = power,
+                         label=method.label, color=method ) ) +
+  geom_text( position = position_jitter(w = 0.02, h = 0) ) +
+  #geom_line( size=1.05 ) +
+  #geom_point( size=4, position = position_jitter(w = 0.015, h = 0) ) +
   theme_bw() + facet_wrap(~ group ) +
   ylab("Power") +
   scale_color_manual( name="Joint test", values = colors, labels = legend.labs ) +
-  scale_shape_manual( name = "Joint test", values = c(20, 17, 18, 1), labels = legend.labs ) +
+  scale_shape_manual( name = "Joint test", values = shapes, labels = legend.labs ) +
+  #scale_x_continuous( limits = c(0,1), breaks = x.breaks ) +
   scale_y_continuous( limits = c(0,1), breaks = y.breaks ) +
   xlab( "Correlation between each pair of Ys" ) +
   ggtitle("Power of bootstrapped hypothesis test of joint null")
 
+# ggsave( filename = paste("plot1.png"),
+#         plot=p1, path=NULL, width=10, height=10, units="in")
 
-
-ggsave( filename = paste("plot1.png"),
-        plot=p1, path=NULL, width=10, height=10, units="in")
-
+# BOOKMARK
+# sanity check
+aggregate( rej.jt.0.05 ~ rho.YY, s, mean )
 
 
 
@@ -104,15 +132,97 @@ ggsave( filename = paste("plot1.png"),
 #  means of n.rej.bt.0.05.mean n.rej.bt.0.01.mean for the points inside the CIs
 #  means of bt.lo.0.01, bt.hi.0.01, bt.lo.0.05, bt.hi.0.05 for CI limits
 
+# each of these will become a single column in long data
+# ( n.rej.names = c( "n.rej.0.01", "n.rej.0.05" ) )  # avoid Bonferroni
+# ( n.rej.bt.names = names(s)[ grep( "n.rej.bt.", names(s) ) ] )
+# ( bt.lo.names = names(s)[ grep( "bt.lo.", names(s) ) ] )
+# ( bt.hi.names = names(s)[ grep( "bt.hi.", names(s) ) ] )
 
-n.rej.names = names(s)[ grep( "n.rej.0.", names(s) ) ]
+# MAKE SURE TO LIST THEM IN SAME ORDER AS JT.REJ.NAMES
+# I DON'T GET WHY COLS GET ARRANGED IN OPPOSITE ORDER!!!!!
+method.names = rev( c("ours.0.01", "ours.0.05") )
+
+# reshape wide to long
+# https://stackoverflow.com/questions/12466493/reshaping-multiple-sets-of-measurement-columns-wide-format-into-single-columns
+
+# ~~~ REDO THE ABOVE MANUALLY BECAUSE INCONSISTENT COL ORDER
+# order the cols so that 0.01 is always first, then 0.05
+s2 = data.frame( scen = s$scen,
+                 n.rej.0.01 = s$n.rej.0.01, n.rej.0.05 = s$n.rej.0.05,
+                 n.rej.bt.0.01.mean = s$n.rej.bt.0.01.mean, n.rej.bt.0.05.mean = s$n.rej.bt.0.05.mean,
+                 bt.lo.0.01 = s$bt.lo.0.01, bt.lo.0.05 = s$bt.lo.0.05, 
+                 bt.hi.0.01 = s$bt.hi.0.01, bt.hi.0.05 = s$bt.hi.0.05 )
 
 
+lc = reshape( s2,
+              varying = list( A = n.rej.names, B = n.rej.bt.names,
+                              C = bt.lo.names, D = bt.hi.names ),
+              v.names= c( "n.rej", "n.rej.bt", "bt.lo", "bt.hi" ),
+              times = method.names,
+              timevar = "method",  # name of the above variable
+              direction="long" )
+
+ci = lc %>% group_by(scen, method) %>%
+  summarise( n.rej.mn = mean(n.rej),
+             n.rej.bt.mn = mean(n.rej.bt),
+             bt.lo.mn = mean(bt.lo),
+             bt.hi.mn = mean(bt.hi) )
+
+ci = merge(ci, scen.params, by = "scen" )
+
+ci$group = paste( "X-Y correlation: ", ci$rho.XY,
+                   " for ",
+                   ifelse( ci$half, "half of", "all" ),
+                   " pairs", 
+                   sep = "" )  # for plotting joy
 
 
+# add horizontal stagger for visible error bars in plot
+ci2 = ci
+buffer = 0.02
+ci2$rho.YY[ ci2$method == "ours.0.05" ] = ci2$rho.YY[ ci2$method == "ours.0.05" ] + buffer
+
+##### Make Plot ##### 
+
+# X-axis: Strength of YY correlation
+# Y-axis: Power to reject joint null
+# Panels: Strength of XY correlation
+# Lines: Different methods
+
+library(ggplot2)
+y.breaks = seq(0, 1, 0.1)
 
 
+colors = c( "#E69F00", "#D55E00" )
+legend.labs = c( "Ours (alpha = 0.01)", "Ours (alpha = 0.05)" )
 
+ggplot( data = ci2 ) +
+  # bootstrap results
+  geom_point( aes( x = rho.YY, y = n.rej.bt.mn, color = method ), size=2.5 ) +
+  #geom_line( aes( x = rho.YY, y = n.rej.bt.mn, color = method ), size=1.1 ) +
+  geom_errorbar( aes( x=rho.YY, ymin = bt.lo.mn,
+                                 ymax = bt.hi.mn, color = method ), width=0.02, size=1.05 ) +
+  
+  # original dataset results
+  geom_point( aes( x = rho.YY, y = n.rej.mn ), color = "black", shape=4, size=3.5 ) +
+  
+  theme_bw() + facet_wrap(~ group ) +
+  ylab("Average null CIs") +
+  scale_color_manual( name="Joint test", values = colors, labels = legend.labs ) +
+  #scale_y_continuous( limits = c(0,1), breaks = y.breaks ) +
+  xlab( "Correlation between each pair of Ys" ) +
+  ggtitle("Average CI limits and rejections in resamples and originals")
+
+
+# ggsave( filename = paste("plot1.png"),
+#         plot=p1, path=NULL, width=10, height=10, units="in")
+
+
+# BOOKMARK
+# sanity check
+aggregate( bt.hi.0.05 ~ rho.YY, s, mean )
+# hmmm...doesn't make sense
+# the CIs should change
 
 
 

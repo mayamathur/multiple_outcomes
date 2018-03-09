@@ -54,14 +54,6 @@ scp mmathur@sherlock:/share/PI/manishad/multTest/doParallel.R ~/Desktop
 scp mmathur@sherlock:/share/PI/manishad/multTest/functions.R ~/Desktop
 scp mmathur@sherlock:/share/PI/manishad/multTest/stitch_on_sherlock.R ~/Desktop
 
-# move files and results from subsampling
-scp mmathur@sherlock:/share/PI/manishad/multTest/sim_results/stitched.csv ~/Desktop
-scp mmathur@sherlock:/share/PI/manishad/multTest/doParallel_subsample.R ~/Desktop
-scp mmathur@sherlock:/share/PI/manishad/multTest/gen_sbatch_subsample.R ~/Desktop
-scp mmathur@sherlock:/share/PI/manishad/multTest/analysis.R ~/Desktop
-scp mmathur@sherlock:/share/PI/manishad/multTest/functions.R ~/Desktop
-scp mmathur@sherlock:/share/PI/manishad/multTest/scen_params.csv ~/Desktop
-
 # clean up the directory
 rm /share/PI/manishad/multTest/sim_results/*
 rm /share/PI/manishad/multTest/sim_results/short/*
