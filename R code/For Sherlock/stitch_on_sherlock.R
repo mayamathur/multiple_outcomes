@@ -17,9 +17,11 @@ write.csv( s, "stitched.csv" )
 
 # how close are we to being done?
 (nrow(s)/5) / 1500
+table(s$scen)
 
 # move it to Desktop
-# scp mmathur@sherlock:/share/PI/manishad/multTest/sim_results/stitched.csv ~/Desktop
+scp mmathur@sherlock:/share/PI/manishad/multTest/sim_results/stitched.csv ~/Desktop
+scp mmathur@sherlock:/share/PI/manishad/multTest/scen_params.csv ~/Desktop
 
 
 

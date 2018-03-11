@@ -124,10 +124,6 @@ for ( j in 1:sim.reps ) {
   pvals = samp.res$pvals
   names(n.rej) = paste( "n.rej.", as.character(alpha), sep="" )
   
-  # Bonferroni test of joint null using just original data
-  # i.e., do we reject at least one outcome using Bonferroni threshold?
-  jt.rej.bonf.naive = n.rej[1] > 0
-  
   # run all bootstrap iterates
     r = foreach( i = 1:boot.reps, .combine=rbind ) %dopar% {
       # draw bootstrap sample 
@@ -287,7 +283,7 @@ for ( j in 1:sim.reps ) {
     
     # p-values for observed rejections
     # if we resampled under H0, want prob of observing at least as many rejections as we did
-    if ( p$bt.type == "h0.parametric" ) {
+    if ( p$bt.type == "h0.parametric" | p$bt.type == "resid" ) {
       
       # jt.pval.bonf = sum( n.rej.bt.0.005 >= n.rej[,1] ) / length( n.rej.bt.0.005 )
       jt.pval.0.01 = sum( n.rej.bt.0.01 >= n.rej[["n.rej.0.01"]] ) /
@@ -300,6 +296,18 @@ for ( j in 1:sim.reps ) {
     # rej.jt.bonf = jt.pval.bonf < 0.05
     rej.jt.0.01 = jt.pval.0.01 < 0.05
     rej.jt.0.05 = jt.pval.0.05 < 0.05
+    
+    
+    
+    ######## Bonferroni joint test ########
+    
+    # Bonferroni test of joint null using just original data
+    # i.e., do we reject at least one outcome using Bonferroni threshold?
+    jt.rej.bonf.naive = n.rej[1] > 0
+    
+    
+    ######## Holm joint test ########
+    
     
 
     ######## Westfall's single-step ######## 
@@ -319,11 +327,17 @@ for ( j in 1:sim.reps ) {
     
     jt.rej.Wstep = any( p.adj.stepdown < 0.05 )
     
-    # compare to minP
-    # cbind( p.adj.minP, p.adj.stepdown )
     
-    # should reject more than either procedure above
-    # table( p.adj.stepdown < 0.05 )
+    ######## Romano ########
+    # DO ME
+    # Will need to run this with resampling scheme set to FCR
+    # See compare_joint_tests: I just need to center the boot tvals by the observed ones
+    
+    # regular FWER control
+    # res = FWERkControl(tvals, bt.stat, k = 2, alpha = 0.05)
+    # # number rejected
+    # # if at least 1, then we reject joint null
+    # sum(res$Reject)
     
     
     ###### Write Results #####

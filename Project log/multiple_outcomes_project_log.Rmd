@@ -44,7 +44,28 @@ bibliography: refs_fake.bib
 
 \section{Stream of consciousness}
 
-\subsection{FWER control methods we should compare for power of joint test}
+
+
+Mystery #2: Why does Westfall recommend a resampling scheme for logistic regression that doesn't preserve correlation? (pg 215)
+
+Multiple imputation idea: Maybe a general algorithm for resampling under $H_A$ could be something like MI. You would take your dataset and copy all the Xs, deleting the Ys. Then you would use an off-the-rack parametric MI procedure to impute the "missing data" for each of the resamples (and each time delete the observed data). E.g., could do a fully conditional approach where you first regression Y1 on all other variables, including the other outcomes, then regress Y2 on the remaining ones, etc. This does invoke assumptions about the form of relationship between the outcomes, but at least wouldn't break any parametric assumptions. I think you could do this with MICE's off-the-rack models because it fits logistic regression to binary variables by default (see JStatSoft paper)! To resample under $H_0$ this way, could first shuffle the Ys in original dataset? That should preserve correlation between Ys. 
+
+
+\section{For Westfall simulations}
+
+* Redo as-is but with 1000 reps/scenario, and have more reps in doParallel
+* Add Holm to simulations -- maybe do it along with Romano?
+* Add Romano to simulations (requires FCR instead of Westfall approach) since it seems to work in practice (\texttt{debug\_fcr}), but remember that this violates OLS assumptions, so isn't technically advisable. 
+
+\section{For later simulations}
+
+* Add binary outcomes with logistic regression?
+* To further improve power, could Use something about p-values themselves for joint test?
+
+
+
+
+\section{FWER control methods we should compare for power of joint test}
 
 \begin{enumerate}
 \item Westfall's single-step minP and maxT methods (pg 47): Easy to code manually
@@ -55,32 +76,7 @@ bibliography: refs_fake.bib
 \end{enumerate}
 
 
-\subsection{Should we compare our joint test to joint tests based on non-FWER procedures?}
-
-If we reject joint null based on FWER control method, then we can conclude with 95\% confidence that this rejection is real, which implies that the joint null is false. 
-
-With $k$-FWER control, we can conclude with 95\% confidence that there are fewer than $k$ false positives, so $R-k+1$ of the observed rejections are real (don't know which ones), where $R$ is the number of adjusted rejections. So, as long as $R>k-1$, we can reject the joint null with 95\% confidence. PROBLEM: WOULD HAVE TO TRY EVERY $k$??
-
-With FDP control, we can reject the joint null if the proportion of adjusted rejections exceeds the allowed amount ($\gamma$). Again, problem because we'd have to try every $\gamma$?
-
-FDR does not work for a joint test because it uses expected proportion of rejections. 
-
-The problem is that $k$-FWER and FDP would probably lead to more powerful joint test than the FWER control method, but not clear which parameters to choose. So maybe we should not worry about them?
-
-
-\subsection{What we can learn from different procedures}
-
-Say we observe 18 rejections at the 0.05 level. Then, with increasing stringency, we can say:
-\begin{itemize}
-\item Our null CI is $[0, 10]$. "We observed $18-10 = 8$ more hits than we would expect in 95\% of samples taken under the strong null (every null holds)."
-\item $8-$FWER controlling procedure (Romano) rejects 11. "There are fewer than 8 false positives, so of these 14 rejections, at least $14-7 = 7$ are real effects, but we don't know which ones." (How should we decide which $k$ to use here?)
-\item FWER-controlling procedure (Bonferroni or preferably Romano/Westfall/another resampling method) rejects 3. "All 3 of these rejections are real effects with 95\% confidence", or alternatively: "We reject the strong null with >95\% confidence."
-\end{itemize}
-
-In practice, you could get the first two from the same bootstrap resamples (taken parametrically under the strong null). Then you'd have to resample under the original distribution to get the third one. 
-
-
-\subsection{Our two metrics}
+\section{Our two metrics}
 
 \textbf{Metric \#1}: 95\% CI for number of hits above expected value that we see in observed data (resample under original distribution, using first half of my theory)
 
@@ -403,31 +399,61 @@ Resampling-based procedures for FWER control.
 \end{itemize}
 
 
-\subsection{New reference}
-
-\begin{itemize}
-\item asdf
-\end{itemize}
-
 
 
 \newpage
-\section{Q \& A}
-\subsection{Open questions}
+
+\section{Resolved questions}
+
+\subsection{What should we do about logistic regression?}
+
+Westfall's algorithm (pg 215) doesn't seem to work. He just regresses each outcome on the Xs and then generates from a binomial using the fitted parameters. But this doesn't preserve the correlation between the Ys (see \texttt{westfall\_logistic\_regression.R}), so I don't understand. Also, he says you can't do case-resampling for logistic regression, but I don't know why -- unless it's the same issue about correlated residuals that seems potentially problematic in OLS. 
 
 
+\subsection{Should we compare our joint test to joint tests based on non-FWER procedures?}
 
-\subsection{Resolved questions}
-Q: Why do datasets created through full-case resampling reject the null too often?
-A: See my Cross Validated question (\url{https://stats.stackexchange.com/questions/323455/why-do-hypothesis-tests-on-resampled-datasets-reject-the-null-too-often}). Basically, when we resample full cases, we violate the OLS assumption of iid errors because every repeated pair $(X,Y)$ has exactly the same residual, so the residuals are highly correlated with $X$. If we fix $X$ and resample residuals, then even though there are repeated observations, the errors of the model newly fit to the resampled data are iid because we are breaking any association between the resampled residuals and $X$. Why do Davison \& Hinkley recommend this approach if it's wrong? Because it's only wrong if you need to meet parametric assumptions within each resample. Our application of bootstrapping is unusual in that we need to resample in a way that is compatible with parametric assumptions of the test we're going to apply for each outcome. 
+If we reject joint null based on FWER control method, then we can conclude with 95\% confidence that this rejection is real, which implies that the joint null is false. 
 
-Q: Why does Blakesley/Westfall’s minP bootstrapping work since it is an extreme order statistic?
-A: Probably because minP is not an order statistic of the data themselves. 
+With $k$-FWER control, we can conclude with 95\% confidence that there are fewer than $k$ false positives, so $R-k+1$ of the observed rejections are real (don't know which ones), where $R$ is the number of adjusted rejections. So, as long as $R>k-1$, we can reject the joint null with 95\% confidence. PROBLEM: WOULD HAVE TO TRY EVERY $k$??
 
-Q: If we go the confidence interval route, why not just treat the p-values as our data and resample directly from them to produce CI? 
-A: Because there are only a fixed number of p-values (k), and this is not necessarily asymptotically large. 
+With FDP control, we can reject the joint null if the proportion of adjusted rejections exceeds the allowed amount ($\gamma$). Again, problem because we'd have to try every $\gamma$?
 
-Q: Why does bootstrapping work with small samples since we need the ECDF in sample to go to the true CDF? Or does it not work in small samples?
+FDR does not work for a joint test because it uses expected proportion of rejections. 
+
+The problem is that $k$-FWER and FDP would probably lead to more powerful joint test than the FWER control method, but not clear which parameters to choose. So maybe we should not worry about them?
+
+
+\subsection{What we can learn from existing FWER procedures?}
+
+Say we observe 18 rejections at the 0.05 level. Then, with increasing stringency, we can say:
+\begin{itemize}
+\item Our null CI is $[0, 10]$. "We observed $18-10 = 8$ more hits than we would expect in 95\% of samples taken under the strong null (every null holds)."
+\item $8-$FWER controlling procedure (Romano) rejects 11. "There are fewer than 8 false positives, so of these 14 rejections, at least $14-7 = 7$ are real effects, but we don't know which ones." (How should we decide which $k$ to use here?)
+\item FWER-controlling procedure (Bonferroni or preferably Romano/Westfall/another resampling method) rejects 3. "All 3 of these rejections are real effects with 95\% confidence", or alternatively: "We reject the strong null with >95\% confidence."
+\end{itemize}
+
+In practice, you could get the first two from the same bootstrap resamples (taken parametrically under the strong null). Then you'd have to resample under the original distribution to get the third one. 
+
+
+\subsection{Why do datasets created through full-case resampling reject the null too often?}
+
+See my Cross Validated question (\url{https://stats.stackexchange.com/questions/323455/why-do-hypothesis-tests-on-resampled-datasets-reject-the-null-too-often}). There are two separate issues:
+
+\begin{enumerate}
+\item You have to center the bootstrap statistics by the estimated statistic in the original data (so do the hypothesis test on $\widehat{\beta}^{(j)} - \widehat{\beta}$, not on $\widehat{\beta}^{(j)}$ itself). This is because of the bootstrap analogy principle. 
+\item With FCR, we violate the OLS assumption of iid errors because every repeated pair $(X,Y)$ has exactly the same residual, so the residuals are perfectly associated with $X$. If we use Westfall's \emph{null} resampling approach where we fix $X$ and resample residuals, then even though there are repeated observations, the \emph{residuals} of the model newly fit to the resampled data are still iid because we are breaking any association between the resampled residuals and $X$. This issue only matters if you need to meet parametric assumptions within each resample. Our application of bootstrapping is unusual in that we need to resample in a way that is compatible with parametric assumptions of the test we're going to apply for each outcome. This is why, e.g., Davison \& Hinkley do specifically recommend FCR for OLS. 
+\end{enumerate}
+
+It turns out that in the OLS example I tried, only issue #1 actually matter because fixing that issue led to nominal rejections. However, issue #2 seems to still be a real concern and might matter more in models less robust to assumption violations than OLS. 
+
+
+\subsection{Why does Blakesley/Westfall’s minP bootstrapping work since it is an extreme order statistic?}
+Probably because minP is not an order statistic of the data themselves. 
+
+\subsection{If we go the confidence interval route, why not just treat the p-values as our data and resample directly from them to produce CI?}
+Because there are only a fixed number of p-values (k), and this is not necessarily asymptotically large. 
+
+\subsection{Why does bootstrapping work with small samples since we need the ECDF in sample to go to the true CDF? Or does it not work in small samples?}
 A: Correct. It does not necessarily work in small samples. 
 
 
@@ -436,9 +462,20 @@ A: Correct. It does not necessarily work in small samples.
 \newpage
 \section{Simulation notes}
 
-Next up: Try regenerating residuals on Sherlock with multiple outcomes and huge sample size. Trying n = 100,000 and B = 2,000 and 5-hr time limit?
+\subsection{Upcoming simulations}
 
-Seems like when rejection prob is low, bootstraps do worse? E.g., rho.XY = 0.03 worked perfectly with $n=10,000$, but rho.XY = 0.01 did not. 
+
+\subsection{"2018-3-18 with other methods"}
+
+We shelved the CI under the alternative because of the below issues (couldn't find a bootstrapping/resampling method that worked under $H_A$). In the present simulations, we compared our joint test of the null (using number of rejections) to other methods (Westfall's minP, Westfall's step-down, Bonferroni). 
+
+\begin{itemize}
+\item \textbf{Realized that regenerating residuals (method \texttt{h0.parametric}) actually doesn't work because it loses the correlated structure: we were just generating separate $Y$s. Empirically, saw that the null CIs were the same regardless of \texttt{rho.YY}.}
+\item So these simulations used Westfall's reattach-residuals method (method \texttt{resid}), and all results made a lot of sense. 
+\item CI plots shows the averaged CI limits and mean bootstrapped rejections by scenario. 
+\item Seemed weird that both Westfall methods lead to exactly the same joint test, but this is okay. It's because the smallest p-values are the ones that change the least, so few p-values shift from being above to below 0.05 when changing from minP to step-down (see folder "Compare Westfall minP vs step-down"). 
+\end{itemize}
+
 
 \subsection{2018-1-23 unsaved local sims}
 
@@ -451,7 +488,7 @@ Revisiting residual resampling for CI: Fix design matrix, then re-generate resid
 \item Not yet assessing CIs for number of rejections because would need multiple outcomes for that
 \end{itemize}
 
-Went back to debug fcr script and found that reattaching residuals works under null. 
+Went back to debug FCR script and found that reattaching residuals works under null. 
 
 Under alternative, though, got 25% rejections across all bootstrap resamples vs. 15% across 1000 sim reps in original datasets.
 
