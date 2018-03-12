@@ -31,7 +31,7 @@ sim.reps = 5
 # nX = 1
 # nY = 40
 # rho.XX = 0
-# rho.YY = c(0.75)
+# rho.YY = c(0.25)
 # rho.XY = c(0.08)  # null hypothesis: 0
 # half = 0
 # 
@@ -39,7 +39,7 @@ sim.reps = 5
 # boot.reps = 5
 # sim.reps = 2
 # scen = "a"
-# bt.type = c( "h0.parametric" )
+# bt.type = c( "resid" )
 # 
 # 
 # # matrix of scenario parameters
@@ -119,9 +119,11 @@ for ( j in 1:sim.reps ) {
                                               TRUE, FALSE), 
                              .sigma = ifelse( p$bt.type %in% c( "h0.parametric", "ha.resid.2"),
                                               TRUE, FALSE),
-                             .intercept = (p$bt.type == "h0.parametric") )
+                             .intercept = (p$bt.type == "h0.parametric"),
+                             .tval = TRUE)
   n.rej = samp.res$rej  # first one is Bonferroni
   pvals = samp.res$pvals
+  tvals = samp.res$tvals
   names(n.rej) = paste( "n.rej.", as.character(alpha), sep="" )
   
   # run all bootstrap iterates
@@ -200,7 +202,7 @@ for ( j in 1:sim.reps ) {
       
       
       ##### Bootstrap Under HA #3 - Regenerate Residuals #####
-      # ~~~~ I THINK THIS ALSO LOSES THE CORRELATION???
+      # THIS ACTUALLY LOSES CORRELATION BETWEEN YS
       # re-attach residuals
       if ( p$bt.type == "ha.resid.2" ) {
         # extract residuals from original data
@@ -228,11 +230,15 @@ for ( j in 1:sim.reps ) {
       # important for dataset_result to be able to find the right names
       names(b) = c(X.names, Y.names)
       
-      bt.res = dataset_result( .dat = b, .alpha = alpha, .resid = FALSE, .tval=TRUE )
+      bt.res = dataset_result( .dat = b,
+                               .alpha = alpha,
+                               .resid = FALSE,
+                               .tval=TRUE )
       
       # return all the things
       list( rej = bt.res$rej,
-            pvals = bt.res$pvals )
+            pvals = bt.res$pvals,
+            tvals = bt.res$tvals )
 
       # get number rejected for bootstrap sample
       # we don't need to return residuals for this one
@@ -258,6 +264,11 @@ for ( j in 1:sim.reps ) {
   # rows = Ys
   # cols = resamples
   p.bt = do.call( cbind, r[ , "pvals" ] )
+  
+  # resampled test statistic matrix (uncentered) for Romano
+  # rows = Ys
+  # cols = resamples
+  t.bt = do.call( cbind, r[ , "tvals" ] )
   
   
   ###### Joint Test Results for This Simulation Rep #####
@@ -308,36 +319,30 @@ for ( j in 1:sim.reps ) {
     
     ######## Holm joint test ########
     
-    
+    p.adj.holm = p.adjust( p = pvals, method = "holm" )
+    jt.rej.holm = any( p.adj.holm < 0.05 )
 
     ######## Westfall's single-step ######## 
     
-    # do adjusted p-vals make sense?
     p.adj.minP = adjust_minP( pvals, p.bt )
-    # cbind( pvals, p.adj.minP )
-    # plot( pvals, p.adj.minP )
-    
     jt.rej.minP = any( p.adj.minP < 0.05 )
     
     
     ######## Westfall's step-down ######## 
     
     p.adj.stepdown = adj_Wstep( pvals, p.bt )
-    # plot( pvals, p.adj.stepdown )
-    
     jt.rej.Wstep = any( p.adj.stepdown < 0.05 )
     
     
     ######## Romano ########
     # DO ME
     # Will need to run this with resampling scheme set to FCR
-    # See compare_joint_tests: I just need to center the boot tvals by the observed ones
+    # See compare_joint_tests: I just need to center the boot tvals
+    #  by the observed ones
     
     # regular FWER control
-    # res = FWERkControl(tvals, bt.stat, k = 2, alpha = 0.05)
-    # # number rejected
-    # # if at least 1, then we reject joint null
-    # sum(res$Reject)
+    res = FWERkControl(tvals, as.matrix(t.bt), k = 1, alpha = 0.05)
+    jt.rej.Romano = sum(res$Reject) > 0
     
     
     ###### Write Results #####
@@ -362,8 +367,10 @@ for ( j in 1:sim.reps ) {
                       
                       # joint test results for entire study
                       jt.rej.bonf.naive = ifelse( as.numeric(jt.rej.bonf.naive) == 1, TRUE, FALSE ),
+                      jt.rej.holm,
                       jt.rej.minP,
                       jt.rej.Wstep,
+                      jt.rej.Romano,
                       
                       # crit.bonf,
                       crit.0.05,
