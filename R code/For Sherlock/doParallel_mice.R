@@ -1,5 +1,4 @@
 
-
 ######### FOR CLUSTER USE #########
 # load command line arguments
 args = commandArgs(trailingOnly = TRUE)
@@ -27,43 +26,46 @@ sim.reps = 5
 # ######### FOR LOCAL USE #########
 # # setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Sandbox/2018-1-13")
 # # p = read.csv("scen_params.csv")  # should be a single row, I think
-#
+# 
 # n = 100
 # nX = 1
-# nY = 40
+# nY = 4
 # rho.XX = 0
 # rho.YY = c(0.25)
 # rho.XY = c(0.08)  # null hypothesis: 0
 # half = 0
-#
+# 
 # # bootstrap iterates and type
 # boot.reps = 5
 # sim.reps = 2
 # scen = "a"
-# bt.type = c( "resid" )
-#
-#
+# bt.type = c( "MICE.H0" )
+# 
+# 
 # # matrix of scenario parameters
 # scen.params = expand.grid( bt.type, n, nX, nY, rho.XX,
 #                            rho.YY, rho.XY, half )
 # names(scen.params) = c( "bt.type", "n", "nX", "nY", "rho.XX",
 #                         "rho.YY", "rho.XY", "half" )
-#
+# 
 # # name the scenarios
 # # remove letters that are privileged variables in R
 # letter.names = c(letters, LETTERS)[ ! c(letters, LETTERS) %in% c("i","T","F") ]
 # scen.params$scen.name = letter.names[ 1:dim(scen.params)[1] ]
 # p = scen.params
-#
+# 
 # # add alpha corresponding to Bonferroni as first one
 # # NOTE THAT CODE ASSUMES BONFERRONI IS THE FIRST ONE
 # crit.bonf = 0.05 / p$nY
 # alpha = c( crit.bonf, 0.01, 0.05 )
-#
+# 
 # # for sourcing functions later
 # setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/git_multiple_outcomes/R code/For Sherlock")
 # ######### END OF LOCAL PART #########
 
+
+
+# ~~~ NOTE THAT GLM GIVES Z-VALUE, NOT TVAL, FOR LOGISTIC REGRESSION
 
 ########################### THIS SCRIPT COMPLETELY RUNS 1 SIMULATION  ###########################
 
@@ -74,8 +76,11 @@ sim.reps = 5
 library(doParallel)
 library(foreach)
 library(mvtnorm)
+library(BinNor)
 
-source("functions.R")
+# ~~~ LATER COULD PUT MICE FUNCTIONS IN REGULAR FNS THING
+#  BECAUSE THEY SHOULD BE BACKWARD-COMPATIBLE
+source("functions_mice.R")
 
 # set the number of cores
 registerDoParallel(cores=16)
@@ -102,19 +107,17 @@ for ( j in 1:sim.reps ) {
   ##### Bootstrapping Loop ######
   rep.time = system.time( {
 
-  # ~~~ NEED NEW SIM_DATA FUNCTION HERE
   # make initial dataset from which to bootstrap
   cor = make_corr_mat( .nX = p$nX, .nY = p$nY, .rho.XX = p$rho.XX,
                        .rho.YY = p$rho.YY, .rho.XY = p$rho.XY,
                        .half = as.numeric(p$half) )
-  d = sim_data( .n = p$n, .cor = cor )
+  d = sim_data( .n = p$n, .cor = cor, .Ytype = "binary",
+                .nX = p$nX, .nY = p$nY )
 
   # extract names of outcome variables
   X.names = names(d)[ grep( "X", names(d) ) ]
   Y.names = names(d)[ grep( "Y", names(d) ) ]
 
-  
-  # ~~~ NEED NEW DATASET_RESULT FUNCTION HERE
   # get number rejected for observed dataset
   # vector with same length as .alpha
   # only return residuals and/or model estimates if we need them later for resampling
@@ -122,26 +125,55 @@ for ( j in 1:sim.reps ) {
                              .resid = FALSE,
                              .sigma = FALSE,
                              .intercept = FALSE,
-                             .tval = FALSE)
+                             .tval = TRUE)
   n.rej = samp.res$rej  # first one is Bonferroni
   pvals = samp.res$pvals
   tvals = samp.res$tvals
   names(n.rej) = paste( "n.rej.", as.character(alpha), sep="" )
   
   
-  # ~~~ RUN MICE HERE FOR ALL IMPUTATIONS
+  ######## Begin MICE sampling under H0 ########
+  if ( p$bt.type == "MICE.H0" ) {
+    # double the dataset
+    d2 = rbind(d, d)
+    
+    # make second half of dataset missing
+    d2[ (n+1) : nrow(d2), names(d2) %in% Y.names ] = NA
+    
+    # recode binaries as factors to avoid whiny MICE
+    for (y in Y.names) {
+      d2[[y]] = as.factor( d2[[y]] )
+    }
+    
+    # first fit empty MICE to get predictor matrix
+    library(mice)
+    ini = mice(d2, maxit = 0)
+    pred = ini$predictorMatrix
+    
+    # force H0 by not modeling Ys as function of X
+    pred[ , X.names ] = 0
+
+    # imputation method
+    # should be logreg 
+    method = ini$method
+    method[ method != "logreg" & method != "" ] = "logreg"
+    imp = mice( d2, pred = pred, method = method, m = boot.reps )
+  }
+  ######## End MICE sampling under H0 ########
   
 
-  # run all bootstrap iterates
+  ######## Begin Parallelization ########
+  # analyze all bootstrap iterates
     r = foreach( i = 1:boot.reps, .combine=rbind ) %dopar% {
       
-      # work on a single imputed dataset
+      # MICE has already generated all the datasets
+      # so here, just extract the single imputed dataset that we need
       b = complete(imp,i)[ (n+1) : (2*n), ]
 
       bt.res = dataset_result( .dat = b,
                                .alpha = alpha,
                                .resid = FALSE,
-                               .tval=FALSE,
+                               .tval = TRUE,
                                .sigma = FALSE, 
                                .intercept = FALSE )
 
@@ -204,7 +236,7 @@ for ( j in 1:sim.reps ) {
 
     # p-values for observed rejections
     # if we resampled under H0, want prob of observing at least as many rejections as we did
-    if ( p$bt.type == "h0.parametric" | p$bt.type == "resid" ) {
+    if ( p$bt.type %in% c( "h0.parametric", "resid", "MICE.H0" ) ) {
 
       # jt.pval.bonf = sum( n.rej.bt.0.005 >= n.rej[,1] ) / length( n.rej.bt.0.005 )
       jt.pval.0.01 = sum( n.rej.bt.0.01 >= n.rej[["n.rej.0.01"]] ) /
@@ -251,8 +283,8 @@ for ( j in 1:sim.reps ) {
     #  by the observed ones
 
     # regular FWER control
-    res = FWERkControl(tvals, as.matrix(t.bt), k = 1, alpha = 0.05)
-    jt.rej.Romano = sum(res$Reject) > 0
+    #res = FWERkControl(tvals, as.matrix(t.bt), k = 1, alpha = 0.05)
+    #jt.rej.Romano = sum(res$Reject) > 0
 
 
     ###### Write Results #####
@@ -280,7 +312,7 @@ for ( j in 1:sim.reps ) {
                       jt.rej.holm,
                       jt.rej.minP,
                       jt.rej.Wstep,
-                      jt.rej.Romano,
+                      #jt.rej.Romano,
 
                       # crit.bonf,
                       crit.0.05,

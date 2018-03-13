@@ -240,14 +240,45 @@ make_corr_mat = function( .nX, .nY, .rho.XX, .rho.YY, .rho.XY, .half = FALSE ) {
 # simulate 1 dataset with correlated covariates
 # then simulate 
 
-sim_data = function( .n, .cor ) {
+sim_data = function( .n, .cor,
+                     .Ytype = "normal",
+                     .nX = NULL, .nY = NULL ) # only needed for binary Ys
+  {
 
   vnames = names( .cor )
   
+  # names for variables
+  X.names = paste0( "X", 1 : .nX )
+  Y.names = paste0( "Y", 1 : .nY )
+  
   # simulate the dataset
-  # everything is a standard Normal
-  library(mvtnorm)
-  d = as.data.frame( rmvnorm( n = .n, mean = rep( 0, dim( .cor )[1] ), sigma = as.matrix( .cor ) ) )
+  if ( .Ytype == "normal" ) {
+    # everything is a standard Normal
+    library(mvtnorm)
+    d = as.data.frame( rmvnorm( n = .n, mean = rep( 0, dim( .cor )[1] ), sigma = as.matrix( .cor ) ) )
+    vnames = c( X.names, Y.names )
+  }
+
+  # simulate the dataset
+  else if ( .Ytype == "binary" ) {
+    library(BinNor)
+    sigma.star = compute.sigma.star( no.bin = .nY, no.nor = .nX, prop.vec.bin = rep(0.5, .nY),
+                                   corr.mat = as.matrix(.cor) )
+    
+    d = as.data.frame( 
+      jointly.generate.binary.normal( no.rows = .n, no.bin = .nY, no.nor = .nX,
+                                      prop.vec.bin = rep(0.5, .nY),
+                                      mean.vec.nor = 0,
+                                      var.nor = 1, 
+                                      sigma_star = sigma.star$sigma_star,
+                                      continue.with.warning = TRUE )
+    )
+    
+    # respect ordering from BinNor
+    # opposite of mvrnorm case
+    vnames = c( Y.names, X.names )
+  }
+  
   names(d) = vnames
   
   # return the dataset
@@ -281,11 +312,11 @@ fit_model = function( Y.name, .dat, .resid, .sigma, .tval, .intercept ) {
   
   # ~~~ NEW STUFF
   # is Y binary? Should work for either 0/1 coding or factor coding
-  binary = ( length( unique( .dat[[Y.name]] ) ) == 2 )
+  n.levels = length( unique( .dat[[Y.name]] ) )
   
   # fit appropriate model
-  if (!binary) m = lm( eval( parse(text=formula) ), data=.dat )
-  else m = glm( eval( parse(text=formula) ), data=.dat, family=binomial )
+  if ( n.levels > 2 ) m = lm( eval( parse(text=formula) ), data=.dat )
+  else if ( n.levels == 2 ) m = glm( eval( parse(text=formula) ), data=.dat, family=binomial )
   
   # extract p-value for exposure of interest (X1)
   pval = summary(m)$coefficients[ "X1", 4 ]
