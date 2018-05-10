@@ -15,29 +15,45 @@ nX = 1
 nY = 40
 rho.XX = 0
 rho.YY = c(0.25, 0.5, 0)
-rho.XY = c(0.02, 0.05, 0) # null hypothesis: 0
-half = c(0, 1)  # exchangeable vs. half-correlated matrix
+rho.XY = c(0, 0.02, 0.03, 0.04, 0.05, 0.10) # null hypothesis: 0
+prop.corr = c(0.5, 1)  # exchangeable vs. half-correlated matrix
 
 # bootstrap iterates and type
 boot.reps = 2000
-bt.type = c( "resid" )
+bt.type = c( "resid", "ha.resid" )
+
 
 # matrix of scenario parameters
-scen.params = expand.grid( bt.type, n, nX, nY, rho.XX, rho.YY, rho.XY, half )
-names(scen.params) = c( "bt.type", "n", "nX", "nY", "rho.XX", "rho.YY", "rho.XY", "half" )
+scen.params = expand.grid( bt.type, n, nX, nY, rho.XX, rho.YY, rho.XY, prop.corr )
+
+# give letters to scenarios
+names(scen.params) = c( "bt.type", "n", "nX", "nY", "rho.XX", "rho.YY", "rho.XY", "prop.corr" )
 
 
-# name the scenarios
+######## Remove Some Scenarios ########
+# for rhoXY = 0.10, only want info for confidence intervals
+# so cut out the ha.resid ones
+scen.params = scen.params[ scen.params$rho.XY != 0.10 |
+                             scen.params$rho.XY == 0.10 & scen.params$bt.type == "resid", ]
+
+# for rho.XY = 0, don't need to manipulate prop.corr because all 0 anyway
+scen.params = scen.params[ scen.params$rho.XY != 0 |
+                             scen.params$rho.XY == 0 & scen.params$prop.corr == 1, ]
+
+
+######## Name the Scenarios ########
+# if merging results with other simulations, set this to the last letter already used
+start.at = "a"
+
 # remove letters that are privileged variables in R
-letter.names = c(letters, LETTERS)[ ! c(letters, LETTERS) %in% c("i","T","F") ]
-scen.params$scen.name = letter.names[ 1:dim(scen.params)[1] ]
+# letter.names = c(letters, LETTERS, paste(letters, letters, sep="") )
+# letter.names = letter.names[ ! c(letters, LETTERS) %in% c("i","T","F") ]  # exclude privileged characters
+# letter.names = letter.names[ grep(start.at, letter.names): length(letter.names) ]
+# 
+# scen.params$scen.name = letter.names[ 1:dim(scen.params)[1] ]
+
+scen.params$scen.name = 1:nrow(scen.params)
 n.scen = length(scen.params[,1])
-
-# we don't need scenarios with rho.XY = 0 and half = 1 because redundant with 
-# scenarios where rho.XY = 0 and half = 0
-scen.to.toss = scen.params$scen.name[ scen.params$rho.XY == 0 & scen.params$half == 1 ]
-
-scen.params = scen.params[ ! scen.params$scen.name %in% scen.to.toss, ]
 
 # write the csv file of params (to Sherlock)
 write.csv( scen.params, "scen_params.csv" )
@@ -50,7 +66,7 @@ source("functions.R")
 
 
 # number of sbatches to generate (i.e., iterations within each scenario)
-n.reps.per.scen = 500
+n.reps.per.scen = 1000
 n.reps.in.doParallel = 5
 n.files = ( n.reps.per.scen / n.reps.in.doParallel ) * n.scen
 
@@ -85,55 +101,38 @@ sbatch_params <- data.frame(jobname,
 #generateSbatch(sbatch_params, runfile_path)
 
 
-# run them all
-# works
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in 1001:1500) {
+for (i in missed.nums) {
+  system( paste("sbatch -p normal,owners /share/PI/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
+}
+
+
+######## If Running Only Some Jobs To Fill Gaps ######## 
+
+# run in Sherlock ml load R
+# sbatch_not_run( "/share/PI/manishad/multTest/sim_results/short", 
+#                 "/share/PI/manishad/multTest/sim_results",
+#                 .name.prefix = "short" )
+# scp mmathur@sherlock:/share/PI/manishad/multTest/sim_results/missed_job_nums.csv ~/Desktop
+
+setwd("/share/PI/manishad/multTest/sim_results")
+missed.nums = read.csv("missed_job_nums.csv")$x
+
+
+setwd( paste(path, "/sbatch_files", sep="") )
+for (i in missed.nums) {
   system( paste("sbatch -p normal,owners /share/PI/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
 }
 
 
 
-########################### AFTER SIMULATION IS DONE ###########################
 
-# path = "/share/PI/manishad/multTest"
-# setwd(path)
-# 
-# source("functions.R")
-# stitch_files(.results.singles.path = "/share/PI/manishad/multTest/sim_results",
-#                         .name.prefix = "results",
-#                         .stitch.file.name="stitched_results.csv")
-# 
-# # move stitched files to desktop
-# # scp mmathur@sherlock:/share/PI/manishad/multTest/sim_results/stitched_results.csv ~/Desktop
-# 
-# # move all files to desktop for local stitching
-# # scp mmathur@sherlock:/share/PI/manishad/multTest/sim_results/* ~/Desktop/sim_results
-# 
-# # check overall progress
-# setwd("~/Desktop")
-# setwd("/share/PI/manishad/multTest/sim_results") # from within Sherlock
-# s = read.csv("stitched_results.csv")
-# 
-# # percent finished
-# dim(s)[1] / 1000
-# 
-# # which scenarios are done?
-# table(s$scen)
-# 
-# 
-# # get the job files that have NOT run
-# job.files.all = paste("/share/PI/manishad/multTest/sim_results/results_job_", 1:1000, "_.csv", sep="")
-# jobs.not.run = job.files.all[ ! job.files.all %in% as.character(s$job.file) ]
-# 
-# # just the numbers of the jobs that have NOT run
-# matches = regmatches( jobs.not.run, gregexpr("[[:digit:]]+", jobs.not.run ) )  # extracts just the numeric part of string
-# job.nums.not.run = as.numeric(unlist(matches))
-# 
-# 
-# # run the ones that haven't run yet
-# setwd( paste(path, "/sbatch_files", sep="") )
-# for (i in job.nums.not.run) {
-#   system( paste("sbatch /share/PI/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
-# }
-# 
+
+
+
+
+
+
+
+
+

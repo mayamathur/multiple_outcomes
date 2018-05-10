@@ -1,6 +1,9 @@
 ---
 title: ''
 author: ''
+output:
+  pdf_document: default
+  word_document: default
 header-includes:
 - \usepackage[T1]{fontenc}
 - \usepackage{microtype}
@@ -10,7 +13,7 @@ header-includes:
 - \pagestyle{fancy}
 - \fancyhead{}
 - \fancyfoot{}
-- \fancyhead[C]{Multiple Outcomes}
+- \fancyhead[C]{Multiple Testing}
 - \fancyfoot[RO,LE]{\thepage}
 - \usepackage{booktabs}
 - \usepackage{lettrine}
@@ -28,9 +31,8 @@ header-includes:
 - \usepackage{verbatim}
 - \usetikzlibrary{matrix}
 - \usepackage{float}
-output: pdf_document
-bibliography: refs_fake.bib
-csl: aje_style.csl
+bibliography: refs_mo.bib
+csl: apa_style.csl
 ---
 
 \newtheorem{theorem}{Theorem}
@@ -40,20 +42,22 @@ csl: aje_style.csl
 \newtheorem{remark}{Remark}
 \newtheorem{fact}{Fact}
 \newtheorem{example}{Example}
-\newtheorem{algorithm}{Algorithm}
+\newtheorem{assump}{Assumption}
 
 
-<!--
 \doublespacing
 
 \begin{center}
-\textbf{ \LARGE{Title line one:} } \\ \vspace{5mm}
-\textbf{ \LARGE{title line two} }
+\textbf{ \LARGE{Multiple Testing Research Update \#1} } \\ \vspace{5mm}
+\textbf{ \LARGE{\today} }
 \vspace{10mm}
 \end{center}
 
 \doublespacing
 
+\tableofcontents
+
+<!--
 \vspace{10mm}
 \begin{center}
 \large{ \emph{ Maya B. Mathur$^{1, 2\ast}$, Peng Ding$^{3}$, and Tyler J. VanderWeele$^{1,4}$ } }
@@ -89,58 +93,74 @@ Palo Alto, CA
 
 \vspace{10mm}
 
-
-\newpage
 -->
 
-\section{Notes to self}
 
+\newpage
 
 <!-------------------------- --------------------------------->
 <!-------------- SECTION: SETTING AND NOTATION --------------->
 <!-------------------------- --------------------------------->
 
+
 \section{Setting and notation}
 
-Suppose that $K$ random variables are measured on $N$ subjects, with the resulting matrix denoted $\mathbf{Z} \in \mathbb{R}_{N \times K}$. Let $Z_{nk}$ denote, for the $n^{th}$ subject, the $k^{th}$ random variable. Consider a bootstrapping algorithm (which is defined below) that generates, for iterate $j$, a dataset containing the random variables $\left( Z_{n1}^{(j)}, \dotsb, Z_{nK}^{(j)} \right)$ for each subject $n$. There are a total of $B$ bootstrapped datasets. 
+Suppose that $K$ random variables are measured on $N$ subjects, with the resulting matrix denoted $\mathbf{Z} \in \mathbb{R}_{N \times K}$. Let $Z_{nk}$ denote, for the $n^{th}$ subject, the $k^{th}$ random variable. Consider a resampling algorithm that generates, for iterate $j$, a dataset containing the random vector $\left( Z_{n1}^{(j)}, \dotsb, Z_{nK}^{(j)} \right)$ for each subject $n$. There are a total of $B$ resampled datasets. We use the superscript $^{(j)}$ to denote random variables, distributions, and statistics in resampled dataset $j$.
 
-We refer to probability density functions as $f$ and cumulative distribution functions as $F$. Specifically, we refer to the joint distribution of the data as follows. With $\mathcal{B} \in \mathbb{R}_{N \times K}$ denoting a matrix of constants with entries $\left( b_{11}, \dotsb, b_{NK} \right)$, let:
-\begin{align*}
-F_{\mathbf{Z}} \left( \mathbf{B} \right) &= P \left( Z_{11} \le b_{11}, \dotsb, Z_{NK} \le b_{NK} \right)
-\end{align*}
+Further suppose that we conduct $W$ hypothesis tests, each with level $\alpha$. Denote the $w^{th}$ null hypothesis as $H_{0w}$. Let $c_{w,\alpha}$ be the critical value for the test statistic, $T_w$, of the $w^{th}$ test. We refer to the vector of test statistics as $\mathbf{T}$. <!--Assume that each test concerns a point null hypothesis (\textbf{Assumption 1}) and that each test is parametric with consistent estimates of the tested parameters in the likelihood identifiable from the observed data (\textbf{Assumption 2}).--> We define the "strong null" as the case in which all $W$ point null hypotheses hold and use the superscript $^0$ generally to denote distributions, data, or statistics generated under the strong null. 
 
-<!-- Define the joint CDF of $\left( Z_{n1}^{(j)}, \dotsb, Z_{nK}^{(j)} \right)$ as:
-
-\begin{align*}
-F_{\left( Z_{n1}^{(j)}, \dotsb, Z_{nK}^{(j)} \right)} \left( r_1, \dotsb, r_K \right) &= P \left( Z_{n1}^{(j)} < r_1, \dotsb, Z_{nK}^{(j)} < r_K \right)
-\end{align*}
--->
-
-We will usually refer simply to $\mathbf{Z}$ and $F_{\mathbf{Z}}$ for brevity and will denote their counterparts in bootstrapped dataset $j$ as $\mathbf{Z}^{(j)}$ and $F_{\mathbf{Z}^{(j)}}$.
-
-Further suppose that we conduct $W$ hypothesis tests, each with level $\alpha$. Let $c_{w,\alpha}$ be the critical value for the test statistic, $T_w$, of the $w^{th}$ test. We refer to the vector of test statistics as $\mathbf{T}$. Assume that each test concerns a point null hypothesis (\textbf{Assumption 1}), that each test statistic is a continuous function of the data with continuous first derivatives, $\mathbf{Z}$ (\textbf{Assumption 2}), and that each test is parametric with consistent estimates of all parameters in the likelihood identifiable from the observed data (\textbf{Assumption 3}). We define the "strong null" as the case in which all $W$ point null hypotheses hold and use the superscript $^0$ to denote variables generated under the strong null. 
-
-Define the statistic corresponding to the total number of rejections in $W$ tests in a sample generated under the strong null as $\widehat{\theta}^0 = \sum_{w=1}^W 1 \big\{ T_w^0 > c_{w,\alpha} \big\}$. Similarly, the total number of rejections in bootstrap sample $j$ is $\widehat{\theta}^{(j)} = \sum_{w=1}^W 1 \big\{ T_w^{(j)} > c_{w,\alpha} \big\}$. 
-
-Respectively define the true distribution of the number of rejections under the strong null, its counterpart in the bootstrap samples, and its empirical estimator in the bootstrap samples as:
+Define the statistic corresponding to the total number of rejections in $W$ tests in a sample generated under the strong null as $\widehat{\theta}^0 = \sum_{w=1}^W 1 \big\{ T_w^0 > c_{w,\alpha} \big\}$. Similarly, the total number of rejections in resample $j$ is $\widehat{\theta}^{(j)} = \sum_{w=1}^W 1 \big\{ T_w^{(j)} > c_{w,\alpha} \big\}$. Using $F$ to denote cumulative distribution functions, respectively define the true CDF of the number of rejections under the strong null, its counterpart in the resamples, and its empirical estimator in the resamples as:
 \begin{align*}
 F_{\widehat{\theta}^0}(r) &= P \left( \widehat{\theta}^0 \le r \right) \\
 F_{\widehat{\theta}^{(j)}}(r) &= P \left( \widehat{\theta}^{(j)} \le r \right) \\
 \widehat{F}_{\widehat{\theta}^{(j)}} \left( r \right) &= \frac{1}{B} \sum_{j^{*}=1}^B 1 \Big\{ \widehat{\theta}^{(j^{*})} \le r \Big\}
 \end{align*}
 
+<!----- Old version
+\section{Setting and notation}
+
+Suppose that $K$ random variables are measured on $N$ subjects, with the resulting matrix denoted $\mathbf{Z} \in \mathbb{R}_{N \times K}$. Let $Z_{nk}$ denote, for the $n^{th}$ subject, the $k^{th}$ random variable. Consider a resampling algorithm that generates, for iterate $j$, a dataset containing the random vector $\left( Z_{n1}^{(j)}, \dotsb, Z_{nK}^{(j)} \right)$ for each subject $n$. There are a total of $B$ resampled datasets. 
+
+We refer to cumulative distribution functions as $F$. Specifically, we refer to the joint distribution of the data as follows. With $\mathcal{B} \in \mathbb{R}_{N \times K}$ denoting a matrix of constants with entries $\left( b_{11}, \dotsb, b_{NK} \right)$, let:
+\begin{align*}
+F_{\mathbf{Z}} \left( \mathbf{B} \right) &= P \left( Z_{11} \le b_{11}, \dotsb, Z_{NK} \le b_{NK} \right)
+\end{align*}
+
+Define the joint CDF of $\left( Z_{n1}^{(j)}, \dotsb, Z_{nK}^{(j)} \right)$ as:
+
+\begin{align*}
+F_{\left( Z_{n1}^{(j)}, \dotsb, Z_{nK}^{(j)} \right)} \left( r_1, \dotsb, r_K \right) &= P \left( Z_{n1}^{(j)} < r_1, \dotsb, Z_{nK}^{(j)} < r_K \right)
+\end{align*}
+
+
+We will usually refer simply to $\mathbf{Z}$ and $F_{\mathbf{Z}}$ for brevity and will denote their counterparts in resampled dataset $j$ as $\mathbf{Z}^{(j)}$ and $F_{\mathbf{Z}^{(j)}}$.
+
+Further suppose that we conduct $W$ hypothesis tests, each with level $\alpha$. Let $c_{w,\alpha}$ be the critical value for the test statistic, $T_w$, of the $w^{th}$ test. We refer to the vector of test statistics as $\mathbf{T}$. Assume that each test concerns a point null hypothesis (\textbf{Assumption 1}) and that each test is parametric with consistent estimates of the tested parameters in the likelihood identifiable from the observed data (\textbf{Assumption 2}). We define the "strong null" as the case in which all $W$ point null hypotheses hold and use $F_{ \mathbf{Z}^0 }$ to denote the distribution of the data under the strong null. We use the superscript $^0$ generally to denote data or statistics generated under the strong null. 
+
+Define the statistic corresponding to the total number of rejections in $W$ tests in a sample generated under the strong null as $\widehat{\theta}^0 = \sum_{w=1}^W 1 \big\{ T_w^0 > c_{w,\alpha} \big\}$. Similarly, the total number of rejections in resample $j$ is $\widehat{\theta}^{(j)} = \sum_{w=1}^W 1 \big\{ T_w^{(j)} > c_{w,\alpha} \big\}$. 
+
+Respectively define the true distribution of the number of rejections under the strong null, its counterpart in the resamples, and its empirical estimator in the resamples as:
+\begin{align*}
+F_{\widehat{\theta}^0}(r) &= P \left( \widehat{\theta}^0 \le r \right) \\
+F_{\widehat{\theta}^{(j)}}(r) &= P \left( \widehat{\theta}^{(j)} \le r \right) \\
+\widehat{F}_{\widehat{\theta}^{(j)}} \left( r \right) &= \frac{1}{B} \sum_{j^{*}=1}^B 1 \Big\{ \widehat{\theta}^{(j^{*})} \le r \Big\}
+\end{align*}
+
+------->
+
+
 
 <!------------- --------------------------------->
 <!-------------- SECTION: RESULTS --------------->
 <!------------- --------------------------------->
 
-\section{Results}
+\section{Main results}
 
-We now show that under a parametric bootstrapping algorithm defined below, the empirical distribution of the number of rejections in the bootstrap samples converges in distribution to the true distribution of the number of rejections in sample generated under the strong null. Figure \ref{roadmap} depicts the structure of the proofs. 
+We now show that under a certain class of resampling algorithms defined below, the empirical distribution of the number of rejections in the resamples converges to the true distribution of the number of rejections in samples generated under the strong null. Figure \ref{roadmap} depicts the structure of the proofs. 
 
 
 \begin{figure}[H]
-\caption{Overview of theory to follow. The dashed arrows denote convergence in probability in either $N$ or both $N$ and $B$. The solid arrow denotes almost sure convergence in $B$. Parenthetical acronyms refer to remarks, a lemma, and a theorem developed below.}
+\caption{Overview of theory to follow. Solid arrows denote ordinary limits in $B$, the dashed line denotes almost sure convergence in $N$, and the dotted line denotes convergence in probability in both $N$ and $B$. Parenthetical acronyms refer to an assumption, remark, lemma, and theorem developed below.}
 \label{roadmap}
 \begin{center}
 \begin{tikzpicture}
@@ -151,7 +171,7 @@ We now show that under a parametric bootstrapping algorithm defined below, the e
       \\};
   \path[-stealth]
   % the - argument removes the arrowhead
-    (m-1-1) edge[dashed] node [below] {(R1)} (m-1-2)
+    (m-1-1) edge[] node [below] {(A3)} (m-1-2)
     
     % diagonal line
 	%(m-1-1) edge[dashed] node [below] {(C1)} (m-2-2)
@@ -167,54 +187,78 @@ We now show that under a parametric bootstrapping algorithm defined below, the e
       \widehat{F}_{ \widehat{\theta}^{(j)} } & \\};
   \path[-stealth]
   % the - argument removes the arrowhead
-    (m-1-1) edge[dashed] node [below] {(L1)} (m-1-2)
+    (m-1-1) edge[] node [below] {(L1)} (m-1-2)
     
     % diagonal line
-	(m-2-1) edge[] node [left] {(R2)} (m-1-1)
+	(m-2-1) edge[dashed] node [left] {(R2)} (m-1-1)
     
-    (m-2-1) edge [dashed] node [below] {(T1)} (m-1-2)
+    (m-2-1) edge [dotted] node [below] {(T1)} (m-1-2)
             ;
 \end{tikzpicture}
 \end{center}
 \end{figure}
 
 
-
 <!-------------- Definition 1 --------------->
-\bigskip \begin{algorithm}[Parametric bootstrap under the strong null] 
+<!-------------- \setcounter{assump}{2} --------------->
+\bigskip \begin{assump}[Resampling under the strong null] 
 \label{cbt_def}
-We will refer throughout to bootstrap samples generated as follows:
-\begin{enumerate}
-\item Use the observed data to obtain consistent point estimates of any unknown parameters in the likelihood. 
-\item For any parameters in the likelihood that are constrained under the null hypothesis, set them equal to their null values (which are uniquely defined under Assumption 1 regarding point null hypotheses). For nuisance parameters, set them equal to their consistent estimates.  
-\item For any covariates treated as fixed in the likelihood, set them equal to their observed values.
-\item Generate outcome data from the estimated likelihood under the strong null as defined above. 
-\end{enumerate}
-\end{algorithm}
+The resampling algorithm used to generate $\left( Z_{n1}^{(j)}, \dotsb, Z_{nK}^{(j)} \right)$ must generate identically and independently distributed (i.i.d.) observations, and it must ensure that $\mathbf{T}^{(j)} \xrightarrow[B \to \infty]{D} \mathbf{T}^0$, i.e.:
+$$\lim_{B \to \infty} F_{\mathbf{T}^{(j)}} = F_{\mathbf{T}^0}$$
+\end{assump}
 
-(\hl{CITE ME - e.g., Fox, Romano}.)
-Note that unlike some resampling schemes that can induce \hl{XXX} problems, this algorithm guarantees that the bootstrapped data satisfy all parametric assumptions of the hypothesis tests to be conducted, preserving the nominal $\alpha$ of each test.
+This requirement has several critical implications. First, the resampled data must preserve the correlation structure of all variables in the dataset, except where the strong null dictates otherwise. Otherwise, the distribution of the test statistics will typically not be preserved. Second, just as the original data are assumed to respect the parametric assumptions of all $W$ hypothesis tests, the resampled data must be generated in a manner that also respects this parametric structure. Otherwise, hypothesis tests conducted on the resampled data may not preserve their nominal $\alpha$-levels, which again affects the distribution of the test statistics. 
 
 
-<!-------------- Example 1 --------------->
+<!-------------- Example 1 ------------->
 \bigskip
-\begin{example}[Parametric bootstrap for multiple linear regression] 
-Suppose that one of the hypothesis tests is conducted using an OLS model regressing the $w^{th}$ variable on the first variable, adjusting for the second variable:
-$$Z_{nw} = \beta_0 + \beta_1 Z_{n1} + \beta_2 Z_{n2} + \epsilon_{nw}$$
-with $H_0: \beta_1 = 0$ and $\epsilon \sim N(0, \sigma^2)$. Then we can apply Algorithm \ref{cbt_def} as follows:
-\begin{enumerate}
-\item Fit the model to the observed data to estimate the three nuisance parameters as $\widehat{\beta}_0$, $\widehat{\beta}_2$, and $\widehat{\sigma}^2$. 
-\item For each bootstrap iterate, set the design matrix equal to that of the observed data.
-\item Set $\beta_1 = 0$ (invoking the strong null), and set nuisance parameters $\beta_0 = \widehat{\beta}_0$, $\beta_2 = \widehat{\beta}_2$, and $\sigma^2 = \widehat{\sigma}^2$. 
-\item Thus, for each bootstrap iterate, generate the bootstrapped outcomes as $Z_{nw}^{(j)} = \widehat{\beta}_0 + \widehat{\beta}_2 Z_{n2} + \epsilon^{(j)}_{nw}$, where $\epsilon^{(j)}_{nw} \sim N(0,\widehat{\sigma}^2)$. 
-\end{enumerate}
+\begin{example}[A valid resampling algorithm for multiple linear regression] 
+\label{ex:ols}
+\normalfont
+Suppose we conduct $W=2$ hypothesis tests using ordinary least squares (OLS) regressions of the first and second variables on the third variable, adjusting for the fourth:
+\begin{align*}
+Z_{n1} &= \beta_0 + \beta_1 Z_{n3} + \beta_2 Z_{n4} + \epsilon_{n1}\\
+Z_{n2} &= \alpha_0 + \alpha_1 Z_{n3} + \alpha_2 Z_{n4} + \epsilon_{n2}
+\end{align*}
+with null hypotheses $H_{01}: \beta_1 = 0$ and $H_{02}: \alpha_1 = 0$, and assuming $\epsilon_{nw} \sim N(0, \sigma^2_w)$ for $w \in \{1,2\}$. A resampling algorithm \hl{[@westfalltext]} satisifying Assumption \ref{cbt_def} could proceed by first fixing the covariates $Z_{n3}$ and $Z_{n4}$ for all observations while setting the "outcomes" equal to a vector of residuals resampled with replacement. That is, letting $n'$ denote an observation sampled with replacement and letting hats denote the usual OLS estimates obtained from the original dataset, the resampled variables for observation $n$ are: 
+\begin{align*}
+Z_{n1}^{(j)} &:= \left( \widehat{Z}_{n'1} - Z_{n'1} \right)\\
+Z_{n2}^{(j)} &:= \left( \widehat{Z}_{n'2} - Z_{n'2} \right)\\
+Z_{n3}^{(j)} &:= Z_{n3}\\
+Z_{n4}^{(j)} &:= Z_{n4}
+\end{align*}
+This resampling algorithm fulfills Assumption \ref{cbt_def} (\hl{proof in progress}). Note that even if the original data were not generated under the strong null, this resampling algorithm guarantees that $E \big[ Z_{nw}^{(j)} \; \vert \; Z_{n3} \big] = E \big[ Z_{nw}^{(j)} \big]$ for $w \in \{1,2\}$, implying the strong null. This algorithm also retains the distributional assumption on $\epsilon_{n1}$ and $\epsilon_{n2}$.
 \end{example}
 
 
-<!-------------- Example 2 --------------->
+<!-------------- Example 2  ------------->
 \bigskip
-\begin{example}[Parametric bootstrap for linear mixed model] 
-The approach in Definition \ref{cbt_def} can accommodate parametric models with correlated observations, such as a linear mixed model with random intercepts by subject. One could obtain consistent estimates of the random intercepts using, for example, empirical Bayesian estimation, and these estimates can be plugged into the estimated likelihood under the strong null. 
+\begin{example}[An invalid resampling approach for multiple linear regression]
+\normalfont
+We now return to the setting of Example \ref{ex:ols}. An alternative resampling approach that is intuitive, but in fact violates Assumption \ref{cbt_def}, is to again fix $Z_{n3}$ and $Z_{n4}$ but to resample with replacement the outcome vectors $\left( Z_{n'1}, Z_{n'2} \right)$ rather than the residuals:
+\begin{align*}
+Z_{n1}^{(j)} &:= {Z}_{n'1}\\
+Z_{n2}^{(j)} &:= {Z}_{n'2}\\
+Z_{n3}^{(j)} &:= Z_{n3}\\
+Z_{n4}^{(j)} &:= Z_{n4}
+\end{align*}
+Although this approach indeed enforces the strong null and preserves the correlation between the outcomes, it fails to preserve the correlation between the outcomes and the adjusted covariate, $Z_{n4}$, and thus does not recover the distribution of $\left( \widehat{\beta}_1^0, \widehat{\alpha}_1^0 \right)$.
+\end{example}
+
+ 
+
+<!-------------- Example 2 ------------->
+\bigskip
+\begin{example}[Another invalid resampling algorithm for multiple linear regression] 
+\normalfont
+Another incorrect alternative would be to bootstrap parametrically while constraining $\beta_1 = \alpha_1 = 0$ to enforce the strong null:
+\begin{align*}
+Z_{n1}^{(j)} &:= \widehat{\beta}_0 + \widehat{\beta}_2 Z_{n4} + \epsilon_{n1}^{(j)}\\
+Z_{n2}^{(j)} &:= \widehat{\alpha}_0 + \widehat{\alpha}_2 Z_{n4} + \epsilon_{n2}^{(j)}\\
+Z_{n3}^{(j)} &:= Z_{n3}\\
+Z_{n4}^{(j)} &:= Z_{n4}
+\end{align*}
+where $\epsilon_{nw}^{(j)} \sim_{i.i.d.} N(0, \widehat{\sigma}^2_{\epsilon_{nw}})$ for $w \in \{ 1,2\}$. However, this sequential algorithm fails to preserve the correlation between $Z_{n1}$ and $Z_{n2}$, in turn failing to recover the distribution of $\left( \widehat{\beta}_1^0, \widehat{\alpha}_1^0 \right)$.
 \end{example}
 
 
@@ -222,19 +266,17 @@ The approach in Definition \ref{cbt_def} can accommodate parametric models with 
 \bigskip
 \begin{remark}
 \label{CMT_results}
-The distribution of the bootstrapped test statistics is consistent in $N$ for the true distribution of the test statistics under the strong null. By repeatedly invoking the Continuous Mapping Theorem (CMT):
-\begin{align}
-\label{consistent}
-f_{\mathbf{Z}^{(j)}} &\xrightarrow[N \to \infty]{P} f_{\mathbf{Z}^0} \tag{CMT; Assumption 3} \\
-f_{\mathbf{T}^{(j)}} &\xrightarrow[N \to \infty]{P} f_{\mathbf{T}^0} \tag{CMT; Assumption 2} \\
-F_{\mathbf{T}^{(j)}} &\xrightarrow[N \to \infty]{P} F_{\mathbf{T}^0} \tag{CMT; integration preserves continuity} \\
-\end{align}
+\normalfont
+For Assumption \ref{cbt_def} to hold, it is sufficient for $\mathbf{T}$ to be a continuous function of $\mathbf{Z}$ and for $\mathbf{Z}^{(j)} \xrightarrow[B \to \infty]{D} \mathbf{Z}^0$, i.e., $\lim_{B \to \infty} F_{\mathbf{Z}^{(j)}} = F_{\mathbf{Z}^0}$. Note that this condition is \emph{not} necessary for Assumption \ref{cbt_def} to hold; for example, under the residual resampling scheme of Example \ref{ex:ols}, we have $E \big[ Z_{n1}^{(j)} \big] = E \big[Z_{n2}^{(j)} \big] = 0$ regardless of $E \big[ Z_{n1} \big]$ and $E \big[Z_{n2}\big]$.
 \end{remark}
+
+
 
 <!-------------- Remark 2 --------------->
 \bigskip \begin{remark}
 \label{glivenko}
-By the i.i.d construction of the bootstrap samples and the Glivenko-Cantelli theorem, the empirical distribution of the number of rejections in the bootstrap samples converges almost surely in $B$ to its true distribution under the strong null:
+\normalfont
+By the i.i.d. construction of the resampled data (Assumption \ref{cbt_def}) and the Glivenko-Cantelli theorem, the empirical distribution of the number of rejections in the resamples converges almost surely in $B$ to its true distribution:
 $$\widehat{F}_{\widehat{\theta}^{(j)}} \xrightarrow[B \to \infty]{A.S.} F_{\widehat{\theta}^{(j)}} $$
 \end{remark}
 
@@ -264,7 +306,8 @@ Since the $B$ bootstrap samples are i.i.d. and $E \big[ \vert \widehat{F}_{\wide
 <!-------------- Lemma 1 --------------->
 \bigskip \begin{lemma}
 \label{lemma3}
-The number of rejections in the bootstrap samples converges in distribution in $N$ to the number of rejections in samples from the original population under the strong null: $$F_{{ \widehat{\theta} }^{(j)}} \xrightarrow[N \to \infty]{P} F_{{ \widehat{\theta} }^0}$$
+The number of rejections in the resamples converges in distribution in $N$ to the number of rejections in samples from the original population under the strong null:
+$$\lim_{B \to \infty} F_{{ \widehat{\theta} }^{(j)}} = F_{{ \widehat{\theta}^0 }}$$
 
 \begin{proof}
 Define the $r$-family of ``rejection sets'' as all possible configurations of the $W$ test statistics that lead to $r$ rejections: $$\mathcal{A}_r = \Big\{ \left( A_1, \dotsb, A_W \right) \in \mathbb{R}^W : \left( T_1 \in A_1, \dotsb, T_W \in A_W \right) \; \Rightarrow \; \widehat{\theta} = r\Big\}$$
@@ -272,9 +315,9 @@ Define the $r$-family of ``rejection sets'' as all possible configurations of th
 
 \bigskip Now consider the distribution of $\widehat{\theta}^{(j)}$:
 \begin{align*}
-P \left( \widehat{\theta}^{(j)} = r \right) &= P \left( \sum_{w=1}^W 1 \Big\{ T_w^{(j)} > c_{w,\alpha} \Big\} = r \right) \\
-&= \sum_{ \left( A_1, \dotsb, A_W \right) \in \mathcal{A} } P \left( T_1^{(j)} \in A_1, \dotsb, T_W^{(j)} \in A_W \right) \\
-&\xrightarrow[N \to \infty]{P} \sum_{ \left( A_1, \dotsb, A_W \right) \in \mathcal{A} } P \left( T^0_1 \in A_1, \dotsb, T^0_W \in A_W \right) \tag{\text{from Remark} \ref{CMT_results}}\\
+\lim_{B \to \infty} P \left( \widehat{\theta}^{(j)} = r \right) &= \lim_{B \to \infty} P \left( \sum_{w=1}^W 1 \Big\{ T_w^{(j)} > c_{w,\alpha} \Big\} = r \right) \\
+&= \lim_{B \to \infty} \sum_{ \left( A_1, \dotsb, A_W \right) \in \mathcal{A} } P \left( T_1^{(j)} \in A_1, \dotsb, T_W^{(j)} \in A_W \right) \\
+& \sum_{ \left( A_1, \dotsb, A_W \right) \in \mathcal{A} } P \left( T^0_1 \in A_1, \dotsb, T^0_W \in A_W \right) \tag{\text{from Assumption} \ref{cbt_def}}\\
 &= P \left( \widehat{\theta}^0 = r \right)
 \end{align*}
 \end{proof}
@@ -282,21 +325,19 @@ P \left( \widehat{\theta}^{(j)} = r \right) &= P \left( \sum_{w=1}^W 1 \Big\{ T_
 
 
 
-
-
 <!-------------- Theorem 1 --------------->
 \bigskip \begin{theorem} 
 \label{theorem1}
-The empirical distribution of the number of rejections in the bootstrap samples is consistent in $N$ and $B$ for the true distribution of the number of rejections under the strong null:
+The empirical distribution of the number of rejections in the resamples is consistent in $N$ and $B$ for the true distribution of the number of rejections under the strong null:
 $$\widehat{F}_{\widehat{\theta}^{(j)}} \xrightarrow[B, N \to \infty]{P} F_{\widehat{\theta}^0} $$
 \begin{proof}
-Fix an arbitrarily small $\epsilon > 0$ and $\epsilon' > 0$. Remark \ref{glivenko} implies consistency, so there exists a $B^{*}$ such that, for all $B > B^{*}$:
+Fix an arbitrarily small $\epsilon > 0$ and $\epsilon' > 0$. Remark \ref{glivenko} implies convergence in probability, so there exists a $B^{*}$ such that, for all $B > B^{*}$:
 \begin{align*}
-P \left( \vert \widehat{F}_{ \widehat{\theta}^{(j)} } - F_{ \widehat{\theta}^{(j)} } \vert > \epsilon / 2 \right) &< \epsilon'/2
+P \left( \vert \widehat{F}_{ \widehat{\theta}^{(j)} } - F_{ \widehat{\theta}^{(j)} } \vert > \epsilon / 2 \right) &< \epsilon'
 \end{align*}
 Similarly, from Lemma \ref{lemma3}, there exists an $N^{*}$ such that, for all $N > N^{*}$:
 \begin{align*}
-P \left( \vert F_{ \widehat{\theta}^{(j)} } - F_{ \widehat{\theta}^0 } \vert > \epsilon / 2 \right) &< \epsilon' / 2
+\left\vert F_{ \widehat{\theta}^{(j)} } - F_{ \widehat{\theta}^0 } \right\vert &< \epsilon / 2
 \end{align*}
 Thus, for all $B$ and $N$ such that $B > B^{*}$ and $N > N^{*}$:
 \begin{align*}
@@ -304,10 +345,55 @@ P \left( \vert \widehat{F}_{ \widehat{\theta}^{(j)} } - F_{ \widehat{\theta}^0 }
 &\le P \left( \vert \widehat{F}_{ \widehat{\theta}^{(j)} } - F_{ \widehat{\theta}^{(j)} } \vert + \vert F_{ \widehat{\theta}^{(j)} } - F_{ \widehat{\theta}^0 } \vert > \epsilon \right)  \tag{triangle inequality}\\
 &\le P \left( \vert \widehat{F}_{ \widehat{\theta}^{(j)} } - F_{ \widehat{\theta}^{(j)} } \vert > \epsilon/2 \; \text{ or } \; \vert F_{ \widehat{\theta}^{(j)} } - F_{ \widehat{\theta}^0 } \vert > \epsilon/2 \right) \\
 &\le P \left( \vert \widehat{F}_{ \widehat{\theta}^{(j)} } - F_{ \widehat{\theta}^{(j)} } \vert > \epsilon/2 \right) + P \left( \vert F_{ \widehat{\theta}^{(j)} } - F_{ \widehat{\theta}^0 } \vert > \epsilon/2 \right) \\
-&< \epsilon' 
+&< \epsilon' + 0
 \end{align*}
 \end{proof}
 \end{theorem}
+
+
+<!-------------------------- --------------------------------->
+<!-------------- SECTION: GIBBS --------------->
+<!-------------------------- --------------------------------->
+
+
+\section{A general Gibbs resampling algorithm}
+
+For simple modeling choices and study designs, it is fairly easy to specify a resampling algorithm that satisfies Assumption \ref{cbt_def} (for example, @westfalltext provide numerous such algorithms). However, designing valid ad hoc algorithms can be challenging for more complex settings, such as generalized linear models with non-identity links [@westfalltext]. Thus, here, we outline a general resampling algorithm that can capture complex dependence structures for \hl{arbitrary} analysis models, as long as the user is willing to assume a parametric structure for the relationships between outcomes\footnote{This method also assumes correct specification of the relationships between the outcomes and the covariates, but these assumptions are already implicit in the analysis model, so do not represent additional assumptions.}.
+
+Let $\mathbf{Y} = \left( \mathbf{Y}_1, \cdots, \mathbf{Y}_p \right)$ be a random vector of $p$ outcomes and $\mathbf{C}$ be a random vector of auxiliary covariates whose relationships with $\mathbf{Y}$ are not restricted under the strong null. Let $\mathbf{Y}^{\text{obs}}$ and $\mathbf{C}^{\text{obs}}$ denote their realized counterparts in the observed dataset. Let $\boldsymbol{\alpha}$ be a vector of all parameters characterizing the joint distribution of $\left( \mathbf{Y}, \mathbf{C} \right)$. (For example, if the joint distribution is conveniently specified in terms of a series of conditional densities, then $\boldsymbol{\alpha}$ could comprise regression parameters of each outcome in $\mathbf{Y}$ on each covariate in $\mathbf{C}$ and on the other outcomes.) Using $f^0$ to denote PDFs under the strong null, assume a uniform prior on $\boldsymbol{\alpha}$, such that $f^0 \left( \boldsymbol{\alpha} \right) \propto 1$. Then, fixing $\mathbf{C}$ as in Example \ref{ex:ols}, the posterior predictive distribution for a new vector of outcomes is: 
+
+\begin{align*}
+f^0 \left( \mathbf{Y}^{(j)} \; \vert \; \mathbf{Y}^{\text{obs}}, \mathbf{C}^{\text{obs}} \right) &= \int_{A} f^0 \left( \mathbf{Y}^{(j)} \; \vert \; \mathbf{Y}^{\text{obs}}, \mathbf{C}^{\text{obs}}, \boldsymbol{\alpha} \right) f^0 \left( \boldsymbol{\alpha} \; \vert \; \mathbf{Y}^{\text{obs}}, \mathbf{C}^{\text{obs}} \right) \partial \boldsymbol{\alpha} \\
+&\propto \int_{A} f^0 \left( \mathbf{Y}^{(j)} \; \vert \; \mathbf{Y}^{\text{obs}}, \mathbf{C}^{\text{obs}}, \boldsymbol{\alpha} \right) f^0 \left( \mathbf{Y}^{\text{obs}}, \mathbf{C}^{\text{obs}} \; \vert \; \boldsymbol{\alpha} \right) \partial \boldsymbol{\alpha} \tag{uniform prior}
+\end{align*}
+
+To draw $\mathbf{Y}^{(j)}$, a generic Gibbs sampler could proceed as follows [@gelman]:
+\begin{enumerate}
+\item{Specify fully conditional distributions for each outcome $Y_i$:
+\begin{align*}
+Y_1 &\sim f^0 \left( Y_1 \; \vert \; \boldsymbol{\alpha}_1, \mathbf{C}^{\text{obs}}, \mathbf{Y}_{-1} \right) \\
+&\;\;\vdots \notag \\
+Y_p &\sim f^0 \left( Y_p \; \vert \; \boldsymbol{\alpha}_p, \mathbf{C}^{\text{obs}}, \mathbf{Y}_{-p} \right) \\
+\end{align*}
+where $\mathbf{Y}_{-i}$ represents all outcomes in $\mathbf{Y}$ except for $Y_i$ itself, and where $\boldsymbol{\alpha}_i$ represents the subset of parameters in $\boldsymbol{\alpha}$ that characterize the joint distribution of $\left( Y_i, \mathbf{C} \right)$.
+}
+
+\item{Obtain initial values of $\boldsymbol{\alpha}$ (i.e., $\boldsymbol{\alpha}^{(1)}$) for the first Gibbs iterate, for example by using MLEs from the observed data.}
+
+\item{For iterate $j$, successively draw parameters and predictive values for each outcome:
+\begin{align*}
+\boldsymbol{\alpha}_1^{(j)} &\sim f^0 \left( \boldsymbol{\alpha}_1 \; \vert \; \mathbf{Y}^{(j-1)}, \mathbf{C}^{\text{obs}} \right) \\
+Y_1^{(j)} &\sim f^0 \left( Y_1 \; \vert \; \boldsymbol{\alpha}_1^{(j)}, \mathbf{Y}_{-1}^{(j-1)}, \mathbf{C}^{\text{obs}} \right) \\
+&\;\;\vdots \notag \\
+\boldsymbol{\alpha}_p^{(j)} &\sim f^0 \left( \boldsymbol{\alpha}_p \; \vert \; \mathbf{Y}^{(j-1)}, \mathbf{C}^{\text{obs}} \right) \\
+Y_p^{(j)} &\sim f^0 \left( Y_p \; \vert \; \boldsymbol{\alpha}_p^{(j)}, \mathbf{Y}_{-p}^{(j-1)}, \mathbf{C}^{\text{obs}} \right)
+\end{align*}
+}
+\end{enumerate}
+
+By the \hl{usual} results (\hl{LAME}) regarding Gibbs sampling and Bayesian estimation of the posterior predictive distribution [@gelman], this algorithm satisfies the convergence criterion in Remark \ref{CMT_results}.
+
+In practice, this algorithm can be easily implemented by repurposing existing software for missing data imputation by chained equations (e.g., @micepackage). To do so, the observed dataset is copied while setting to missing all values of $\mathbf{Y}$, and this new dataset with "missing" values is concatenated with the observed one, yielding a pseudo-dataset with $2N$ observations (half of which have missing outcomes). Then, existing software can be used to create $B$ imputations of the "missing" data, with the imputed portion of each of $B$ imputations (the last $N$ observations of the pseudo-datasets) becoming the resampled datasets. Critically, the user must be careful to specify the "imputation" models such that the strong null is enforced; in contrast, typical software defaults use all variables in the dataset to impute all other variables, which would not enforce the strong null.
 
 
 <!-------------------------- --------------------------------->
@@ -316,20 +402,49 @@ P \left( \vert \widehat{F}_{ \widehat{\theta}^{(j)} } - F_{ \widehat{\theta}^0 }
 
 \section{Simulation study}
 
-See simulations from 2017-8-1 (written up in "multiple_outcomes (4).pdf"). Maybe use these these scenarios again? Generate at least some data under null to show that power of joint test is <5\%, as intended.  
+\subsection{Methods}
 
-\subsection{Width of 95\% CI generated under null}
-
-\begin{itemize}
-\item Figure 1: Mean number of rejections and average of CI limits to show width
-\item Figure 2: Average distance of observed rejections from upper CI limit
-\end{itemize}
-
-\subsection{Power of joint test}
+We generated multivariate standard normal data, comprising 1 covariate ($X$) and 40 outcomes ($Y_1, \dotsb, Y_{40}$). The sample size was fixed at $N = 1000$. The correlation between each pair of outcomes was $\rho_{YY}$. The correlation between $X$ and a fixed proportion, $q$, of outcomes was $\rho_{XY}$ (with remaining pairs having correlation 0). 
+In a full-factorial design, we manipulated:
 
 \begin{itemize}
-\item Figure 3 with panels: Prob of rejecting joint null in samples generated under null (should be <5\% for all) and under various alternative scenarios
+\item $\rho_{XY} \in \{ 0, 0.02, 0.03, 0.04, 0.05, 0.10 \}$
+\item $\rho_{YY} \in \{ 0, 0.25, 0.50 \}$
+\item $q \in \{ 0.50, 1 \}$
+\item $\alpha \in \{ 0.01, 0.05 \}$
 \end{itemize}
+
+For each of $1000$ simulation reps per scenario, the simulation algorithm proceeded as follows:
+
+\begin{enumerate}
+\item Generate an observed dataset according to the scenario.
+\item Compute $\widehat{\theta}$: For each outcome $Y_i$, regress $Y_i$ on $X$ and conduct a $t$-test at level $\alpha$ on the coefficient for $X$. 
+\item{For each resampling iterate $j$ (with $B = 2000$), apply the algorithm in Example \ref{ex:ols}:
+	\begin{enumerate}
+	  \item Fix $X$ for all observations in the dataset.
+    \item Draw observation index $n'$ randomly with replacement from $\{ 1, \dotsb, N \}$. For observation $n$, set $Y_{nw}^{(j)} = \widehat{Y}_{n'w} - Y_{n'w}$ (the regression residual for observation $n'$ in the original dataset).
+    \item Compute $\widehat{\theta}^{(j)}$: Regress $Y_{w}^{(j)}$ on $X$ and conduct a $t$-test at level $\alpha$ on the coefficient for $X$. 
+    \end{enumerate}
+}
+\item Use the quantiles of $\left( \widehat{\theta}^{(1)}, \dotsb, \widehat{\theta}^{(B)} \right)$ to construct a 95\% CI for $\theta_0$ and to check if $\widehat{\theta}$ is above the $1-\alpha$ quantile.
+\end{enumerate}
+
+
+\subsection{Power to test the strong null}
+
+Figure 2 shows the power of joint tests of the strong null constructed using existing familywise error rate (FWER) procedures, for which we defined rejection of the strong null as rejecting at least one of the 40 FWER-corrected hypothesis tests. We compared two non-resampling methods (Bonferroni and Holm), four resampling methods that use data resampled under the strong null (Westfall minP[@westfalltext], Westfall step-down[@westfalltext], our method with $\alpha=0.05$, and our method with $\alpha=0.01$), one resampling method using data resampled without constraints (Romano[@romano]), and our highly experimental procedure involving rejection based on the mean log $p$-value. 
+
+For resampling methods using data generated under the null, we used the algorithm in Example \ref{ex:ols}. For the single method using data generated without constraints (Romano), we used a classical nonparametric bootstrap in which we simply resampled entire rows of the dataset with replacement and conducted hypothesis tests of the bootstrapped estimates versus those in the original dataset (rather than 0) to recover the null distribution [@hall;@chernick]. However, note that the classical bootstrap does not guarantee correct inference in the fitted OLS models because the exact repetition of entire rows of data induces correlation between $X$ and the residuals; we chose this approach because we are unaware of an unconstrained resampling algorithm for OLS that preserves parametric assumptions. (In contrast, residual resampling as in Example \ref{ex:ols} circumvents this problem because entire rows are not repeated.) Nevertheless, the joint test based on Romano's method under the classical bootstrap showed nominal rejection rates in the null scenarios (Figure 2, upper left panel).
+
+
+![Power of joint tests based on various FWER control procedures versus our methods.](joint_test.png)
+
+\subsection{Observed rejections vs. 95\% confidence interval under strong null}
+
+Figure 3 shows these results. (As we discussed, for the next iteration of this writeup, I'll remove the scenarios with small effect sizes; they are just included here for completeness.)
+
+![Average number of rejections and confidence limits in datasets resampled under the null when the original data were generated under various null and alternative scenarios.](null_ci.png)
+
 
 
 
@@ -340,9 +455,6 @@ See simulations from 2017-8-1 (written up in "multiple_outcomes (4).pdf"). Maybe
 \section{Applied example}
 
 
-
-<!--
-\newpage
 \section*{References}
--->
+
 

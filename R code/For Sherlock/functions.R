@@ -1,6 +1,5 @@
 
 
-
 ######################## FNS FOR WESTFALL's SINGLE-STEP ########################
 
 # returns minP-adjusted p-values (single-step)
@@ -133,9 +132,18 @@ get_crit = function( p.dat, col.p ) {
 # .half: Should only the last half the outcomes have the specified correlation?
 #  (if FALSE, correlation matrix is exchangeable; otherwise first half are 0 and 
 #  second half are rho.XY)
+# This is only included for backward compatibility because now we have the more flexible .prop.corr thing
 
-cell_corr = function( vname.1, vname.2, .rho.XX, .rho.YY, .rho.XY,
-                      .nY, .half = FALSE ) {
+# .prop.corr: What proportion of Ys should be correlated with X?
+
+cell_corr = function( vname.1,
+                      vname.2,
+                      .rho.XX,
+                      .rho.YY,
+                      .rho.XY,
+                      .nY,
+                      #.half = 0,
+                      .prop.corr = 1) {
   
   # use grep to figure out if variables are covariates or outcomes
   if ( length( grep("X", vname.1 ) ) == 1 ) {
@@ -168,20 +176,41 @@ cell_corr = function( vname.1, vname.2, .rho.XX, .rho.YY, .rho.XY,
     # equal correlation between X1 and all outcomes
     # all other covariates have correlation 0 with outcome
     if( "X1" %in% c( vname.1, vname.2 ) ) {
-      # exchangeable case
-      if ( !.half ) return( .rho.XY )
       
-      # "half are correlated" case
-      if (.half) {
+      # ##### ONLY FOR BACKWARD COMPATIBILITY #####
+      # # exchangeable case
+      # if ( .half == 0 ) return( .rho.XY )
+      # 
+      # # "half are correlated" case
+      # if ( .half == 1 ) {
+      #   # find the one that is the outcome
+      #   outcome.name = ifelse( vtype.1 == "outcome", vname.1, vname.2 )
+      #   
+      #   # extract its number (4 for "Y4")
+      #   num = substring( outcome.name, first = 2 )
+      #   
+      #   # see if its number is greater than halfway or not
+      #   return( ifelse( num > .nY / 2, .rho.XY, 0 ) )
+      # }
+      # ##### END PART FOR BACKWARD COMPATIBILITY #####
+      
+      # ~~~ MODIFIED
+      # this generalizes the above
+      # some other proportion of nulls are false
+      if (.prop.corr == 1) return( .rho.XY ) 
+      if ( .prop.corr != 1 ) {
         # find the one that is the outcome
         outcome.name = ifelse( vtype.1 == "outcome", vname.1, vname.2 )
         
-        # extract its number (4 for "Y4")
+        # extract its number ("4" for "Y4")
         num = substring( outcome.name, first = 2 )
         
-        # see if its number is greater than halfway or not
-        return( ifelse( num > .nY / 2, .rho.XY, 0 ) )
-        # bookmark
+        # the first last.correlated outcomes are correlated with X (rho.XY)
+        #  and the rest aren't
+        last.correlated = round( .nY * .prop.corr )
+        
+        # see if number for chosen outcome exceeds the last correlated one
+        return( ifelse( num > last.correlated, 0, .rho.XY ) )
       }
     }
     
@@ -202,7 +231,13 @@ cell_corr = function( vname.1, vname.2, .rho.XX, .rho.YY, .rho.XY,
 
 # if correlation matrix isn't positive definite, try reducing some of the correlations
 
-make_corr_mat = function( .nX, .nY, .rho.XX, .rho.YY, .rho.XY, .half = FALSE ) {
+make_corr_mat = function( .nX,
+                          .nY,
+                          .rho.XX,
+                          .rho.YY,
+                          .rho.XY,
+                          #.half = FALSE,
+                          .prop.corr = 1) {
   
   nVar = .nX + .nY
   
@@ -218,12 +253,11 @@ make_corr_mat = function( .nX, .nY, .rho.XX, .rho.YY, .rho.XY, .half = FALSE ) {
   # populate each cell 
   for ( r in 1:dim(cor)[1] ) {
     for ( c in 1:dim(cor)[2] ) {
-      cor[ r, c ] = cell_corr( vnames[r], vnames[c], .rho.XX, .rho.YY, .rho.XY, .nY, .half )
+      cor[ r, c ] = cell_corr( vnames[r], vnames[c], .rho.XX, .rho.YY, .rho.XY, .nY, .prop.corr )
     }
   }
   
   # check if positive definite
-  library(matrixcalc)
   if( ! is.positive.definite( as.matrix(cor) ) ) stop( "Correlation matrix not positive definite")
   
   return( cor )  # this is still a data.frame in order to keep names
@@ -246,8 +280,9 @@ sim_data = function( .n, .cor ) {
   
   # simulate the dataset
   # everything is a standard Normal
-  library(mvtnorm)
-  d = as.data.frame( rmvnorm( n = .n, mean = rep( 0, dim( .cor )[1] ), sigma = as.matrix( .cor ) ) )
+  d = as.data.frame( rmvnorm( n = .n,
+                              mean = rep( 0, dim( .cor )[1] ),
+                              sigma = as.matrix( .cor ) ) )
   names(d) = vnames
   
   # return the dataset
@@ -435,6 +470,55 @@ stitch_files = function(.results.singles.path, .results.stitched.write.path=.res
 }
 
 
+########################### FN: RETURN FILES THAT AREN'T COMPLETED ###########################
+
+# given a folder path for results and a common beginning of file name of results files
+#   written by separate workers in parallel, stitch results files together into a
+#   single csv.
+
+sbatch_not_run = function(.results.singles.path,
+                          .results.write.path,
+                        .name.prefix) {
+  
+  # .results.singles.path = "/share/PI/manishad/multTest/sim_results/short"
+  # .results.write.path = "/share/PI/manishad/multTest/sim_results"
+  # .name.prefix = "short"
+  
+  # get list of all files in folder
+  all.files = list.files(.results.singles.path, full.names=TRUE)
+  
+  # we only want the ones whose name includes .name.prefix
+  keepers = all.files[ grep( .name.prefix, all.files ) ]
+  
+  # ~~~ TEST ONLY
+  # keepers = c( "/share/PI/manishad/multTest/sim_results/short_results_job_2_.csv",
+  #              "/share/PI/manishad/multTest/sim_results/short_results_job_5_.csv")
+
+  # extract job numbers
+  sbatch.nums = as.numeric( unlist( lapply( strsplit( keepers, split = "_"), FUN = function(x) x[5] ) ) )
+  
+  # check for missed jobs before the max one
+  all.nums = 1:max(sbatch.nums)
+  missed.nums = all.nums[ !all.nums %in% sbatch.nums ]
+  
+  # give info
+  print("The max job number is: ", max(sbatch.nums) )
+  print( paste( "Number of jobs that weren't run: ",
+        ifelse( length(missed.nums) > 0, length(missed.nums), "none" ) ) )
+  
+  if( length(missed.nums) > 0 ) {
+    setwd(.results.write.path)
+    write.csv(missed.nums, "missed_job_nums.csv")
+  }
+  
+}
+
+# sbatch_not_run( "/share/PI/manishad/multTest/sim_results/short",
+#                 "/share/PI/manishad/multTest/sim_results",
+#                 .name.prefix = "short" )
+# scp mmathur@sherlock:/share/PI/manishad/multTest/sim_results/missed_job_nums.csv ~/Desktop
+
+
 ########################### SLURM FUNCTIONS ###########################
 
 
@@ -481,7 +565,7 @@ sbatch_skeleton <- function() {
 #SBATCH --cpus-per-task=CPUS_PER_TASK
 #now run normal batch commands
     
-ml load R
+ml load R/3.3.3.gcc
 srun R -f PATH_TO_R_SCRIPT ARGS_TO_R_SCRIPT")
 }
 

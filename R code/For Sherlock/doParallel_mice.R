@@ -19,7 +19,7 @@ alpha = c( crit.bonf, 0.01, 0.05 )
 
 # simulation reps to run within this job
 # this need to match n.reps.in.doParallel in the genSbatch script
-sim.reps = 5
+sim.reps = 1
 ######### END OF CLUSTER PART #########
 
 
@@ -73,10 +73,12 @@ sim.reps = 5
 # runs all bootstrapping iterations
 # writes 1-row csv with number rejected and bootstrap CI
 
+# need to load all packages here, not just in functions.R?
 library(doParallel)
 library(foreach)
 library(mvtnorm)
 library(BinNor)
+library(mice, lib.loc = "/share/PI/manishad/Rpackages/")
 
 # ~~~ LATER COULD PUT MICE FUNCTIONS IN REGULAR FNS THING
 #  BECAUSE THEY SHOULD BE BACKWARD-COMPATIBLE
@@ -134,11 +136,14 @@ for ( j in 1:sim.reps ) {
   
   ######## Begin MICE sampling under H0 ########
   if ( p$bt.type == "MICE.H0" ) {
+    
+    cat("Flag 1: entered imputation loop")
+    
     # double the dataset
     d2 = rbind(d, d)
     
     # make second half of dataset missing
-    d2[ (n+1) : nrow(d2), names(d2) %in% Y.names ] = NA
+    d2[ (p$n+1) : nrow(d2), names(d2) %in% Y.names ] = NA
     
     # recode binaries as factors to avoid whiny MICE
     for (y in Y.names) {
@@ -146,7 +151,6 @@ for ( j in 1:sim.reps ) {
     }
     
     # first fit empty MICE to get predictor matrix
-    library(mice)
     ini = mice(d2, maxit = 0)
     pred = ini$predictorMatrix
     
@@ -158,6 +162,8 @@ for ( j in 1:sim.reps ) {
     method = ini$method
     method[ method != "logreg" & method != "" ] = "logreg"
     imp = mice( d2, pred = pred, method = method, m = boot.reps )
+    
+    cat("Flag 2: finished imputation")
   }
   ######## End MICE sampling under H0 ########
   
@@ -168,7 +174,7 @@ for ( j in 1:sim.reps ) {
       
       # MICE has already generated all the datasets
       # so here, just extract the single imputed dataset that we need
-      b = complete(imp,i)[ (n+1) : (2*n), ]
+      b = complete(imp,i)[ (p$n+1) : (2*p$n), ]
 
       bt.res = dataset_result( .dat = b,
                                .alpha = alpha,

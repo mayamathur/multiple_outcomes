@@ -14,12 +14,17 @@ n = 1000
 nX = 1
 nY = 40
 rho.XX = 0
-rho.YY = c(0.25, 0.5, 0)
-rho.XY = c(0.02, 0.05, 0) # null hypothesis: 0
-half = c(0, 1)  # exchangeable vs. half-correlated matrix
+rho.YY = c(0.25, 0)
+rho.XY = c(0.05, 0) # null hypothesis: 0
+half = c(0)  # exchangeable vs. half-correlated matrix
+
+# scenarios from OLS
+# rho.YY = c(0.25, 0.5, 0)
+# rho.XY = c(0.02, 0.05, 0) # null hypothesis: 0
+# half = c(0, 1)  # exchangeable vs. half-correlated matrix
 
 # bootstrap iterates and type
-boot.reps = 2000
+boot.reps = 1000
 bt.type = c( "MICE.H0" )
 
 # matrix of scenario parameters
@@ -51,7 +56,7 @@ source("functions.R")
 
 # number of sbatches to generate (i.e., iterations within each scenario)
 n.reps.per.scen = 500
-n.reps.in.doParallel = 5
+n.reps.in.doParallel = 1
 n.files = ( n.reps.per.scen / n.reps.in.doParallel ) * n.scen
 
 
@@ -68,7 +73,7 @@ runfile_path = paste(path, "/testRunFile.R", sep="")
 sbatch_params <- data.frame(jobname,
                             outfile,
                             errorfile,
-                            jobtime = "0:30:00",
+                            jobtime = "6:00:00",
                             quality = "normal",
                             node_number = 1,
                             mem_per_node = 64000,

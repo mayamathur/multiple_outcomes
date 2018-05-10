@@ -12,10 +12,17 @@ nano rm_1.err
 scp -r mmathur@sherlock:/share/PI/manishad/multTest/sbatch_files/rm_19.err ~/Desktop
 scp -r mmathur@sherlock:/share/PI/manishad/multTest/sbatch_files/rm_19.out ~/Desktop
 
+
+
 # run one of them on Manisha's nodes
-sbatch -p manishad /share/PI/manishad/multTest/sbatch_files/1.sbatch
+sbatch -p manishad /share/PI/manishad/multTest/sbatch_files/10934.sbatch
 # not on Manisha's nodes
 sbatch -p normal,owners /share/PI/manishad/multTest/sbatch_files/1.sbatch
+
+
+sbatch -p normal,owners /share/PI/manishad/multTest/sbatch_files/99.sbatch
+
+
 
 # see the datasets
 cd /share/PI/manishad/multTest/sim_results/short
@@ -31,8 +38,14 @@ nano /share/PI/manishad/multTest/sim_results/overall_stitched/sti*
 # move all datasets to local machine
 scp -r mmathur@sherlock:/share/PI/manishad/multTest/sim_results.zip ~/Desktop
 
-# move stitched dataset to local machine
+
+
+# move stitched dataset and parameters to local machine
 scp mmathur@sherlock:/share/PI/manishad/multTest/sim_results/stitched.csv ~/Desktop
+scp mmathur@sherlock:/share/PI/manishad/multTest/scen_params.csv ~/Desktop
+
+scp mmathur@sherlock:/share/PI/manishad/multTest/sbatch_files/1.sbatch ~/Desktop
+
 
 # move parameters to Desktop
 scp mmathur@sherlock:/share/PI/manishad/multTest/scen_params.csv ~/Desktop
@@ -58,7 +71,7 @@ scp mmathur@sherlock:/share/PI/manishad/multTest/stitch_on_sherlock.R ~/Desktop
 rm /share/PI/manishad/multTest/sim_results/*
 rm /share/PI/manishad/multTest/sim_results/short/*
 rm /share/PI/manishad/multTest/sim_results/long/*
-rm -r /share/PI/manishad/multTest/sbatch_files/*
-rm -r /share/PI/manishad/multTest/sbatch_files/rm*
+rm /share/PI/manishad/multTest/sbatch_files/rm*
   
 
+rm -r /share/PI/manishad/multTest/sbatch_files/*
