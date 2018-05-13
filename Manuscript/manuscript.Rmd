@@ -99,6 +99,16 @@ Palo Alto, CA
 
 \newpage
 
+<!-------------------------- --------------------------------->
+<!------------- SECTION: TO DO -------------->
+<!-------------------------- --------------------------------->
+
+\section{To do}
+
+\begin{itemize}
+\item Connect the last theorem with number of rejections
+\end{itemize}
+
 
 <!-------------------------- --------------------------------->
 <!------------- SECTION: SETTING AND NOTATION -------------->
@@ -118,6 +128,7 @@ To cover:
 Assumptions:
 \begin{itemize}
 \item Ones borrowed directly from Freedman
+\item Covariates are mean-centered?
 \item All regressions have same design matrix and sample size. Do they all need to have same exposure of interest?
 \item Residuals have mean 0
 \item Independent observation
@@ -142,6 +153,46 @@ $\Psi_n(F)$: the distribution of $\sqrt{n} \left( \widehat{\beta}^W - \beta^W \r
 $p$: number of parameters. See Lemma 2.1'
 
 $\sigma^2_w$: see Lemma 2.1'
+
+<!-------------------------- REGULARITY ASSUMPTION ---------------------------->
+\begin{assump}
+\label{regularity_assump}
+As a regularity condition on the design matrix, assume that for some constant $k>0$:
+\begin{align*}
+N \cdot B'B &\xrightarrow[N \to \infty]{P} k \\
+\Leftrightarrow N \sum_{n=1}^N [(X'X)^{-1}X']^2_{ij} &\xrightarrow[n \to \infty]{P} k
+\end{align*}
+\end{assump}
+
+\begin{remark}
+To provide intuition, consider the assumption in the context of simple linear regression \textcolor{red}{($p=2$)} with a mean-centered exposure of interest, $X_1$. Define $S_1 = \sum_{n=1}^N X_{n1}$ and $S_2 = \sum_{n=1}^N X_{n1}^2$. Then we have:
+\begin{align*}
+X'X &= \begin{bmatrix}
+N & S_1 \\
+S_1 & S_2 
+\end{bmatrix}\\ \\
+(X'X)^{-1} &= \frac{1}{N S_2 - S_1^2} \begin{bmatrix}
+S_2 & -S_1 \\
+-S_1 & N 
+\end{bmatrix}\\ \\
+(X'X)^{-1}X' &= \frac{1}{N S_2 - S_1^2} \begin{bmatrix}
+S_2 - X_{11} S_1 & \dotsb & S_2 - X_{N1} S_1 \\
+-S_1 + X_{11}N & \dotsb & -S_1 + X_{N1} N 
+\end{bmatrix}\\
+\end{align*}
+
+The regularity condition concerns the term:
+\begin{align*}
+N \sum_{n=1}^N B_n^2 &= N \sum_{n=1}^N [(X'X)^{-1}X']^2_{n1} \\
+&= \frac{1}{ N S_2^2 - 2 S_2 S_1^2 + \frac{1}{N} S_2} \sum_{n=1}^N \left( X_{n1} N - S_1 \right)^2 \\
+&= \frac{1}{ N S_2^2 - 2 S_2 S_1^2 + \frac{1}{N} S_2} \sum_{n=1}^N \left( N^2 X_{n1}^2 - 2N X_{n1} S_1 + S_1^2 \right) \\
+&= \frac{N^2 S_2 - 2N S_1^2 + NS_1^2 }{N S_2^2 - 2 S_2 S_1^2 + \frac{1}{N} S_2} \\
+&= \frac{N^2 S_2 - NS_1^2 }{N S_2^2 - 2 S_2 S_1^2 + \frac{1}{N} S_2} \\
+&= \frac{\frac{S_2}{N} - \frac{S_1^2}{N^2} }{ \frac{S_2^2}{N^2} - 2 \frac{S_2}{N} \frac{S_1^2}{N^2} + \frac{S_2}{N^2} } \tag{$\div N^3$} \\
+&\xrightarrow[N \to \infty]{P} 1 / \sigma^2_1
+\end{align*}
+The last line follows because, by mean-centering, we have $S_1/N \xrightarrow[N \to \infty]{P} 0$ and $S_2/N \xrightarrow[N \to \infty]{P} \sigma^2_1$. Thus, for simple linear regression, Assumption \ref{regularity_assump} holds if $\sigma^2_1 > 0$. 
+\end{remark}
 
 <!-------------------------- LEMMA 8.9' ---------------------------->
 The following development closely follows @freedman, who considered the asymptotic validity of residual resampling in recovering the sampling distribtribution for a single multiple linear regression model. Here, we extend this work to consider the sampling distribution of coefficient estimations from several multiple linear regression models sharing the same design matrix, but with different outcomes. Several of the following lemmas parallel those in @bickel.
