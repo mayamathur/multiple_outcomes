@@ -26,6 +26,7 @@ header-includes:
 - \usepackage{color,soul}
 - \usepackage{palatino}
 - \usepackage{float}
+- \usepackage{amsmath}
 bibliography: refs_fake.bib
 ---
 
@@ -42,38 +43,49 @@ bibliography: refs_fake.bib
 
 \tableofcontents
 
-\section{Stream of consciousness}
 
-
-
-Mystery #2: Why does Westfall recommend a resampling scheme for logistic regression that doesn't preserve correlation? (pg 215)
-
-Multiple imputation idea: Maybe a general algorithm for resampling under $H_A$ could be something like MI. You would take your dataset and copy all the Xs, deleting the Ys. Then you would use an off-the-rack parametric MI procedure to impute the "missing data" for each of the resamples (and each time delete the observed data). E.g., could do a fully conditional approach where you first regression Y1 on all other variables, including the other outcomes, then regress Y2 on the remaining ones, etc. This does invoke assumptions about the form of relationship between the outcomes, but at least wouldn't break any parametric assumptions. I think you could do this with MICE's off-the-rack models because it fits logistic regression to binary variables by default (see JStatSoft paper)! To resample under $H_0$ this way, could first shuffle the Ys in original dataset? That should preserve correlation between Ys. 
-
-
-\section{For Westfall simulations}
-
-* Redo as-is but with 1000 reps/scenario, and have more reps in doParallel
-* Add Holm to simulations -- maybe do it along with Romano?
-* Add Romano to simulations (requires FCR instead of Westfall approach) since it seems to work in practice (\texttt{debug\_fcr}), but remember that this violates OLS assumptions, so isn't technically advisable. 
-
-\section{For later simulations}
-
-* Add binary outcomes with logistic regression?
-* To further improve power, could Use something about p-values themselves for joint test?
-
-
-
-
-\section{FWER control methods we should compare for power of joint test}
+<!-- NEW SECTION -->
+\section{Proof sketch following Freedman paper}
 
 \begin{enumerate}
-\item Westfall's single-step minP and maxT methods (pg 47): Easy to code manually
-\item Westfall's step-down free method (pg 66): Moderate to code manually
-\item Romano: Implemented in StepwiseTest package, but needs debugging
-\item Holm (step-down): Easy to code manually; UMP than Bonferroni
-\item Bonferroni (single-step): Easy to code manually
+\item{ Define multivariate Mallows metric, $\tilde{d}_2$. Prove that it's still a metric and that Eq. (2.3) still holds. Since it's a metric, triangle inequality (2.6) still holds:
+$$\frac{1}{2} \tilde{d}_2(F_n, F)^2 \le \tilde{d}_2(\widehat{F}_n, F_n) + \tilde{d}_2( F_n, F)$$}
+
+\item{ $\bigstar$ Show that Theorem 2.1 still holds for $\tilde{d}_2$, assuming the same design matrix for all regressions:
+$$\tilde{d}_2^p( \Psi (F_n), \Psi (F)) \le n \cdot \text{trace} [X(n)'X(n)]^{-1} \cdot d_2(F,G)$$
+}
+
+\item{Work on each piece of the triangle inequality:
+	\begin{enumerate}
+    	\item $\tilde{d}_2(F_n, F) \to 0$ because we can still apply SLLN to joint distribution (analog to B\&F Lemmas 8.3/8.4).
+        \item $\tilde{d}_2( \widehat{F}_n, F_n) \le \frac{p}{n} \sum_{w=1}^W \sigma^2_w \to 0$ (analog to Lemmas 2.1/2.2).
+    \end{enumerate}
+}
+
+\item{Lemma 2.4 still holds because each term $\to 0$ by B\&F Lemma 2.4:
+$$\frac{1}{n} \sum_{w=1}^W \| \widehat{\epsilon}_{w} (n) - \widehat{\epsilon}_{w} (n) \|^2 \to 0$$
+}
+
+\item{ Lemma 2.5 still holds using our Eq. (2.3), our Lemma 2.4, and the fact that $\widehat{F}_n = \tilde{F}_n$ for us:
+
+$$d_2( \widehat{F}_n, F_n ) \to 0$$}
+
+\item{$\bigstar$ Show that $\Psi (F_n)$ is close to $\Psi (\widehat{F}_n)$ by writing difference between vector of coefficient estimates in terms of residuals and resampled residuals (loose analog to Theorem 2.2).}
 \end{enumerate}
+
+
+
+\section{Stream of consciousness}
+
+MICE thing doesn't work because we're regressing $Y_2$ on $Y_1$, and if data are generated under $H_A$, these are correlated because both outcomes are correlated with $X$. This remains true even if we leave $X$ out of the imputation model. 
+
+FCR-center works for OLS but not logistic regression because for the latter, SE depends on value of parameter. (Is this subset pivotality?)
+
+Marginally vs. conditionally: See simulation writeups.  
+
+Bootstrapping brainteaser: Observations really are independent in FCR resamples. I think the previous issues with this were actually not due to failed assumptions. 
+\url{https://stats.stackexchange.com/questions/339237/are-observations-independent-in-bootstrapped-resamples}
+
 
 
 \section{Our two metrics}
@@ -223,7 +235,7 @@ A resampling-based procedure for FDR control. Very readable!
 \begin{itemize}
 \item Pg. 7: Outlines residual resampling under $H_0$, exactly as we will be doing
 \item Talks a lot about Westfall and also uses subset pivotality
-\item Pg 7: "Subset pivotality is achieved if the distribution of [the p-values of the true null hypotheses] is unaffected by the truth or falsehood of the remaining hypotheses"
+\item Pg 7 (subset pivotality): When we resample under the strong null, the distribution of $p$-values for the null hypotheses that are actually \emph{false} is different from what it is in real life. That's because we are resampling such that \emph{all} nulls are true, whereas in real life some might be false. The goal is to use the resampled distribution of $p$-values \emph{for the nulls that are true} to approximate its true distribution. This only holds if the distribution of that subset of $p$-values isn't affected by the truth or falsehood of the remaining hypotheses. 
 \item Seems to be very closely related to Westfall, but cares about FDR instead of FWER. 
 \end{itemize}
 
@@ -244,7 +256,7 @@ A resampling-based multiple testing control procedure for FWER, k-FWER, or FDP.
 \item FDP control: With 95\% confidence, the proportion of rejections that are false positives is $< \gamma$
 \item FDR control: with 95\% confidence, the EXPECTED proportion of rejections that are false positives is $< \gamma$ 
 \item They bootstrap under the original data distribution and use this to get quantiles of the distribution of the $k^{th}$-largest test statistic for various subsets of the test statistics, allowing control of the $k-$FWER through a step-down procedure. 
-\item Why resample not under the null? Since we don't know which hypotheses are true, assume the data really were generated under the null because this is conservative. If the data aren't generated under the null, then the critical values will just be more stringent because the kth-largest test stat will be larger (page 1383). Basically this "exploits the duality between CIs and hypothesis tests" (pg 1388). Apparently resampling not under the null avoids subset pivotality (pg 1388). 
+\item Why resample not under the null? Apparently resampling not under the null avoids subset pivotality (pg 1388). Resampling under $H_A$ "exploits the duality between CIs and hypothesis tests" (pg 1388). Even though we're resampling under $H_A$, the \emph{critical value} is still under the null distribution. (See Example 2.1, where the critical value is clearly for the distribution when $\mu=0$. Also note that the $A$ subscript on the critical values, for example on page 1384, indicates that it's the critical value when all $s$ nulls are true.) Thus, I think he must be centering the bootstrapped test stats by the observed one in order to get the null distribution of the critical values. This is corroborated by an email exchange I had with author of StepwiseTest package (see file "Romano Wolf StepwiseTest package question email thread").
 \item Page 1396: Talks about other resampling methods in some detail, including Westfall
 \item Does not use subset pivotality, unlike Westfall
 \end{itemize}
@@ -405,9 +417,9 @@ Resampling-based procedures for FWER control.
 
 \section{Resolved questions}
 
-\subsection{What should we do about logistic regression?}
+\subsection{What does Westfall do for logistic regression?}
 
-Westfall's algorithm (pg 215) doesn't seem to work. He just regresses each outcome on the Xs and then generates from a binomial using the fitted parameters. But this doesn't preserve the correlation between the Ys (see \texttt{westfall\_logistic\_regression.R}), so I don't understand. Also, he says you can't do case-resampling for logistic regression, but I don't know why -- unless it's the same issue about correlated residuals that seems potentially problematic in OLS. 
+Westfall's algorithm (pg 215) doesn't seem to work. He just regresses each outcome on the Xs and then generates from a binomial using the fitted parameters. But this doesn't preserve the correlation between the Ys unless you condition on all covariates such that the Ys are independent (see \texttt{westfall\_logistic\_regression.R}). 
 
 
 \subsection{Should we compare our joint test to joint tests based on non-FWER procedures?}
@@ -457,15 +469,93 @@ Because there are only a fixed number of p-values (k), and this is not necessari
 A: Correct. It does not necessarily work in small samples. 
 
 
+<!-- NEW SECTION -->
+\newpage
+\subsection{Exact variance under null}
+
+Let $p_w$ be the $w^{th}$ observed p-value. Then, under the strong null, we have:
+\begin{align*}
+\text{Var}\left( \widehat{\theta} \right) &= W \alpha \left( 1 - \alpha \right) + 2 \sum_{1 \le i < j \le W} P \left( p_i < \alpha, p_j < \alpha \right) - \alpha^2
+\end{align*}
+
+\begin{align*}
+\text{Var} \left( \widehat{\theta} \right) &= \text{Var} \left( \sum_{w=1}^W 1 \big\{ p_w < \alpha \big\} \right) \\
+&= \sum_{w=1}^W \text{Var} \left( 1 \big\{ p_w < \alpha \big\} \right) + 2 \sum_{1 \le i < j \le W} \text{Cov} \left( 1 \big\{ p_i < \alpha \big\}, 1 \big\{ p_j < \alpha \big\} \right) \\
+%--
+&= W \alpha \left( 1-\alpha \right) + 2 \sum_{1 \le i < j \le W} E \big[ 1 \big\{ p_i < \alpha, p_j < \alpha \big\} \big] - E \big[ 1 \big\{ p_i < \alpha \big\} \big] E \big[ 1 \big\{ p_j < \alpha \big\} \big] \\
+%--
+&= W \alpha \left( 1-\alpha \right) + 2 \sum_{1 \le i < j \le W} \Big[ \underbrace{P \left( p_i < \alpha, p_j < \alpha \right)}_{=\alpha^2 \text{ under independence}} - \alpha^2 \Big]
+\end{align*}
+
+
 
 <!-- NEW SECTION -->
 \newpage
 \section{Simulation notes}
 
-\subsection{Upcoming simulations}
+\subsection{"Marginally vs conditionally"}
+
+Goal was to test the hypothesis that if outcomes are independent conditional on \emph{adjusted} covariate C, then the test stats for X are independent even though the outcomes are marginally correlated. However, if the outcomes are independent only conditional on \emph{unadjusted} U (as in below simulations), then the test stats for X are correlated. 
+
+\subsection{"Validate FCR-center resampling"}
+
+Since realizing that MICE algorithm wouldn't work, I tried to validate FCR-center (i.e., do FCR, but then center each resampled test statistic by its counterpart in the original data) by generating data with 1 standard normal covariate and 1 unmeasured non-confounder that induces correlation between $Y_1$ (normal) and $Y_2$ (either normal or binary depending on scenario). The empirical (Sherlock) results for both scenarios are in \texttt{stitched.csv}. 
+
+The simulation had two separate stages:
+
+\begin{enumerate}
+\item Locally, use \texttt{fcr\_center\_validation.R} to actually generate data under $H_0$ (i.e., override the beta for $X$ and set it to 0) for $10,000$ simulation reps and check the correlation of the $p$-values. This gives us the "true" correlations under $H_0$. 
+\item On Sherlock, use \texttt{fcr\_center\_validation\_for\_sherlock.R} to generate, for each of $2,500$ simulation reps per scenario, an original dataset under $H_A$ and then use FCR-resample to produce $B=2,000$ resamples under $H_0$. Fit the analysis model to each resample. Compute the average correlation of the $p$-values for each simulation rep.  
+\end{enumerate}
+
+\underline{Results:} When both outcomes are normal, FCR-center exactly recovers the correct $p$-value correlation (true correlation: 0.70, empirical correlation: 0.70). However, when 1 outcome is normal and 1 is binary, FCR-center does not work (true correlation: 0.31, empirical correlation: 0.20).
+
+\underline{Explanation:} I think this is because CI and hypothesis test are directly equivalent for OLS, but not for logistic regression. That's because for OLS, the SE is independent of the value of the parameter $\beta$ itself: it's just $\sigma^2(X'X)^{-1}$, and $\sigma$^2 is independent of $\beta$ for any fixed model specification. In contrast, with logistic regression, the SE depends on $\beta$, which is why its MLEs require iteration. Basically this is the same reason that the SE for a proportion is different when computed under $H_0$ vs. $H_A$, so the CI and test might not coincide. I did a separate simulation to check this in which I avoided any bootstrapping. I just directly generated data under $H_0$ or $H_A$ using \texttt{fcr\_center\_validation.R} and looked at whether the "true" SE of the coefficient estimates was the same for $H_0$ and $H_A$. Below, the 0.06 and 0.08 show the difference in SEs under $H_0$ and $H_A$ for a binary outcome.
+
+\hl{IS THIS THE FABLED SUBSET PIVOTALITY?}
 
 
-\subsection{"2018-3-18 with other methods"}
+\begin{table}[H]
+\centering
+\label{my-label}
+\begin{tabular}{@{}llll@{}}
+\toprule
+Y2 type & $H_0$ & $SE(\widehat{\beta}_{Y_1})$ & $SE(\widehat{\beta}_{Y_2})$ \\ \midrule
+Binary  & T    & 0.10      & 0.06      \\
+Binary  & F    & 0.10      & 0.08      \\ \midrule
+Normal  & T    & 0.10      & 0.10      \\
+Normal  & F    & 0.10      & 0.10        \\ \bottomrule
+\end{tabular}
+\end{table}
+
+
+\subsection{2018-4-7 unsaved local simulations using \texttt{mice\_validation.R} }
+
+"2 normal outcomes": 
+
+Critical: 
+If Y1 and Y2 are correlated because of U, but U is adjusted in the models for Y1 and Y2, then the test stats and p-values AREN’T correlated.
+
+If U is NOT adjusted in analysis (implicit in our current simulations), then the test stats and p-values ARE correlated.
+
+
+\subsection{2018-4-3}
+
+Reran all methods to compare. This is written up in the file "2018-4-3 Multiple Outcomes update #1".
+
+
+\subsection{2018-3-16 $\ast$real Romano}
+
+Resampling parametrically under original data distribution (\texttt{ha.resid}) and centering bootstrapped test stats by observed one in order to apply Romano.  
+
+\subsection{"2018-3-15 add Romano-H0"}
+
+This is the same as the previous one, except adding Holm and a version of Romano that still uses \emph{null} resamples (\texttt{h0.parametric}). Note that this is not actually what he recommends in his paper (he resamples from the original data distribution, but then presumably centers the bootstrapped test statistics by the observed one). 
+
+For paper, could combine these results (minus Romano) with previous one in order to have 1000 simulations per method (except Holm because it wasn't in the previous simulations). 
+
+
+\subsection{"2018-3-18 $\ast$with other methods"}
 
 We shelved the CI under the alternative because of the below issues (couldn't find a bootstrapping/resampling method that worked under $H_A$). In the present simulations, we compared our joint test of the null (using number of rejections) to other methods (Westfall's minP, Westfall's step-down, Bonferroni). 
 
@@ -676,10 +766,6 @@ One-sided CI idea to improve coverage a little
 
 For earlier simulation results, see old project log in Word. 
 
-<!--
-\newpage
-Here is a test reference[@evalue]. Use semicolons to separate multiple references. To change reference style, Google for a .csl style sheet for journal of interest of one with similar reference style. 
--->
 
 
 <!-- NEW SECTION -->

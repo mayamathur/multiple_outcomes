@@ -95,13 +95,235 @@ Palo Alto, CA
 
 -->
 
+\newcommand*{\vertbar}{\rule[-1ex]{0.5pt}{2.5ex}}
 
 \newpage
 
+
 <!-------------------------- --------------------------------->
-<!-------------- SECTION: SETTING AND NOTATION --------------->
+<!------------- SECTION: SETTING AND NOTATION -------------->
 <!-------------------------- --------------------------------->
 
+\section{Setting and notation}
+
+To cover:
+\begin{itemize}
+\item Draw data structure for us and for Freedman
+\item Distance metric
+\item Various distribution functions
+\item Matrices
+\item Assumptions
+\end{itemize}
+
+Assumptions:
+\begin{itemize}
+\item Ones borrowed directly from Freedman
+\item All regressions have same design matrix and sample size. Do they all need to have same exposure of interest?
+\item Residuals have mean 0
+\item Independent observation
+\end{itemize}
+
+Superscripts denote lengths. Subscripts denote indices. $[\cdot]_{ij}$ denotes the $i,j^{th}$ element of a matrix, and $[\cdot]_{i}$ denotes the $i^{th}$ element of a vector.
+
+$\beta^W$: the $W$-vector of coefficients of interest for each regression. For clarity, we use the superscript to remind the reader that this is not the usual $p$-vector of coefficients from a single multiple regression model, but rather a vector of single coefficient estimates from $W$ different regression models. 
+
+$\widehat{\beta}^W$: the W-vector of coefficient estimates of interest for each regression
+
+$\epsilon_w$: the $N$-vector of true errors for the $w^{th}$ regression
+
+$\epsilon_{kw}$: the scalar true error for observation $k$ in regression $w$
+
+$X$: the $N \times p$ design matrix
+
+$\underset{p \times N} A = \left( X'X \right)^{-1}X'$
+
+$\Psi_n(F)$: the distribution of $\sqrt{n} \left( \widehat{\beta}^W - \beta^W \right)$
+
+$p$: number of parameters. See Lemma 2.1'
+
+$\sigma^2_w$: see Lemma 2.1'
+
+<!-------------------------- LEMMA 8.9' ---------------------------->
+The following development closely follows @freedman, who considered the asymptotic validity of residual resampling in recovering the sampling distribtribution for a single multiple linear regression model. Here, we extend this work to consider the sampling distribution of coefficient estimations from several multiple linear regression models sharing the same design matrix, but with different outcomes. Several of the following lemmas parallel those in @bickel.
+\begin{lemma}[Lemma 8.9']
+Let $C$ and $D$ be $W \times N$ random matrices, and let $B$ be a fixed $N$-vector. Let $G_C$ and $G_D$ be the marginal distribution functions of the $W$-vectors $CB$ and $DB$, respectively. Then: 
+\begin{align*}
+d_2^W \left( G_C, G_D \right)^2 &\le \text{tr} \{ BB' E \big[ (C-D)'(C-D) \big] \}
+\end{align*}
+
+\begin{proof}
+\begin{align*}
+d_2^W \left( G_C, G_D \right)^2 &\le E \Big[ || CB - DB ||^2 \Big]\\
+&= E \Big[ \text{tr} \{ \underbrace{(CB-DB)}_{1 \times W} \underbrace{(CB-DB)'}_{W \times 1} \} \Big] \\
+&= E \Big[ \text{tr} \{ \underbrace{(C-D)}_{W \times N} \underbrace{BB'}_{N \times N} \underbrace{(C-D)'}_{N \times W} \} \Big] \\
+&= E \Big[ \text{tr} \{ BB' (C-D)'(C-D) \} \Big] \tag{trace cyclical invariance}\\
+&= \text{tr} \{ E \Big[ BB' (C-D)'(C-D) \Big] \}  \\
+&= \text{tr} \{ BB' E [ \underbrace{ (C-D)'(C-D) }_{N \times N} ] \} \tag{B is fixed} \\
+\end{align*}
+\textcolor{red}{In the inequality, the LHS is the infimum of the expectation over all possible pairs of random variables, whereas the RHS is the expectation for a particular pair of random variables (see similar step in Bickel \& Freedman pg 1214, Lemma 8.9.}
+\end{proof}
+\end{lemma}
+
+
+
+
+<!-------------------------- THEOREM 2.1'---------------------------->
+The next theorem bounds the distance between the true sampling distribution of the test statistics and the estimated sampling distribution in the resamples in terms of the distance between the sampling distribution of the true errors and the resampled residuals. 
+
+\begin{theorem}[Theorem 2.1']
+\label{bound_thm}
+Let $\underset{N \times 1} B$ be the $i^{th}$ column of $(X'X)^{-1}X'$ (i.e., corresponding to the $i^{th}$ regression covariate). Then:
+\begin{align*}
+d_2^W \left( \Psi(F), \Psi(F_N) \right)^2 &\le N \cdot \text{tr} \{ BB' \} \cdot d_2^W \left( F, F_N \right)^2
+\end{align*}
+
+\begin{proof}
+
+In general for multiple regression, we have $\widehat{\beta} - \beta = \left( X'X\right)^{-1} X' \epsilon$.
+Letting:
+
+\begin{align*}
+C = \underbrace{
+\begin{bmatrix}
+    \text{---} \hspace{-0.2cm} & \epsilon_1' & \hspace{-0.2cm} \text{---} \\
+    & \vdots & \\
+    \text{---} \hspace{-0.2cm} & \epsilon_W' & \hspace{-0.2cm} \text{---}
+\end{bmatrix} }_{W \times N}
+\end{align*}
+
+we can express $\Psi_N(F)$ as the law of the $W$-vector: 
+
+\begin{align*}
+\sqrt{N} \left( \widehat{\beta}^W - \beta^W \right) &= \sqrt{N} \begin{bmatrix}
+    [ (X'X)^{-1}X' \epsilon_1 ]_{i}\\
+    \vdots\\
+    [ (X'X)^{-1}X' \epsilon_W ]_{i}
+\end{bmatrix} = \sqrt{N} \begin{bmatrix}
+    \epsilon_1' B \\
+    \vdots\\
+    \epsilon_W' B
+\end{bmatrix} =
+\sqrt{N} \cdot CB
+\end{align*}
+
+whose $w^{th}$ element pertains to the $i^{th}$ regression coefficient in the $w^{th}$ regression. Now let $D$ be the counterpart of $C$ with the residual vectors, $\widehat{\epsilon}_w$, in place of the true errors, $\epsilon_w$. Then the entries of matrix $(C-D)'(C-D)$ are:
+\begin{align*}
+[(C-D)'(C-D)]_{kj} &= \sum_{w=1}^W \left( \epsilon_{jw} - \widehat{\epsilon}_{jw} \right) \left( \epsilon_{kw} - \widehat{\epsilon}_{kw} \right)
+\end{align*}
+
+We have $E[ \left( \epsilon_{jw} - \widehat{\epsilon}_{jw} \right) \left( \epsilon_{kw} - \widehat{\epsilon}_{kw} \right) ] = \text{Cov} \left( \epsilon_{jw} - \widehat{\epsilon}_{jw}, \epsilon_{kw} - \widehat{\epsilon}_{kw} \right)$, but for all $k \ne j$, the covariance is 0 because the observations are independent. Thus, $E[(C-D)'(C-D)]$ is a diagonal matrix equal to $I^{N} \cdot E \Big[ \sum_{w=1}^W \left( \epsilon_{jw} - \widehat{\epsilon}_{jw} \right)^2 \Big] = I^{N} \cdot d_2^W \left( \widehat{F}_n, F\right)$. \textcolor{red}{I took the latter equality from B\&F Lemma 8.9 but don't understand it. I traced it back to the proof of Lemma 8.6 (pg 1213), in which this equality is stated to hold "without loss of generality in view of Lemma 8.1", but I still don't understand.} The result then follows immediately from applying Lemma 8.9', setting $G_C = F$, $G_D = \widehat{F}_n$ and $B, C,$ and $D$ as defined above and pulling the scalar $\sqrt{N}$ outside the squared distance. 
+\end{proof}
+\end{theorem}
+
+To apply the bound in Theorem 2.1', we will first bound the term on the right-hand side through a triangle inequality argument, which applies because $d_2^W(\cdot, cdot)$ is a metric [@bickel]:
+
+\begin{align}
+\label{triangle}
+d_2^W \left( \widehat{F}_N, F \right)^2 \le d_2^W \left( \widehat{F}_N, F_N \right)^2 + d_2^W \left( F_N, F \right)^2 
+\end{align}
+The first term on the RHS relates the empirical distribution of the residuals to the empirical distribution of the true errors (which are discrete distributions taking $N$ values); the second term relates the latter empirical distribution to the true error distribution (which is continuous). 
+
+
+\begin{lemma}[Lemma 2.1']
+\label{first_bound}
+Concerning the first term in Equation (\ref{triangle}):
+\begin{align*}
+d_2^W \left( \widehat{F}_N, F_N\right) \xrightarrow[N \to \infty]{P} 0
+\end{align*}
+
+\begin{proof}
+As in Definition XXX, let $U \sim \widehat{F}_N$ and $V \sim F_N$ be two random variables in $\mathbb{R}^W$ that follow the empirical marginal distributions of the residuals and true errors. Denote their elements $\left( U_1, \dotsb, U_W \right)$ and $\left( V_1, \dotsb, V_W \right)$. \textcolor{red}{Let $(\widetilde{U}, \widetilde{V})$ be a special choice of $(U,V)$ that follow not only the marginal empirical distributions $\widehat{F}_N$ and $F_N$, but also the empirical \emph{joint} distribution of the residuals and the true errors.}
+
+\begin{align*}
+d_2^W \left( \widehat{F}_N, F_N\right) & := \inf\limits_{ \substack{U \sim \widehat{F}_N \\ V \sim F_N} } E \big[ || U - V ||^2 \big] \\
+& \textcolor{red}{\le E \Big[ || \widetilde{U} - \widetilde{V} ||^2 \Big] \tag{\text{choose one element from inf set}} }\\
+& = \frac{1}{N} \sum_{n=1}^N \underbrace{ \sum_{w=1}^W \left( \widehat{\epsilon}_{nw} - \epsilon_{nw} \right)^2 }_{||\cdot||^2 \text{ of a $W$-vector}} \tag{\text{joint ECDF expectation}}\\
+& = \frac{1}{N} \sum_{w=1}^W \underbrace{ \sum_{n=1}^N \left( \widehat{\epsilon}_{nw} - \epsilon_{nw} \right)^2 }_{||\cdot||^2 \text{ of an $N$-vector}}\\
+&= \frac{1}{N} \sum_{w=1}^W || \widehat{\epsilon}_w - \epsilon_w ||^2 \\
+\Rightarrow E \Big[ d_2^W \left( \widehat{F}_N, F_N\right) \Big] &= \frac{p}{N} \sum_{w=1}^W \sigma^2_w \tag{\text{Freedman Eq. (2.2)}} \\
+& \xrightarrow[N \to \infty]{P} 0
+\end{align*}
+where $p$ is the number of parameters and $\sigma^2_W$ is XXX. The interchange of summations in lines 3-4 is used to turn a norm involving residuals from different regressions, summed over $N$ observations, into a norm involving residuals of observations within a regression, summed over $W$ regressions. The latter is more convenient because it allows application of existing theory for a single multiple regression model.  
+
+\end{proof}
+\end{lemma}
+
+
+\begin{lemma}
+\label{second_bound}
+Concerning the expectation of the second term in Equation (\ref{triangle}):
+\begin{align*}
+E \Big[ d_2^W \left( \widehat{F}_N, F \right)^2 \Big] \xrightarrow[N \to \infty]{P} 0
+\end{align*}
+
+\begin{proof}
+Letting $P_N$ denote an empirical probability, \textcolor{red}{the joint cumulative distribution corresponding to} $F_N$ is:
+\begin{align*}
+P_N \left( \epsilon_{n1} \le c_1, \dotsb, \epsilon_{nW} \le c_W \right) &= \frac{1}{N} \sum_{n=1}^N 1 \big\{ \epsilon_{n1} \le c_1, \dotsb, \epsilon_{nW} \le c_W \big\} \\
+&\xrightarrow[N \to \infty]{p} P \left( \epsilon_{n1} \le c_1, \dotsb, \epsilon_{nW} \le c_W \right) \tag{SLLN}
+\end{align*}
+which is the joint cumulative distribution corresponding to $F$. By @bickel's Lemma 8.3, this convergence in probability implies the desired result.
+\end{proof}
+\end{lemma}
+
+
+\begin{theorem}[Lemma 2.4']
+\begin{align*}
+\widehat{\beta}^{*W} \xrightarrow[N \to \infty]{D} \widehat{\beta}^W
+\end{align*}
+
+\begin{proof}
+
+\textcolor{red}{First, note that $\text{tr} \{ BB' \} \ge 0$ because XXX.} Thus, combining Theorem \ref{bound_thm} with the triangle inequality in Equation (\ref{triangle}) yields:
+\begin{align*}
+d_2^W \left( \Psi(F), \Psi(F_n) \right)^2 &\le N \cdot \text{tr} \{ BB' \} \cdot \left( d_2^W \left( \widehat{F}_N, F_N \right)^2 + d_2^W \left( F_N, F \right)^2 \right)
+\end{align*}
+
+The term $N \cdot \text{tr} \{ BB' \} \xrightarrow[N \to \infty]{P} k$ by Assumption XXX. The convergence in $r^{th}$ mean of Lemma \ref{first_bound} implies that $d_2^W \left( \widehat{F}_N, F \right) \xrightarrow[N \to \infty]{P} 0$. Lastly, by Lemma \ref{second_bound}, $d_2^W \left( F_N, F \right)^2 \xrightarrow[N \to \infty]{P} 0$. We therefore have $d_2^W \left( \Psi(F), \Psi(F_n) \right)^2 \xrightarrow[N \to \infty]{P} 0$. The desired result then follows from @bickel's Lemma 8.3 relating convergence of the Mallow's metric to convergence in distribution.
+\end{proof}
+\end{theorem}
+
+
+
+<!----
+\begin{lemma}[Lemma 2.4']
+\begin{align*}
+\frac{1}{N} \sum_{w=1}^W || \widehat{\epsilon}_w - \epsilon_w ||^2 \xrightarrow[N \to \infty]{p} 0
+\end{align*}
+
+\begin{proof}
+This follows immediately from applying @freedman's Lemma 2.4 to each of the $W$ terms. 
+\end{proof}
+\end{lemma}
+
+BOOKMARK: THIS LEMMA SHOULD BE THAT THE EXPECTATION IS GOING TO ZERO. LAST LINE WITH SIGMA^2 IS WRONG B/C SHOULD BE EXPECTATION. SEE FREEDMAN. 
+---->
+
+
+
+<!-------------------------- --------------------------------->
+<!------------- SECTION: MAIN RESULTS -------------->
+<!-------------------------- --------------------------------->
+
+\section{Results}
+
+
+
+
+
+
+
+
+
+
+
+
+<!--
+<!-------------------------- --------------------------------->
+<!---------- SECTION: OLD MATERIAL (BEFORE 5/4/2018) ----------->
+<!-------------------------- --------------------------------->
+\newpage
+\section{OLD MATERIAL}
 
 \section{Setting and notation}
 
@@ -220,7 +442,7 @@ Suppose we conduct $W=2$ hypothesis tests using ordinary least squares (OLS) reg
 Z_{n1} &= \beta_0 + \beta_1 Z_{n3} + \beta_2 Z_{n4} + \epsilon_{n1}\\
 Z_{n2} &= \alpha_0 + \alpha_1 Z_{n3} + \alpha_2 Z_{n4} + \epsilon_{n2}
 \end{align*}
-with null hypotheses $H_{01}: \beta_1 = 0$ and $H_{02}: \alpha_1 = 0$, and assuming $\epsilon_{nw} \sim N(0, \sigma^2_w)$ for $w \in \{1,2\}$. A resampling algorithm \hl{[@westfalltext]} satisifying Assumption \ref{cbt_def} could proceed by first fixing the covariates $Z_{n3}$ and $Z_{n4}$ for all observations while setting the "outcomes" equal to a vector of residuals resampled with replacement. That is, letting $n'$ denote an observation sampled with replacement and letting hats denote the usual OLS estimates obtained from the original dataset, the resampled variables for observation $n$ are: 
+with null hypotheses $H_{01}: \beta_1 = 0$ and $H_{02}: \alpha_1 = 0$, and assuming $\epsilon_{nw} \sim N(0, \sigma^2_w)$ for $w \in \{1,2\}$. A resampling algorithm \textcolor{red}{[@westfalltext]} satisifying Assumption \ref{cbt_def} could proceed by first fixing the covariates $Z_{n3}$ and $Z_{n4}$ for all observations while setting the "outcomes" equal to a vector of residuals resampled with replacement. That is, letting $n'$ denote an observation sampled with replacement and letting hats denote the usual OLS estimates obtained from the original dataset, the resampled variables for observation $n$ are: 
 \begin{align*}
 Z_{n1}^{(j)} &:= \left( \widehat{Z}_{n'1} - Z_{n'1} \right)\\
 Z_{n2}^{(j)} &:= \left( \widehat{Z}_{n'2} - Z_{n'2} \right)\\
@@ -394,7 +616,7 @@ Y_p^{(j)} &\sim f^0 \left( Y_p \; \vert \; \boldsymbol{\alpha}_p^{(j)}, \mathbf{
 By the \hl{usual} results (\hl{LAME}) regarding Gibbs sampling and Bayesian estimation of the posterior predictive distribution [@gelman], this algorithm satisfies the convergence criterion in Remark \ref{CMT_results}.
 
 In practice, this algorithm can be easily implemented by repurposing existing software for missing data imputation by chained equations (e.g., @micepackage). To do so, the observed dataset is copied while setting to missing all values of $\mathbf{Y}$, and this new dataset with "missing" values is concatenated with the observed one, yielding a pseudo-dataset with $2N$ observations (half of which have missing outcomes). Then, existing software can be used to create $B$ imputations of the "missing" data, with the imputed portion of each of $B$ imputations (the last $N$ observations of the pseudo-datasets) becoming the resampled datasets. Critically, the user must be careful to specify the "imputation" models such that the strong null is enforced; in contrast, typical software defaults use all variables in the dataset to impute all other variables, which would not enforce the strong null.
-
+-->
 
 <!-------------------------- --------------------------------->
 <!-------------- SECTION: SIMULATION STUDY --------------->
