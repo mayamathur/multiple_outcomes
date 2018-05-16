@@ -145,6 +145,8 @@ for ( j in 1:sim.reps ) {
   n.rej = samp.res$rej  # first one is Bonferroni
   pvals = samp.res$pvals
   tvals = samp.res$tvals
+  # ~~~ bhat = samp.res$bhat
+  # ~~~ se = samp.res$se
   names(n.rej) = paste( "n.rej.", as.character(alpha), sep="" )
 
   # run all bootstrap iterates
@@ -194,6 +196,7 @@ for ( j in 1:sim.reps ) {
                              function(x) rnorm( n = n.cells, mean = intercept[x], sd = sigma[x] ) )
         b = as.data.frame( cbind( Xs, new.Ys ) )
       }
+      
 
       ##### Bootstrap Under HA #1 - FCR #####
       # doesn't work!
@@ -251,6 +254,7 @@ for ( j in 1:sim.reps ) {
       # important for dataset_result to be able to find the right names
       names(b) = c(X.names, Y.names)
 
+      # ~~~ HAVE THIS RETURN THE B-HATS AND SES
       bt.res = dataset_result( .dat = b,
                                .alpha = alpha,
                                .resid = FALSE,
@@ -260,6 +264,7 @@ for ( j in 1:sim.reps ) {
       list( rej = bt.res$rej,
             pvals = bt.res$pvals,
             tvals = bt.res$tvals )
+      # ~~~ also bhats and ses
 
       # get number rejected for bootstrap sample
       # we don't need to return residuals for this one
@@ -290,6 +295,8 @@ for ( j in 1:sim.reps ) {
   # rows = Ys
   # cols = resamples
   t.bt = do.call( cbind, r[ , "tvals" ] )
+  
+  # ~~~ also do bhat.bt and se.bt
 
 
   ###### Joint Test Results for This Simulation Rep #####
@@ -324,8 +331,13 @@ for ( j in 1:sim.reps ) {
                         length( n.rej.bt.0.05 )
     }
     
-    # but if we resampled under Ha, our method doesn't work
+    # if we resampled under Ha, need to center the test stats
     if ( p$bt.type %in% ha.methods ) {
+      
+      # ~~~BOOKMARK
+      # bhat.bt.centered = bhat.bt - bhat  
+      # t.bt.centered = 2 * ( 1 - pt( bhat.bt.centered / se.bt, df = p$N - p$nX - 1 ) )
+      
       jt.pval.0.01 = NA
       jt.pval.0.05 = NA
     }
@@ -367,6 +379,7 @@ for ( j in 1:sim.reps ) {
     
     # if we bootstrapped under Ha
     if ( p$bt.type %in% ha.methods ) {
+      # center the test stats to recover null sampling distribution
       t.bt.centered = t.bt - tvals
       res = FWERkControl(tvals, as.matrix(t.bt.centered), k = 1, alpha = 0.05)
       jt.rej.Romano = sum(res$Reject) > 0
@@ -374,8 +387,6 @@ for ( j in 1:sim.reps ) {
     
     # if we bootstrapped under H0
     if ( p$bt.type %in% h0.methods ) {
-      #res = FWERkControl(tvals, as.matrix(t.bt), k = 1, alpha = 0.05)
-      #jt.rej.Romano = sum(res$Reject) > 0
       jt.rej.Romano = NA
     }
     
