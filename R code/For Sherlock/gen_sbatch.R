@@ -3,7 +3,7 @@
 ########################### SET SIMULATION PARAMETERS MATRIX ###########################
 
 # FOR CLUSTER USE
-path = "/share/PI/manishad/multTest"
+path = "/home/groups/manishad/multTest"
 setwd(path)
 
 # FOR LOCAL USE
@@ -20,7 +20,7 @@ prop.corr = c(0.5, 1)  # exchangeable vs. half-correlated matrix
 
 # bootstrap iterates and type
 boot.reps = 2000
-bt.type = c( "resid", "ha.resid" )
+bt.type = c( "ha.resid" )
 
 
 # matrix of scenario parameters
@@ -33,8 +33,8 @@ names(scen.params) = c( "bt.type", "n", "nX", "nY", "rho.XX", "rho.YY", "rho.XY"
 ######## Remove Some Scenarios ########
 # for rhoXY = 0.10, only want info for confidence intervals
 # so cut out the ha.resid ones
-scen.params = scen.params[ scen.params$rho.XY != 0.10 |
-                             scen.params$rho.XY == 0.10 & scen.params$bt.type == "resid", ]
+# scen.params = scen.params[ scen.params$rho.XY != 0.10 |
+#                              scen.params$rho.XY == 0.10 & scen.params$bt.type == "resid", ]
 
 # for rho.XY = 0, don't need to manipulate prop.corr because all 0 anyway
 scen.params = scen.params[ scen.params$rho.XY != 0 |
@@ -43,7 +43,7 @@ scen.params = scen.params[ scen.params$rho.XY != 0 |
 
 ######## Name the Scenarios ########
 # if merging results with other simulations, set this to the last letter already used
-start.at = "a"
+#start.at = "a"
 
 # remove letters that are privileged variables in R
 # letter.names = c(letters, LETTERS, paste(letters, letters, sep="") )
@@ -71,7 +71,7 @@ n.reps.in.doParallel = 5
 n.files = ( n.reps.per.scen / n.reps.in.doParallel ) * n.scen
 
 
-path = "/share/PI/manishad/multTest"
+path = "/home/groups/manishad/multTest"
 
 scen.name = rep( scen.params$scen.name, each = ( n.files / n.scen ) )
 jobname = paste("job", 1:n.files, sep="_")
@@ -100,29 +100,30 @@ sbatch_params <- data.frame(jobname,
 
 #generateSbatch(sbatch_params, runfile_path)
 
+#5400 files
 
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in missed.nums) {
-  system( paste("sbatch -p normal,owners /share/PI/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
+for (i in 1:1000) {
+  system( paste("sbatch -p normal,owners /home/groups/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
 }
 
 
-######## If Running Only Some Jobs To Fill Gaps ######## 
-
-# run in Sherlock ml load R
-# sbatch_not_run( "/share/PI/manishad/multTest/sim_results/short", 
-#                 "/share/PI/manishad/multTest/sim_results",
-#                 .name.prefix = "short" )
-# scp mmathur@sherlock:/share/PI/manishad/multTest/sim_results/missed_job_nums.csv ~/Desktop
-
-setwd("/share/PI/manishad/multTest/sim_results")
-missed.nums = read.csv("missed_job_nums.csv")$x
-
-
-setwd( paste(path, "/sbatch_files", sep="") )
-for (i in missed.nums) {
-  system( paste("sbatch -p normal,owners /share/PI/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
-}
+# ######## If Running Only Some Jobs To Fill Gaps ######## 
+# 
+# # run in Sherlock ml load R
+# # sbatch_not_run( "$PI_HOME/multTest/sim_results/short", 
+# #                 "$PI_HOME/multTest/sim_results",
+# #                 .name.prefix = "short" )
+# # scp mmathur@sherlock:$PI_HOME/multTest/sim_results/missed_job_nums.csv ~/Desktop
+# 
+# setwd("$PI_HOME/multTest/sim_results")
+# missed.nums = read.csv("missed_job_nums.csv")$x
+# 
+# 
+# setwd( paste(path, "/sbatch_files", sep="") )
+# for (i in missed.nums) {
+#   system( paste("sbatch -p normal,owners /home/groups/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
+# }
 
 
 

@@ -20,7 +20,7 @@ write.csv( s, "stitched.csv" )
 table(s$scen)
 
 # move it to Desktop
-scp mmathur@sherlock:/share/PI/manishad/multTest/sim_results/stitched.csv ~/Desktop
-scp mmathur@sherlock:/share/PI/manishad/multTest/scen_params.csv ~/Desktop
+scp mmathur@login.sherlock.stanford.edu:/home/groups/manishad/multTest/sim_results/overall_stitched/stitched.csv ~/Desktop
+scp mmathur@login.sherlock.stanford.edu:/home/groups/manishad/multTest/scen_params.csv ~/Desktop
 
 

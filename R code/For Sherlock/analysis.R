@@ -10,7 +10,7 @@ s = read.csv("stitched.csv", header=TRUE)
 s = merge(s, scen.params, by = "scen" )
 
 # what percent done are we?
-nrow(s) / (500 * nrow(scen.params))
+nrow(s) / (1000 * nrow(scen.params))
 
 # how many reps per scenario do we have?
 table( s$scen )
@@ -28,7 +28,7 @@ library(tidyverse)
 # names of joint rejection variables for all methods
 ( jt.rej.names = c( names(s)[ grep( "jt.rej.", names(s) ) ],
                     names(s)[ grep( "rej.jt", names(s) ) ] ) )
-  
+
 # MAKE SURE TO LIST THEM IN SAME ORDER  AS JT.REJ.NAMES
 method.names = c("bonf.naive",
                  "holm",
@@ -42,11 +42,11 @@ method.names = c("bonf.naive",
 # reshape wide to long
 # https://stackoverflow.com/questions/12466493/reshaping-multiple-sets-of-measurement-columns-wide-format-into-single-columns
 lp = reshape( s[ , names(s) %in% c(jt.rej.names, "scen") ],
-               varying = jt.rej.names,
-               v.names="jt.rej",
-               times = method.names,
+              varying = jt.rej.names,
+              v.names="jt.rej",
+              times = method.names,
               timevar = "method",  # name of the above variable
-               direction="long" )
+              direction="long" )
 
 # sanity check
 # long data should have 1 row per method-scenario combination
@@ -67,16 +67,19 @@ pwr$group = paste( "X-Y correlation: ", pwr$rho.XY,
                    sep = "" )
 
 # for more plotting joy
+labels = c("NB", "H", "MP", "LP", "J1", "J5", "WS", "R")
 pwr$method.label = NA
-pwr$method.label[ pwr$method == "bonf.naive" ] = "NB"
-pwr$method.label[ pwr$method == "holm" ] = "H"
-pwr$method.label[ pwr$method == "minP" ] = "MP"
-pwr$method.label[ pwr$method == "meanP" ] = "LP"  # for "log-P"
-pwr$method.label[ pwr$method == "ours.0.01" ] = "J1"
-pwr$method.label[ pwr$method == "ours.0.05" ] = "J5"
-pwr$method.label[ pwr$method == "Wstep" ] = "WS"
-pwr$method.label[ pwr$method == "Romano" ] = "R"
+pwr$method.label[ pwr$method == "bonf.naive" ] = labels[1]
+pwr$method.label[ pwr$method == "holm" ] = labels[2]
+pwr$method.label[ pwr$method == "minP" ] = labels[3]
+pwr$method.label[ pwr$method == "meanP" ] = labels[4]  # for "log-P"
+pwr$method.label[ pwr$method == "ours.0.01" ] = labels[5]
+pwr$method.label[ pwr$method == "ours.0.05" ] = labels[6]
+pwr$method.label[ pwr$method == "Wstep" ] = labels[7]
+pwr$method.label[ pwr$method == "Romano" ] = labels[8]
 
+# sanity check
+# table(pwr$method, pwr$method.label)
 
 # # sanity check
 # # should have NAs for method-bt.type combinations that are impossible
@@ -94,7 +97,7 @@ pwr$method.label[ pwr$method == "Romano" ] = "R"
 
 ##### Save Results ##### 
 pwr2 = pwr
-setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Simulation results/2018-3-23 all methods intermediate effect size/Prepped data")
+setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Simulation results/2019-5-18 all scenarios Freedman resampling")
 write.csv( pwr2, "results_pwr.csv")
 
 lp2 = lp
@@ -110,39 +113,86 @@ lp2 = lp
 # Panels: Strength of XY correlation
 # Lines: Different methods
 
+# for slide presentations: simplify the plot 
+# by removing intermediate effect sizes
+# pwr = pwr[ !pwr$rho.XY %in% c(0.02, .1), ]
+
 library(ggplot2)
-#x.breaks = seq(-0.1, 0.6, 0.1)
+x.breaks = seq(0, 0.5, 0.25)
 y.breaks = seq(0, 1, 0.1)
 
 colors = c( "#999999", "orange", "#009E73", "black", "#E69F00", "#D55E00", "black", "darkgreen" )
-legend.labs = c("NB: Naive Bonferroni",
-                "H: Holm",
-                "MP: Westfall minP",
-                "LP: Mean log-P",
-                "J5: Ours (alpha = 0.01)",
-                "J1: Ours (alpha = 0.05)",
-                "R: Romano",
-                "WS: Westfall step-down")
 
 
 ggplot( data = pwr, aes( x = rho.YY, y = power,
                          color = method,
-                         label=method.label ) ) +
-  geom_text() +
-  theme_bw() + facet_wrap(~ group ) +
+                         label = method ) ) +
+  geom_text( aes( label = method.label) ) +
+  theme_bw() +
+  facet_wrap( ~group) +
+  #facet_wrap(~ group, nrow = 2 ) +  # for changing rows/columns
   ylab("Power") +
-  scale_color_manual( name="Joint test", values = colors, labels = legend.labs ) +
-  scale_shape_manual( name = "Joint test", values = shapes, labels = legend.labs ) +
-  #scale_x_continuous( limits = c(0,1), breaks = x.breaks ) +
-  scale_y_continuous( limits = c(0,1), breaks = y.breaks ) +
+  scale_color_manual( values = colors) +
+  scale_x_continuous( limits = c( min(x.breaks), max(x.breaks) ), breaks = x.breaks ) +
+  scale_y_continuous( limits = c( min(y.breaks), max(y.breaks) ), breaks = y.breaks ) +
   xlab( "Correlation between each pair of Ys" ) +
   ggtitle("Power of bootstrapped hypothesis test of joint null")
 
-# ggsave( filename = paste("joint_test_power.png"),
-#          plot=p1, path=NULL, width=10, height=8, units="in")
+
+# PREVIOUS ATTEMPT TO HAVE LABELS IN GRAPH
+
+# legend.labs = c("Naive Bonferroni",
+#                 "Holm",
+#                 "Westfall minP",
+#                 "Mean log-P",
+#                 "Ours (alpha = 0.01)",
+#                 "Ours (alpha = 0.05)",
+#                 "Romano",
+#                 "Westfall step-down")
 
 
-
+# # hackily use acronyms in the legend
+# # https://stackoverflow.com/questions/49965758/change-geom-texts-default-a-legend-to-label-string-itself/49966057?noredirect=1#comment86951861_49966057
+# oldK = GeomText$draw_key # to save for later
+# 
+# # define new key
+# # if you manually add colours then add vector of colours 
+# # instead of `scales::hue_pal()(length(var))`
+# GeomText$draw_key <- function (data, params, size, 
+#                                var = unique(pwr$method.label), 
+#                                longvar = unique(pwr$method), 
+#                                cols=scales::hue_pal()(length(var))) {
+#   
+#   #browser()
+#   
+#   # sort as ggplot sorts these alphanumerically / or levels of factor
+#   txt <- if(is.factor(var)) levels(var) else sort(var)
+#   txt <- txt[match(data$colour, cols)]
+#   
+#   textGrob(txt, 0.5, 0.5,  
+#            just="center", 
+#            gp = gpar(col = alpha(data$colour, data$alpha), 
+#                      fontfamily = data$family, 
+#                      fontface = data$fontface, 
+#                      fontsize = data$size * .pt))
+# }
+# 
+# 
+# ggplot( data = pwr, aes( x = rho.YY, y = power,
+#                          color = method,
+#                          label = method ) ) +
+#   geom_text( aes( label = method.label) ) +
+#   theme_bw() +
+#   facet_wrap( ~group) +
+#   #facet_wrap(~ group, nrow = 2 ) +  # for changing rows/columns
+#   ylab("Power") +
+#   scale_x_continuous( limits = c( min(x.breaks), max(x.breaks) ), breaks = x.breaks ) +
+#   scale_y_continuous( limits = c( min(y.breaks), max(y.breaks) ), breaks = y.breaks ) +
+#   xlab( "Correlation between each pair of Ys" ) +
+#   ggtitle("Power of bootstrapped hypothesis test of joint null")
+# 
+# # reset key
+# GeomText$draw_key = oldK
 
 
 
@@ -214,18 +264,20 @@ ggplot( data = ci2 ) +
   geom_point( aes( x = rho.YY, y = n.rej.bt.mn, color = method ), size=2.5 ) +
   #geom_line( aes( x = rho.YY, y = n.rej.bt.mn, color = method ), size=1.1 ) +
   geom_errorbar( aes( x=rho.YY, ymin = bt.lo.mn,
-                                 ymax = bt.hi.mn, color = method ), width=0.02, size=1.05 ) +
-
+                      ymax = bt.hi.mn, color = method ), width=0.02, size=1.05 ) +
+  
   # original dataset results
   geom_point( aes( x = rho.YY, y = n.rej.mn, shape="the shape" ), color = "black", size=3.5 ) +
   scale_shape_manual( values = c('the shape' = 4),
                       name = "Original dataset", guide = 'legend', labels = c("Mean rejections")) +
-
-
-  theme_bw() + facet_wrap(~ group ) +
+  
+  
+  theme_bw() +
+  #  facet_wrap(~ group ) +
+  facet_wrap(~ group, nrow = 2 ) +
   ylab("Average null CIs") +
   scale_color_manual( name="Joint test", values = colors, labels = legend.labs ) +
-
+  
   #scale_y_continuous( limits = c(0,1), breaks = y.breaks ) +
   xlab( "Correlation between each pair of Ys" ) +
   ggtitle("Average CI limits and rejections in resamples and originals")
@@ -235,3 +287,6 @@ ggplot( data = ci2 ) +
 #         plot=p2, path=NULL, width=10, height=8, units="in")
 
 
+# shorter version for slide talk
+# run this, then re-run the above
+ci2 = ci2[ ci2$rho.XY %in% c(0, 0.05, 0.1), ]

@@ -7,7 +7,7 @@ scen = args[2]  # this will be a letter
 boot.reps = as.numeric( args[3] )
 
 # get scen parameters
-setwd("/share/PI/manishad/multTest")
+setwd("/home/groups/manishad/multTest")
 scen.params = read.csv( "scen_params.csv" )
 p = scen.params[ scen.params$scen.name == scen, ]
 
@@ -22,17 +22,16 @@ alpha = c( crit.bonf, 0.01, 0.05 )
 sim.reps = 5
 
 # EDITED FOR C++ ISSUE WITH PACKAGE INSTALLATION
-library(doParallel, lib.loc = "/share/PI/manishad/Rpackages/")
-library(foreach, lib.loc = "/share/PI/manishad/Rpackages/")
-library(mvtnorm, lib.loc = "/share/PI/manishad/Rpackages/")
-library(StepwiseTest, lib.loc = "/share/PI/manishad/Rpackages/")  # Romano
-library(matrixcalc, lib.loc = "/share/PI/manishad/Rpackages/")
+library(doParallel, lib.loc = "/home/groups/manishad/Rpackages/")
+library(foreach, lib.loc = "/home/groups/manishad/Rpackages/")
+library(mvtnorm, lib.loc = "/home/groups/manishad/Rpackages/")
+library(StepwiseTest, lib.loc = "/home/groups/manishad/Rpackages/")  # Romano
+library(matrixcalc, lib.loc = "/home/groups/manishad/Rpackages/")
+
+# for use in ml load R
+# install.packages( c("doParallel", "foreach", "mvtnorm", "StepwiseTest", "matrixcalc"), lib = "/home/groups/manishad/Rpackages/" )
 
 source("functions.R")
-
-# names of methods that resample under H0 vs. HA
-h0.methods = c("Y", "resid", "h0.parametric")
-ha.methods = c("fcr", "ha.resid", "ha.resid.2")
 
 # set the number of cores
 registerDoParallel(cores=16)
@@ -43,17 +42,17 @@ registerDoParallel(cores=16)
 # # setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Sandbox/2018-1-13")
 # # p = read.csv("scen_params.csv")  # should be a single row, I think
 # 
-# n = 100
+# n = 1000
 # nX = 1
 # nY = 40
 # rho.XX = 0
 # rho.YY = c(0.25)
-# rho.XY = c(0.08)  # null hypothesis: 0
-# prop.corr = 0.05
+# rho.XY = c(0.15)  # null hypothesis: 0
+# prop.corr = 1
 # 
 # # bootstrap iterates and type
-# boot.reps = 5
-# sim.reps = 2
+# boot.reps = 50
+# sim.reps = 3
 # scen = "a"
 # bt.type = c( "ha.resid" )
 # 
@@ -84,10 +83,6 @@ registerDoParallel(cores=16)
 # setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/git_multiple_outcomes/R code/For Sherlock")
 # source("functions.R")
 # 
-# # names of methods that resample under H0 vs. HA
-# h0.methods = c("Y", "resid", "h0.parametric")
-# ha.methods = c("fcr", "ha.resid", "ha.resid.2")
-# 
 # # set the number of cores
 # registerDoParallel(cores=16)
 # 
@@ -100,6 +95,9 @@ registerDoParallel(cores=16)
 # runs all bootstrapping iterations
 # writes 1-row csv with number rejected and bootstrap CI
 
+# names of methods that resample under H0 vs. HA
+h0.methods = c("Y", "resid", "h0.parametric", "h0.freedman")
+ha.methods = c("fcr", "ha.resid", "ha.resid.2")
 
 # j is the number of simulation iterations to run sequentially
 # so for j=10, we are generating 10 observed datasets, along with 500 bootstrap iterates for each
@@ -123,8 +121,11 @@ for ( j in 1:sim.reps ) {
   rep.time = system.time( {
 
   # make initial dataset from which to bootstrap
-  cor = make_corr_mat( .nX = p$nX, .nY = p$nY, .rho.XX = p$rho.XX,
-                       .rho.YY = p$rho.YY, .rho.XY = p$rho.XY,
+  cor = make_corr_mat( .nX = p$nX,
+                       .nY = p$nY,
+                       .rho.XX = p$rho.XX,
+                       .rho.YY = p$rho.YY,
+                       .rho.XY = p$rho.XY,
                        .prop.corr = as.numeric(p$prop.corr) )
   d = sim_data( .n = p$n, .cor = cor )
 
@@ -135,18 +136,14 @@ for ( j in 1:sim.reps ) {
   # get number rejected for observed dataset
   # vector with same length as .alpha
   # only return residuals and/or model estimates if we need them later for resampling
-  samp.res = dataset_result( .dat = d, .alpha = alpha,
-                             .resid = ifelse( p$bt.type %in% c("resid", "ha.resid", "ha.resid.2"),
-                                              TRUE, FALSE),
-                             .sigma = ifelse( p$bt.type %in% c( "h0.parametric", "ha.resid.2"),
-                                              TRUE, FALSE),
-                             .intercept = (p$bt.type == "h0.parametric"),
-                             .tval = TRUE)
+  samp.res = dataset_result( .dat = d,
+                             .alpha = alpha,
+                             .center.stats = FALSE,  # never center stats for the original sample
+                             .bhat.orig = NA )
   n.rej = samp.res$rej  # first one is Bonferroni
   pvals = samp.res$pvals
   tvals = samp.res$tvals
-  # ~~~ bhat = samp.res$bhat
-  # ~~~ se = samp.res$se
+  bhats = samp.res$bhats
   names(n.rej) = paste( "n.rej.", as.character(alpha), sep="" )
 
   # run all bootstrap iterates
@@ -254,17 +251,15 @@ for ( j in 1:sim.reps ) {
       # important for dataset_result to be able to find the right names
       names(b) = c(X.names, Y.names)
 
-      # ~~~ HAVE THIS RETURN THE B-HATS AND SES
       bt.res = dataset_result( .dat = b,
                                .alpha = alpha,
-                               .resid = FALSE,
-                               .tval=TRUE )
+                               .center.stats = ifelse( p$bt.type %in% ha.methods, TRUE, FALSE ),
+                               .bhat.orig = bhats )
 
       # return all the things
       list( rej = bt.res$rej,
             pvals = bt.res$pvals,
             tvals = bt.res$tvals )
-      # ~~~ also bhats and ses
 
       # get number rejected for bootstrap sample
       # we don't need to return residuals for this one
@@ -295,8 +290,6 @@ for ( j in 1:sim.reps ) {
   # rows = Ys
   # cols = resamples
   t.bt = do.call( cbind, r[ , "tvals" ] )
-  
-  # ~~~ also do bhat.bt and se.bt
 
 
   ###### Joint Test Results for This Simulation Rep #####
@@ -309,11 +302,6 @@ for ( j in 1:sim.reps ) {
     crit.0.05 = quantile( n.rej.bt.0.05, 1 - 0.05 )
     crit.0.01 = quantile( n.rej.bt.0.01, 1 - 0.05 )
 
-    # performance: confidence interval for N-hat under joint null
-    # this is a 95% CI regardless of which alpha is used for the individual tests
-    # bt.lo.bonf = quantile( n.rej.bt.0.005, 0.025 )
-    # bt.hi.bonf = quantile( n.rej.bt.0.005, 0.975 )
-
     bt.lo.0.01 = quantile( n.rej.bt.0.01, 0.025 )
     bt.hi.0.01 = quantile( n.rej.bt.0.01, 0.975 )
 
@@ -321,26 +309,11 @@ for ( j in 1:sim.reps ) {
     bt.hi.0.05 = quantile( n.rej.bt.0.05, 0.975 )
 
     # p-values for observed rejections
-    # if we resampled under H0, want prob of observing at least as many rejections as we did
-    if ( p$bt.type %in% h0.methods ) {
-
-      # jt.pval.bonf = sum( n.rej.bt.0.005 >= n.rej[,1] ) / length( n.rej.bt.0.005 )
-      jt.pval.0.01 = sum( n.rej.bt.0.01 >= n.rej[["n.rej.0.01"]] ) /
+    # jt.pval.bonf = sum( n.rej.bt.0.005 >= n.rej[,1] ) / length( n.rej.bt.0.005 )
+    jt.pval.0.01 = sum( n.rej.bt.0.01 >= n.rej[["n.rej.0.01"]] ) /
                         length( n.rej.bt.0.01 )
-      jt.pval.0.05 = sum( n.rej.bt.0.05 >= n.rej[["n.rej.0.05"]] ) /
+    jt.pval.0.05 = sum( n.rej.bt.0.05 >= n.rej[["n.rej.0.05"]] ) /
                         length( n.rej.bt.0.05 )
-    }
-    
-    # if we resampled under Ha, need to center the test stats
-    if ( p$bt.type %in% ha.methods ) {
-      
-      # ~~~BOOKMARK
-      # bhat.bt.centered = bhat.bt - bhat  
-      # t.bt.centered = 2 * ( 1 - pt( bhat.bt.centered / se.bt, df = p$N - p$nX - 1 ) )
-      
-      jt.pval.0.01 = NA
-      jt.pval.0.05 = NA
-    }
 
     # did joint tests reject?
     # rej.jt.bonf = jt.pval.bonf < 0.05
@@ -360,19 +333,11 @@ for ( j in 1:sim.reps ) {
     jt.rej.holm = any( p.adj.holm < 0.05 )
 
     ######## Westfall's single-step and step-down ########
-    
-    if ( p$bt.type %in% h0.methods ) {
-      p.adj.minP = adjust_minP( pvals, p.bt )
-      jt.rej.minP = any( p.adj.minP < 0.05 )
+    p.adj.minP = adjust_minP( pvals, p.bt )
+    jt.rej.minP = any( p.adj.minP < 0.05 )
       
-      p.adj.stepdown = adj_Wstep( pvals, p.bt )
-      jt.rej.Wstep = any( p.adj.stepdown < 0.05 )
-    } else {
-      p.adj.minP = NA
-      jt.rej.minP = NA
-      p.adj.stepdown = NA
-      jt.rej.Wstep = NA
-    }
+    p.adj.stepdown = adj_Wstep( pvals, p.bt )
+    jt.rej.Wstep = any( p.adj.stepdown < 0.05 )
 
     ######## Romano ########
     # regular FWER control
@@ -380,8 +345,8 @@ for ( j in 1:sim.reps ) {
     # if we bootstrapped under Ha
     if ( p$bt.type %in% ha.methods ) {
       # center the test stats to recover null sampling distribution
-      t.bt.centered = t.bt - tvals
-      res = FWERkControl(tvals, as.matrix(t.bt.centered), k = 1, alpha = 0.05)
+      #t.bt.centered = t.bt - tvals
+      res = FWERkControl(tvals, as.matrix(t.bt), k = 1, alpha = 0.05)
       jt.rej.Romano = sum(res$Reject) > 0
     }
     
@@ -392,14 +357,8 @@ for ( j in 1:sim.reps ) {
     
 
     ######## Mean Log-P-Value Joint Test ########
-    
-    # if we bootstrapped under H0
-    if ( p$bt.type %in% h0.methods ) {
-      mean.log.p.bt = colMeans( log(p.bt) )
-      jt.rej.mean.p = mean( log(pvals) ) < quantile( mean.log.p.bt, 0.025 )
-    } else {
-      jt.rej.mean.p = NA
-    }
+    mean.log.p.bt = colMeans( log(p.bt) )
+    jt.rej.mean.p = mean( log(pvals) ) < quantile( mean.log.p.bt, 0.025 )
 
     ###### Write Results #####
 
@@ -466,7 +425,7 @@ for ( j in 1:sim.reps ) {
 
 
 ########################### WRITE LONG RESULTS  ###########################
-setwd("/share/PI/manishad/multTest/sim_results/long")
+setwd("/home/groups/manishad/multTest/sim_results/long")
 write.csv( results, paste( "long_results", jobname, ".csv", sep="_" ) )
 
 
@@ -475,6 +434,6 @@ write.csv( results, paste( "long_results", jobname, ".csv", sep="_" ) )
 # keep only 1 row per simulation rep
 keep.row = rep( c( TRUE, rep(FALSE, boot.reps - 1) ), sim.reps )
 
-setwd("/share/PI/manishad/multTest/sim_results/short")
+setwd("/home/groups/manishad/multTest/sim_results/short")
 write.csv( results[ keep.row, ], paste( "short_results", jobname, ".csv", sep="_" ) )
 

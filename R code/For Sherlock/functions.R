@@ -301,8 +301,13 @@ sim_data = function( .n, .cor ) {
 # fit regression model for a single outcome Y regressed on all Xs
 # return p-value for the exposure of interest (X1)
 
-fit_model = function( Y.name, .dat, .resid, .sigma, .tval, .intercept ) {
+# p: parameters matrix
 
+fit_model = function( Y.name,
+                      .dat,
+                      .center.stats,
+                      .bhat.orig ) {
+  
   # extract names
   X.names = names( .dat )[ grep( "X", names( .dat ) ) ]
   
@@ -314,29 +319,35 @@ fit_model = function( Y.name, .dat, .resid, .sigma, .tval, .intercept ) {
   RHS = paste(X.names, collapse=" + ")
   formula = paste( c( Y.name, RHS ), collapse = " ~ ")
   
+  
   # extract p-value for exposure of interest (X1)
   m = lm( eval( parse(text=formula) ), data=.dat )
-  pval = summary(m)$coefficients[ "X1", 4 ]
+
+  resid.return = residuals(m)
+  sigma.return = summary(m)$sigma
+  intercept.return = coef(m)[["(Intercept)"]]
+  se.return = summary(m)$coefficients["X1", "Std. Error"]
   
-  if ( ! .resid ) resid.return = NA
-  else resid.return = residuals(m)
-    
-  if ( ! .sigma ) sigma.return = NA
-  else sigma.return = summary(m)$sigma
+  # if resampling was done under Ha, center stats by the original-sample estimates
+  if( !.center.stats ) {
+    bhat.return = coef(m)[["X1"]]
+    tval.return = summary(m)$coefficients[ "X1", 3 ]
+  }
+  if( .center.stats ) {
+    # second term pulls out the correct beta-hat from the original vector by using the Yname that we're regressing on
+    bhat.return = coef(m)[["X1"]] - .bhat.orig[ as.numeric( substr( Y.name, 2, nchar(Y.name) ) ) ]
+    tval.return = bhat.return / se.return
+  }
   
-  if ( ! .intercept ) intercept.return = NA
-  else intercept.return = coef(m)[["(Intercept)"]]
+  df = nrow(.dat) - length(X.names) - 1
+  pval.return = 2 * ( 1 - pt( abs(tval.return), df = df ) )
   
-  # extract test stat for this test
-  # for use with Romano's code
-  if ( ! .tval ) tval.return = NA
-  else tval.return = summary(m)$coefficients[ "X1", 3 ]
-  
-  return( list( pval = pval,
+  return( list( pval = pval.return,
                 resid = resid.return,
                 sigma = sigma.return, 
                 intercept = intercept.return,
-                tval = tval.return ) )
+                tval = tval.return,
+                bhat = bhat.return ) )
   
 }
 
@@ -350,11 +361,11 @@ fit_model = function( Y.name, .dat, .resid, .sigma, .tval, .intercept ) {
 # .resid: should it return dataset with residuals (for regenerating residuals)?
 # . sigma: should it return fitted error SD (for regenerating residuals)?
 # .intercept: should it return fitted intercept (for regenerating residuals)?
-dataset_result = function( .dat, .alpha,
-                           .resid = FALSE,
-                           .sigma = FALSE,
-                           .intercept = FALSE,
-                           .tval = FALSE ) {
+dataset_result = function(
+                          .dat,
+                           .alpha,
+                           .center.stats = FALSE,
+                           .bhat.orig = NA ) {  # used for centering test stats
 
   # extract names of outcome variables
   X.names = names( .dat )[ grep( "X", names(.dat) ) ]
@@ -368,40 +379,27 @@ dataset_result = function( .dat, .alpha,
   #  each entry is another list
   # with elements "pval" (scalar) and "resid" (length matches number of subjects)
   lists = lapply( X = Y.names,
-                  FUN = function(y) fit_model( Y.name = y,
+                  FUN = function(y) fit_model(
+                                                Y.name = y,
                                                .dat = .dat,
-                                               .resid = .resid,
-                                               .sigma = .sigma,
-                                               .tval = .tval,
-                                               .intercept = .intercept ) )
+                                               .center.stats = .center.stats,
+                                               .bhat.orig = .bhat.orig ) )
   
   # "flatten" the list of lists
   u = unlist(lists)
   pvals = as.vector( u[ names(u) == "pval" ] )
 
-  # if we will need residuals for later bootstrapping
-  if ( .resid ) {
+  # save residuals
     # names of object u are resid.1, resid.2, ..., hence use of grepl 
     mat = matrix( u[ grepl( "resid", names(u) ) ], byrow=FALSE, ncol=length(Y.names) ) 
     resid = as.data.frame(mat)
     names(resid) = Y.names
-  }
   
-  # if we are returning the estimated error SD
-  if ( .sigma ) sigmas = as.vector( u[ names(u) == "sigma" ] )
-  
-  # if we are returning the estimated intercept
-  if ( .intercept ) intercepts = as.vector( u[ names(u) == "intercept" ] )
-  
-  # if we are returning the test stats for use with Romano
-  if ( .tval ) tvals = as.vector( u[ names(u) == "tval" ] )
-  
-  ##### For looking at distribution of p-values within a single sample #####
-  # first call browser to stop within a given simulation
-#   browser()
-#   setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2/Simulation results/Average sizes")
-#   write.csv(pvals, "pvals.csv")
-  ######################
+
+  sigmas = as.vector( u[ names(u) == "sigma" ] )
+  intercepts = as.vector( u[ names(u) == "intercept" ] )
+  tvals = as.vector( u[ names(u) == "tval" ] )
+  bhats = as.vector( u[ names(u) == "bhat" ] )
   
   # returns vector for number of rejections at each alpha level
   # length should match length of .alpha
@@ -412,26 +410,14 @@ dataset_result = function( .dat, .alpha,
   # values are the number of rejections at that .alpha level
   rej = as.data.frame( matrix( n.reject, nrow=1 ) )
   names(rej) = as.character(.alpha)
-
-  
-  if ( ! .resid ) resid.return = NA
-  else resid.return = resid
-  
-  if ( ! .sigma ) sigmas.return = NA
-  else sigmas.return = sigmas
-  
-  if ( ! .intercept ) intercept.return = NA
-  else intercept.return = intercepts
-  
-  if ( ! .tval ) tvals.return = NA
-  else tvals.return = tvals
   
   return( list( rej = rej,
-                resid = resid.return,
-                sigmas = sigmas.return,
-                intercepts = intercept.return,
-                tvals = tvals.return,
-                pvals = pvals ) )
+                resid = resid,
+                sigmas = sigmas,
+                intercepts = intercepts,
+                tvals = tvals,
+                pvals = pvals,
+                bhats = bhats ) )
 }
 
 
@@ -565,7 +551,7 @@ sbatch_skeleton <- function() {
 #SBATCH --cpus-per-task=CPUS_PER_TASK
 #now run normal batch commands
     
-ml load R/3.3.3.gcc
+ml load R
 srun R -f PATH_TO_R_SCRIPT ARGS_TO_R_SCRIPT")
 }
 
