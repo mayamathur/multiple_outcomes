@@ -139,62 +139,6 @@ ggplot( data = pwr, aes( x = rho.YY, y = power,
   ggtitle("Power of bootstrapped hypothesis test of joint null")
 
 
-# PREVIOUS ATTEMPT TO HAVE LABELS IN GRAPH
-
-# legend.labs = c("Naive Bonferroni",
-#                 "Holm",
-#                 "Westfall minP",
-#                 "Mean log-P",
-#                 "Ours (alpha = 0.01)",
-#                 "Ours (alpha = 0.05)",
-#                 "Romano",
-#                 "Westfall step-down")
-
-
-# # hackily use acronyms in the legend
-# # https://stackoverflow.com/questions/49965758/change-geom-texts-default-a-legend-to-label-string-itself/49966057?noredirect=1#comment86951861_49966057
-# oldK = GeomText$draw_key # to save for later
-# 
-# # define new key
-# # if you manually add colours then add vector of colours 
-# # instead of `scales::hue_pal()(length(var))`
-# GeomText$draw_key <- function (data, params, size, 
-#                                var = unique(pwr$method.label), 
-#                                longvar = unique(pwr$method), 
-#                                cols=scales::hue_pal()(length(var))) {
-#   
-#   #browser()
-#   
-#   # sort as ggplot sorts these alphanumerically / or levels of factor
-#   txt <- if(is.factor(var)) levels(var) else sort(var)
-#   txt <- txt[match(data$colour, cols)]
-#   
-#   textGrob(txt, 0.5, 0.5,  
-#            just="center", 
-#            gp = gpar(col = alpha(data$colour, data$alpha), 
-#                      fontfamily = data$family, 
-#                      fontface = data$fontface, 
-#                      fontsize = data$size * .pt))
-# }
-# 
-# 
-# ggplot( data = pwr, aes( x = rho.YY, y = power,
-#                          color = method,
-#                          label = method ) ) +
-#   geom_text( aes( label = method.label) ) +
-#   theme_bw() +
-#   facet_wrap( ~group) +
-#   #facet_wrap(~ group, nrow = 2 ) +  # for changing rows/columns
-#   ylab("Power") +
-#   scale_x_continuous( limits = c( min(x.breaks), max(x.breaks) ), breaks = x.breaks ) +
-#   scale_y_continuous( limits = c( min(y.breaks), max(y.breaks) ), breaks = y.breaks ) +
-#   xlab( "Correlation between each pair of Ys" ) +
-#   ggtitle("Power of bootstrapped hypothesis test of joint null")
-# 
-# # reset key
-# GeomText$draw_key = oldK
-
-
 
 ########################### NULL CI PLOTS ###########################
 
@@ -217,7 +161,7 @@ method.names = c("ours.0.01", "ours.0.05")
 
 # reshape wide to long
 # https://stackoverflow.com/questions/12466493/reshaping-multiple-sets-of-measurement-columns-wide-format-into-single-columns
-lc = reshape( s[ s$bt.type == "resid", ],
+lc = reshape( s,
               varying = list( A = n.rej.names, B = n.rej.bt.names,
                               C = bt.lo.names, D = bt.hi.names ),
               v.names= c( "n.rej", "n.rej.bt", "bt.lo", "bt.hi" ),
