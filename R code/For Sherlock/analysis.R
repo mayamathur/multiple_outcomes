@@ -15,6 +15,9 @@ nrow(s) / (1000 * nrow(scen.params))
 # how many reps per scenario do we have?
 table( s$scen )
 
+# because of weird row with scen=FALSE
+library(gdata)
+s = drop.levels(s)
 
 
 ########################### DATA PREP ###########################
@@ -24,6 +27,9 @@ table( s$scen )
 
 library(reshape2)
 library(tidyverse)
+library(dplyr)
+library(magrittr)
+library(tidyr)
 
 # names of joint rejection variables for all methods
 ( jt.rej.names = c( names(s)[ grep( "jt.rej.", names(s) ) ],
@@ -50,13 +56,20 @@ lp = reshape( s[ , names(s) %in% c(jt.rej.names, "scen") ],
 
 # sanity check
 # long data should have 1 row per method-scenario combination
-# nrow( lp[ lp$scen == "a", ] ); nrow( s[ s$scen == "a", ]) * length(method.names)
+# nrow( lp[ lp$scen == 1, ] ); nrow( s[ s$scen == 1, ]) * length(method.names)
 
+
+# fix factor levels because of scenario that was TRUE/FALSE as strings
+fake = NA
+fake[lp$jt.rej == "FALSE"] = FALSE
+fake[lp$jt.rej == "TRUE"] = TRUE
+lp$jt.rej = fake
 
 # since each scenario still has multiple rows, take means 
 pwr = lp %>% group_by(scen, method) %>%
   summarise( power = mean(jt.rej) )
 
+# merge in scenario parameters
 pwr = merge(pwr, scen.params, by = "scen" )
 
 # for plotting joy
@@ -81,19 +94,6 @@ pwr$method.label[ pwr$method == "Romano" ] = labels[8]
 # sanity check
 # table(pwr$method, pwr$method.label)
 
-# # sanity check
-# # should have NAs for method-bt.type combinations that are impossible
-# pwr %>% filter( method %in% c("Romano") ) %>%
-#   filter( bt.type == "h0.resid" )
-# 
-# # should have NA power
-# pwr %>% filter( method %in% c("minP", 
-#                               "meanP",
-#                               "ours.0.01", 
-#                               "ours.0.05", 
-#                               "Wstep") ) %>%
-#   filter( bt.type == "ha.resid")
-
 
 ##### Save Results ##### 
 pwr2 = pwr
@@ -113,9 +113,12 @@ lp2 = lp
 # Panels: Strength of XY correlation
 # Lines: Different methods
 
-# for slide presentations: simplify the plot 
+# remove experimental method
+pwr = pwr[!pwr$method == "meanP",]
+
+# for main text: simplify the plot 
 # by removing intermediate effect sizes
-# pwr = pwr[ !pwr$rho.XY %in% c(0.02, .1), ]
+pwr.short = pwr[ !pwr$rho.XY %in% c(0.02, .1), ]
 
 library(ggplot2)
 x.breaks = seq(0, 0.5, 0.25)
@@ -124,7 +127,8 @@ y.breaks = seq(0, 1, 0.1)
 colors = c( "#999999", "orange", "#009E73", "black", "#E69F00", "#D55E00", "black", "darkgreen" )
 
 
-ggplot( data = pwr, aes( x = rho.YY, y = power,
+# for Appendix version, use pwr instead of pwr.short
+p = ggplot( data = pwr, aes( x = rho.YY, y = power,
                          color = method,
                          label = method ) ) +
   geom_text( aes( label = method.label) ) +
@@ -135,8 +139,13 @@ ggplot( data = pwr, aes( x = rho.YY, y = power,
   scale_color_manual( values = colors) +
   scale_x_continuous( limits = c( min(x.breaks), max(x.breaks) ), breaks = x.breaks ) +
   scale_y_continuous( limits = c( min(y.breaks), max(y.breaks) ), breaks = y.breaks ) +
-  xlab( "Correlation between each pair of Ys" ) +
-  ggtitle("Power of bootstrapped hypothesis test of joint null")
+  xlab( "Correlation between each pair of outcomes" ) +
+  #ggtitle("Power of bootstrapped hypothesis test of joint null") +
+  theme(legend.position="none") # remove legend
+
+name = "joint_test_full.png"
+ggsave( filename = paste(name),
+        plot=p, path=NULL, width=10, height=8, units="in")
 
 
 
@@ -199,11 +208,15 @@ ci2$rho.YY[ ci2$method == "ours.0.05" ] = ci2$rho.YY[ ci2$method == "ours.0.05" 
 library(ggplot2)
 y.breaks = seq(0, 1, 0.1)
 
-
 colors = c( "#E69F00", "#D55E00" )
 legend.labs = c( "J1 (alpha = 0.01)", "J5 (alpha = 0.05)" )
 
-ggplot( data = ci2 ) +
+# shorter version for main text
+# run this, then re-run the above
+ci2.short = ci2[ ci2$rho.XY %in% c(0, 0.05, 0.1), ]
+
+# for Appendix version, run this with ci2 instead of ci2.short
+p = ggplot( data = ci2.short ) +
   # bootstrap results
   geom_point( aes( x = rho.YY, y = n.rej.bt.mn, color = method ), size=2.5 ) +
   #geom_line( aes( x = rho.YY, y = n.rej.bt.mn, color = method ), size=1.1 ) +
@@ -215,7 +228,6 @@ ggplot( data = ci2 ) +
   scale_shape_manual( values = c('the shape' = 4),
                       name = "Original dataset", guide = 'legend', labels = c("Mean rejections")) +
   
-  
   theme_bw() +
   #  facet_wrap(~ group ) +
   facet_wrap(~ group, nrow = 2 ) +
@@ -223,14 +235,13 @@ ggplot( data = ci2 ) +
   scale_color_manual( name="Joint test", values = colors, labels = legend.labs ) +
   
   #scale_y_continuous( limits = c(0,1), breaks = y.breaks ) +
-  xlab( "Correlation between each pair of Ys" ) +
-  ggtitle("Average CI limits and rejections in resamples and originals")
+  xlab( "Correlation between each pair of outcomes" ) +
+  #ggtitle("Average CI limits and rejections in resamples and originals") +
+  theme(legend.position="none") # remove legend
 
 
-# ggsave( filename = paste("null_ci_plot.png"),
-#         plot=p2, path=NULL, width=10, height=8, units="in")
+# ggsave( filename = paste("null_ci_full.png"),
+#         plot=p, path=NULL, width=16, height=8, units="in")
 
-
-# shorter version for slide talk
-# run this, then re-run the above
-ci2 = ci2[ ci2$rho.XY %in% c(0, 0.05, 0.1), ]
+ggsave( filename = paste("null_ci_short.png"),
+        plot=p, path=NULL, width=10, height=8, units="in")

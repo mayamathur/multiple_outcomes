@@ -466,8 +466,8 @@ sbatch_not_run = function(.results.singles.path,
                           .results.write.path,
                         .name.prefix) {
   
-  # .results.singles.path = "/share/PI/manishad/multTest/sim_results/short"
-  # .results.write.path = "/share/PI/manishad/multTest/sim_results"
+  # .results.singles.path = "/home/groups/manishad/multTest/sim_results/short"
+  # .results.write.path = "/home/groups/manishad/multTest/sim_results"
   # .name.prefix = "short"
   
   # get list of all files in folder
@@ -488,7 +488,7 @@ sbatch_not_run = function(.results.singles.path,
   missed.nums = all.nums[ !all.nums %in% sbatch.nums ]
   
   # give info
-  print("The max job number is: ", max(sbatch.nums) )
+  print( paste("The max job number is: ", max(sbatch.nums) ) )
   print( paste( "Number of jobs that weren't run: ",
         ifelse( length(missed.nums) > 0, length(missed.nums), "none" ) ) )
   

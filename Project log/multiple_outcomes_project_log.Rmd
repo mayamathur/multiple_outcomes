@@ -45,34 +45,13 @@ bibliography: refs_fake.bib
 
 
 <!-- NEW SECTION -->
-\section{Proof sketch following Freedman paper}
 
-\begin{enumerate}
-\item{ Define multivariate Mallows metric, $\tilde{d}_2$. Prove that it's still a metric and that Eq. (2.3) still holds. Since it's a metric, triangle inequality (2.6) still holds:
-$$\frac{1}{2} \tilde{d}_2(F_n, F)^2 \le \tilde{d}_2(\widehat{F}_n, F_n) + \tilde{d}_2( F_n, F)$$}
+\section{Back to Romano vs. Westfall}
 
-\item{ $\bigstar$ Show that Theorem 2.1 still holds for $\tilde{d}_2$, assuming the same design matrix for all regressions:
-$$\tilde{d}_2^p( \Psi (F_n), \Psi (F)) \le n \cdot \text{trace} [X(n)'X(n)]^{-1} \cdot d_2(F,G)$$
-}
+Romano’s crit values: 95th percentile of biggest CENTERED test stat (N(0,1)) among the subset of hypotheses that ‘s being considered, where the original test stats are computed not under null
+(pg 1384)
 
-\item{Work on each piece of the triangle inequality:
-	\begin{enumerate}
-    	\item $\tilde{d}_2(F_n, F) \to 0$ because we can still apply SLLN to joint distribution (analog to B\&F Lemmas 8.3/8.4).
-        \item $\tilde{d}_2( \widehat{F}_n, F_n) \le \frac{p}{n} \sum_{w=1}^W \sigma^2_w \to 0$ (analog to Lemmas 2.1/2.2).
-    \end{enumerate}
-}
-
-\item{Lemma 2.4 still holds because each term $\to 0$ by B\&F Lemma 2.4:
-$$\frac{1}{n} \sum_{w=1}^W \| \widehat{\epsilon}_{w} (n) - \widehat{\epsilon}_{w} (n) \|^2 \to 0$$
-}
-
-\item{ Lemma 2.5 still holds using our Eq. (2.3), our Lemma 2.4, and the fact that $\widehat{F}_n = \tilde{F}_n$ for us:
-
-$$d_2( \widehat{F}_n, F_n ) \to 0$$}
-
-\item{$\bigstar$ Show that $\Psi (F_n)$ is close to $\Psi (\widehat{F}_n)$ by writing difference between vector of coefficient estimates in terms of residuals and resampled residuals (loose analog to Theorem 2.2).}
-\end{enumerate}
-
+Westfall's crit values: adjust p-values using the p-values under the strong null
 
 
 \section{Stream of consciousness}
@@ -416,6 +395,18 @@ Resampling-based procedures for FWER control.
 \newpage
 
 \section{Resolved questions}
+
+\subsection{Why is it OK for us to resample using Romano's method when applying Westfall?}
+
+Because subset pivotality holds for OLS. Think about the example below regarding pairwise correlations where subset pivotality \emph{doesn't} hold. In that case, the resampling methods would differ because with Westfall, the correlation between two of the test stats in the resamples is reflective of the third test stat being zero. With Romano, the correlation between those test stats is reflective of the potentially \emph{non-zero} estimate of the third test stat.  
+
+But with OLS, because of subset pivotality, the joint distribution of any group of test stats under the strong null has nothing to do with the truth or falsehood of the others, so whether we set all the other test stats to zero during data generation (Westfall) or after, by centering the test stats (Romano), doesn't matter. 
+
+\subsection{What's up with subset pivotality and how does Romano manage to avoid it?}
+
+From the examples in Romano \& Wolf JASA paper (2003), subset pivotality fails when, e.g., the SE or correlation structure of some of the test stats depends on parameters used in \emph{other} tests. For example (Romano 2003 JASA, Example 4.1), say you're testing all pairs of correlations for three variables. X and Y are truly uncorrelated, and X and Z are uncorrelated (nulls are true). But Y and Z are correlated. Then the joint distribution of the X-Y and X-Z correlations depends on the Y-Z correlation, which makes sense intuitively. So subset pivotality fails. In this case, Westfall's approach would be to resample under the strong null, so all three correlations are null and the X-Y and X-Z correlations themselves are uncorrelated. But this does not reflect all possible distributions under which the X-Y and X-Z correlations are null since their distribution depends on the Y-Z correlation. Romano's approach would be to resample under the original distribution, then center the test stats. So then we would have correlations that are all centered at 0, but the X-Y and X-Z correlations are correlated if, in reality, the Y-Z correlation is non-null. 
+
+But I think this also means that if you have test stats whose distribution depends on the parameter being tested (not on the other parameters, so not talking about subset pivotality), like $\widehat{p}$ for a Bernoulli RV (whose SE depends on $p$), then Westfall's method would have the right SEs (reflecting the null), but Romano's would not. However, I think this is actually \emph{not} a problem. As with a single hypothesis test, the "validity" of a hypothesis test depends only its behavior (false positive rate) for samples \emph{generated under the null} -- and when the null does hold, $\widehat{SE} \to SE$ anyway, so asymptotically, it does not matter if you estimate SEs from the data or plug in SEs under the null. Analogously, in the multiple testing setting, the test needs to control FWER only when the null holds for the subset of hypotheses we are considering. This is different from subset pivotality, which concerns dependence of the set of nulls under consideration on the \emph{other} hypotheses from outside the set. 
 
 \subsection{What does Westfall do for logistic regression?}
 

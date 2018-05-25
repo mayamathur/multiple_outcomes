@@ -100,30 +100,30 @@ sbatch_params <- data.frame(jobname,
 
 #generateSbatch(sbatch_params, runfile_path)
 
-#5400 files
+#6600 files
 
-setwd( paste(path, "/sbatch_files", sep="") )
-for (i in 1:1000) {
-  system( paste("sbatch -p normal,owners /home/groups/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
-}
-
-
-# ######## If Running Only Some Jobs To Fill Gaps ######## 
-# 
-# # run in Sherlock ml load R
-# # sbatch_not_run( "$PI_HOME/multTest/sim_results/short", 
-# #                 "$PI_HOME/multTest/sim_results",
-# #                 .name.prefix = "short" )
-# # scp mmathur@sherlock:$PI_HOME/multTest/sim_results/missed_job_nums.csv ~/Desktop
-# 
-# setwd("$PI_HOME/multTest/sim_results")
-# missed.nums = read.csv("missed_job_nums.csv")$x
-# 
-# 
 # setwd( paste(path, "/sbatch_files", sep="") )
-# for (i in missed.nums) {
+# for (i in 6583:6600) {
 #   system( paste("sbatch -p normal,owners /home/groups/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
 # }
+
+
+######## If Running Only Some Jobs To Fill Gaps ######## 
+
+# run in Sherlock ml load R
+sbatch_not_run( "/home/groups/manishad/sim_results/short", 
+                "/home/groups/manishad/sim_results",
+                .name.prefix = "short" )
+scp mmathur@sherlock:$PI_HOME/multTest/sim_results/missed_job_nums.csv ~/Desktop
+
+setwd("$PI_HOME/multTest/sim_results")
+missed.nums = read.csv("missed_job_nums.csv")$x
+
+
+setwd( paste(path, "/sbatch_files", sep="") )
+for (i in missed.nums) {
+  system( paste("sbatch -p normal,owners /home/groups/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
+}
 
 
 
