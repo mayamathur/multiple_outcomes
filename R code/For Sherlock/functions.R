@@ -118,6 +118,8 @@ get_crit = function( p.dat, col.p ) {
 
 ########################### FN: RETURN CORRELATION BETWEEN TWO ARBITRARY CELLS ###########################
 
+# AUDITED
+
 # Returns correlation between a pair of variables given
 #  desired correlation structure.
 
@@ -246,27 +248,25 @@ cell_corr = function( vname.1,
 
 ########################### FN: CREATE CORRELATION MATRIX ###########################
 
+# Makes correlation matrix
+
+# Notes:
+# If correlation matrix isn't positive definite, try reducing some of the correlations
+
+# Arguments:
 # .nX: number of covariates including the one of interest
 # .nY: number of outcomes
-
-# if correlation matrix isn't positive definite, try reducing some of the correlations
+# .rho.XX: Correlation between pairs of Xs
+# .rho.XY: Correlation between pairs of X-Y (of non-null ones)
+# .prop.corr: Proportion of X-Y pairs that are non-null
+#  (non-nulls will be first .prop.corr * .nY pairs)
 
 make_corr_mat = function( .nX,
                           .nY,
                           .rho.XX,
                           .rho.YY,
                           .rho.XY,
-                          #.half = FALSE,
                           .prop.corr = 1) {
-  
-  
-  # TEST ONLY
-  # .nX = 1
-  # .nY = 40
-  # .rho.XX = 0
-  # .rho.YY = 0
-  # .rho.XY = 0.15
-  # .prop.corr = 0.5
   
   nVar = .nX + .nY
   
@@ -275,6 +275,7 @@ make_corr_mat = function( .nX,
   Y.names = paste0( "Y", 1 : .nY )
   vnames = c( X.names, Y.names )
   
+  # initialize correlation matrix
   cor = as.data.frame( matrix( NA, nrow = nVar, ncol = nVar ) )
   names(cor) = vnames
   row.names(cor) = vnames
@@ -282,28 +283,34 @@ make_corr_mat = function( .nX,
   # populate each cell 
   for ( r in 1:dim(cor)[1] ) {
     for ( c in 1:dim(cor)[2] ) {
-      cor[ r, c ] = cell_corr( vnames[r], vnames[c], .rho.XX, .rho.YY, .rho.XY, .nY, .prop.corr )
+      cor[ r, c ] = cell_corr( vname.1 = vnames[r],
+                               vname.2 = vnames[c],
+                               .rho.XX = .rho.XX,
+                               .rho.YY = .rho.YY,
+                               .rho.XY = .rho.XY,
+                               .nY = .nY,
+                               .prop.corr = .prop.corr )
     }
   }
   
   # check if positive definite
   if( ! is.positive.definite( as.matrix(cor) ) ) stop( "Correlation matrix not positive definite")
-  
-  
-  # TEST
-  #table( as.character(cor[1,]) )
-  
-  return( cor )  # this is still a data.frame in order to keep names
+
+  return(cor)  # this is still a data.frame in order to keep names
 }
 
 
-# # test: half are correlated
-# make_corr_mat( .nX = 1,
-#                 .nY = 6,
+# # sanity checks
+# ( cor = make_corr_mat( .nX = 1,
+#                 .nY = 40,
 #                 .rho.XX = 0,
 #                 .rho.YY = 0.25,
 #                 .rho.XY = 0.1,
-#                 .prop.corr = 0.5 )
+#                 .prop.corr = 8/40 ) )
+# 
+# # check that the X-Y correlations make sense
+# table( as.character(cor[1,]) )
+
 
 
 ########################### FN: SIMULATE 1 DATASET ###########################
