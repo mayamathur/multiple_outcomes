@@ -17,6 +17,9 @@ n.reps.per.scen = 1000
 nrow(s) / (n.reps.per.scen * nrow(scen.params))
 table(s$scen)
 
+# quick check
+mean(s$jt.rej.holm)
+
 # move it to Desktop
 scp mmathur@login.sherlock.stanford.edu:/home/groups/manishad/multTest/sim_results/overall_stitched/stitched.csv ~/Desktop
 Vegemite2017

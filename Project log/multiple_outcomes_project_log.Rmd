@@ -46,26 +46,21 @@ bibliography: refs_fake.bib
 
 <!-- NEW SECTION -->
 
-\section{Back to Romano vs. Westfall}
-
-Romano’s crit values: 95th percentile of biggest CENTERED test stat (N(0,1)) among the subset of hypotheses that ‘s being considered, where the original test stats are computed not under null
-(pg 1384)
-
-Westfall's crit values: adjust p-values using the p-values under the strong null
-
 
 \section{Stream of consciousness}
 
-MICE thing doesn't work because we're regressing $Y_2$ on $Y_1$, and if data are generated under $H_A$, these are correlated because both outcomes are correlated with $X$. This remains true even if we leave $X$ out of the imputation model. 
+Chatterjee generalized bootstrap paper: This seems to say that for logistic regression \emph{confidence interval} (not under $H_0$), we can sample with replacement from observations' contributions to the score equations, and then solve these new score equations. I don't think it's valid to simply center these test stats as for OLS because, as shown in the FCR-center simulations, the SEs will be wrong. But maybe we could plug in the null values of the parameters into the score equations?
 
-FCR-center works for OLS but not logistic regression because for the latter, SE depends on value of parameter. (Is this subset pivotality?)
+R algorithm:
+\begin{enumerate}
+\item Write function that calculates score contribution as function of parameters.
+\item Setting the parameter of interest to null value, calculate score contribution for each observation. 
+\item Find the parameter that solves the new score equations?
+\end{enumerate}
 
-Marginally vs. conditionally: See simulation writeups.  
+Actually, I think we have a broader problem: How do we do bootstrap hypothesis tests with GLMs at all? 
 
-Bootstrapping brainteaser: Observations really are independent in FCR resamples. I think the previous issues with this were actually not due to failed assumptions. 
-\url{https://stats.stackexchange.com/questions/339237/are-observations-independent-in-bootstrapped-resamples}
-
-
+Does the Chatterjee paper mean that you can always use FCR to get CIs for any GLM?
 
 \section{Our two metrics}
 
@@ -396,17 +391,10 @@ Resampling-based procedures for FWER control.
 
 \section{Resolved questions}
 
-\subsection{Why is it OK for us to resample using Romano's method when applying Westfall?}
+\subsection{Why doesn't MICE idea work?}
 
-Because subset pivotality holds for OLS. Think about the example below regarding pairwise correlations where subset pivotality \emph{doesn't} hold. In that case, the resampling methods would differ because with Westfall, the correlation between two of the test stats in the resamples is reflective of the third test stat being zero. With Romano, the correlation between those test stats is reflective of the potentially \emph{non-zero} estimate of the third test stat.  
+MICE thing doesn't work because we're regressing $Y_2$ on $Y_1$, and if data are generated under $H_A$, these are correlated because both outcomes are correlated with $X$. This remains true even if we leave $X$ out of the imputation model. 
 
-But with OLS, because of subset pivotality, the joint distribution of any group of test stats under the strong null has nothing to do with the truth or falsehood of the others, so whether we set all the other test stats to zero during data generation (Westfall) or after, by centering the test stats (Romano), doesn't matter. 
-
-\subsection{What's up with subset pivotality and how does Romano manage to avoid it?}
-
-From the examples in Romano \& Wolf JASA paper (2003), subset pivotality fails when, e.g., the SE or correlation structure of some of the test stats depends on parameters used in \emph{other} tests. For example (Romano 2003 JASA, Example 4.1), say you're testing all pairs of correlations for three variables. X and Y are truly uncorrelated, and X and Z are uncorrelated (nulls are true). But Y and Z are correlated. Then the joint distribution of the X-Y and X-Z correlations depends on the Y-Z correlation, which makes sense intuitively. So subset pivotality fails. In this case, Westfall's approach would be to resample under the strong null, so all three correlations are null and the X-Y and X-Z correlations themselves are uncorrelated. But this does not reflect all possible distributions under which the X-Y and X-Z correlations are null since their distribution depends on the Y-Z correlation. Romano's approach would be to resample under the original distribution, then center the test stats. So then we would have correlations that are all centered at 0, but the X-Y and X-Z correlations are correlated if, in reality, the Y-Z correlation is non-null. 
-
-But I think this also means that if you have test stats whose distribution depends on the parameter being tested (not on the other parameters, so not talking about subset pivotality), like $\widehat{p}$ for a Bernoulli RV (whose SE depends on $p$), then Westfall's method would have the right SEs (reflecting the null), but Romano's would not. However, I think this is actually \emph{not} a problem. As with a single hypothesis test, the "validity" of a hypothesis test depends only its behavior (false positive rate) for samples \emph{generated under the null} -- and when the null does hold, $\widehat{SE} \to SE$ anyway, so asymptotically, it does not matter if you estimate SEs from the data or plug in SEs under the null. Analogously, in the multiple testing setting, the test needs to control FWER only when the null holds for the subset of hypotheses we are considering. This is different from subset pivotality, which concerns dependence of the set of nulls under consideration on the \emph{other} hypotheses from outside the set. 
 
 \subsection{What does Westfall do for logistic regression?}
 
@@ -483,6 +471,21 @@ Let $p_w$ be the $w^{th}$ observed p-value. Then, under the strong null, we have
 <!-- NEW SECTION -->
 \newpage
 \section{Simulation notes}
+
+\subsection{2018-6-6 *more scenarios}
+
+Trying more scenarios to have smaller proportion of effects but still with observed rejections way outside CI.
+
+\begin{itemize}
+\item $\rho_{XY} = 0.25$ with 20\% correlated: Has 100\% power, so need to go down. 
+\item $\rho_{XY} = 0.25$ with 5\% correlated: Same as above
+\item $\rho_{XY} = 0.15$ with 5\% correlated: Same as above
+\end{itemize}
+
+\subsection{2018-5-18 *all scenarios Freedman resampling}
+
+These are in the paper.
+
 
 \subsection{"Marginally vs conditionally"}
 

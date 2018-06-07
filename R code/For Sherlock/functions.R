@@ -35,23 +35,6 @@ adjust_minP = function( p, p.bt ) {
 # Westfall textbook, pages 66-67
 adj_Wstep = function( p, p.bt ) {
   
-  # # TEST ONLY
-  # p = structure(c(0.636112475277457, 0.116408752390887, 0.260603159221029,
-  #                 0.575086408582202, 0.625789849782125), .Dim = c(5L, 1L))
-  # p.bt = structure(c(0.728140113074014, 0.828557135138776, 0.728464927503583,
-  #                    0.376518353153738, 0.241363541131996, 0.415330227654616, 0.75686321503498,
-  #                    0.865494617532842, 0.839819273240726, 0.540707408457488, 0.149482739547785,
-  #                    0.506274953008223, 0.122605643925883, 0.747018941160177, 0.168076477020114,
-  #                    0.0582566955778811, 0.284459435324328, 0.561050485854955, 0.13839444320949,
-  #                    0.641335055023296, 0.195313599009888, 0.174692123827015, 0.982035588216878,
-  #                    0.713525352129964, 0.548770486028363), .Dim = c(5L, 5L), .Dimnames = list(
-  #                      NULL, c("result.1", "result.2", "result.3", "result.4", "result.5"
-  #                      )))
-  
-  # if using read-in or simulated dat
-  # p = pvals
-  
-  
   # attach indices to original p-values
   # to keep track of their original order
   p.dat = data.frame( ind = 1:length(p), p )
@@ -94,8 +77,25 @@ adj_Wstep = function( p, p.bt ) {
   #plot( p.dat$p, p.dat$p.adj )
 }
 
+
+# sanity check
+# # TEST ONLY
+# p = structure(c(0.636112475277457, 0.116408752390887, 0.260603159221029,
+#                 0.575086408582202, 0.625789849782125), .Dim = c(5L, 1L))
+# p.bt = structure(c(0.728140113074014, 0.828557135138776, 0.728464927503583,
+#                    0.376518353153738, 0.241363541131996, 0.415330227654616, 0.75686321503498,
+#                    0.865494617532842, 0.839819273240726, 0.540707408457488, 0.149482739547785,
+#                    0.506274953008223, 0.122605643925883, 0.747018941160177, 0.168076477020114,
+#                    0.0582566955778811, 0.284459435324328, 0.561050485854955, 0.13839444320949,
+#                    0.641335055023296, 0.195313599009888, 0.174692123827015, 0.982035588216878,
+#                    0.713525352129964, 0.548770486028363), .Dim = c(5L, 5L), .Dimnames = list(
+#                      NULL, c("result.1", "result.2", "result.3", "result.4", "result.5"
+#                      )))
 # p.adj.Wstep = adj_Wstep(pvals, p.bt)
 # plot( p, p.adj.Wstep )
+
+
+
 
 get_crit = function( p.dat, col.p ) {
   
@@ -194,6 +194,7 @@ cell_corr = function( vname.1,
       # }
       # ##### END PART FOR BACKWARD COMPATIBILITY #####
       
+
       # ~~~ MODIFIED
       # this generalizes the above
       # some other proportion of nulls are false
@@ -203,7 +204,7 @@ cell_corr = function( vname.1,
         outcome.name = ifelse( vtype.1 == "outcome", vname.1, vname.2 )
         
         # extract its number ("4" for "Y4")
-        num = substring( outcome.name, first = 2 )
+        num = as.numeric( substring( outcome.name, first = 2 ) )
         
         # the first last.correlated outcomes are correlated with X (rho.XY)
         #  and the rest aren't
@@ -239,6 +240,15 @@ make_corr_mat = function( .nX,
                           #.half = FALSE,
                           .prop.corr = 1) {
   
+  
+  # TEST ONLY
+  # .nX = 1
+  # .nY = 40
+  # .rho.XX = 0
+  # .rho.YY = 0
+  # .rho.XY = 0.15
+  # .prop.corr = 0.5
+  
   nVar = .nX + .nY
   
   # name the variables
@@ -260,14 +270,22 @@ make_corr_mat = function( .nX,
   # check if positive definite
   if( ! is.positive.definite( as.matrix(cor) ) ) stop( "Correlation matrix not positive definite")
   
+  
+  # TEST
+  #table( as.character(cor[1,]) )
+  
   return( cor )  # this is still a data.frame in order to keep names
 }
 
-# # test: exchangeable
-# make_corr_mat( .nX = 1, .nY = 6, .rho.XX = 0, .rho.YY = .1, .rho.XY = -.1, .half = FALSE )
-# 
+
 # # test: half are correlated
-# make_corr_mat( .nX = 1, .nY = 6, .rho.XX = 0, .rho.YY = .1, .rho.XY = -.1, .half = TRUE )
+# make_corr_mat( .nX = 1,
+#                 .nY = 6,
+#                 .rho.XX = 0,
+#                 .rho.YY = 0.25,
+#                 .rho.XY = 0.1,
+#                 .prop.corr = 0.5 )
+
 
 ########################### FN: SIMULATE 1 DATASET ###########################
 
@@ -289,10 +307,16 @@ sim_data = function( .n, .cor ) {
   return(d)
 }
 
-# test drive
-# cor = make_corr_mat(3, 40)
+# # test drive
+# cor = make_corr_mat( .nX = 1,
+#                .nY = 6,
+#                .rho.XX = 0,
+#                .rho.YY = 0.25,
+#                .rho.XY = 0.1,
+#                .prop.corr = 0.5 )
+# 
 # d = sim_data( .n = 5000, .cor = cor )
-# head( cor(d) ); head( cor )
+# round( cor(d), 2 ); cor
 
 
 
@@ -419,6 +443,19 @@ dataset_result = function(
                 pvals = pvals,
                 bhats = bhats ) )
 }
+
+
+# cor = make_corr_mat( .nX = 1,
+#                      .nY = 6,
+#                      .rho.XX = 0,
+#                      .rho.YY = 0.25,
+#                      .rho.XY = 0.1,
+#                      .prop.corr = 0.5 )
+# 
+# d = sim_data( .n = 5000, .cor = cor )
+# dataset_result( .dat = d,
+#                 .alpha = 0.05 )
+
 
 
 

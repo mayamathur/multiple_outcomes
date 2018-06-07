@@ -97,11 +97,11 @@ pwr$method.label[ pwr$method == "Romano" ] = labels[8]
 
 ##### Save Results ##### 
 pwr2 = pwr
-setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Simulation results/2019-5-18 all scenarios Freedman resampling")
-write.csv( pwr2, "results_pwr.csv")
+#setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Simulation results/2019-5-18 all scenarios Freedman resampling")
+#write.csv( pwr2, "results_pwr.csv")
 
 lp2 = lp
-write.csv( lp2, "results_pwr_long.csv")
+#write.csv( lp2, "results_pwr_long.csv")
 
 lp2 = lp
 
@@ -132,7 +132,7 @@ p = ggplot( data = pwr, aes( x = rho.YY, y = power,
                          color = method,
                          label = method ) ) +
   geom_text( aes( label = method.label) ) +
-  theme_bw() +
+  theme_classic() +
   facet_wrap( ~group) +
   #facet_wrap(~ group, nrow = 2 ) +  # for changing rows/columns
   ylab("Power") +
@@ -144,8 +144,8 @@ p = ggplot( data = pwr, aes( x = rho.YY, y = power,
   theme(legend.position="none") # remove legend
 
 name = "joint_test_full.png"
-ggsave( filename = paste(name),
-        plot=p, path=NULL, width=10, height=8, units="in")
+#ggsave( filename = paste(name),
+#        plot=p, path=NULL, width=10, height=8, units="in")
 
 
 
@@ -216,7 +216,7 @@ legend.labs = c( "J1 (alpha = 0.01)", "J5 (alpha = 0.05)" )
 ci2.short = ci2[ ci2$rho.XY %in% c(0, 0.05, 0.1), ]
 
 # for Appendix version, run this with ci2 instead of ci2.short
-p = ggplot( data = ci2.short ) +
+p = ggplot( data = ci2 ) +
   # bootstrap results
   geom_point( aes( x = rho.YY, y = n.rej.bt.mn, color = method ), size=2.5 ) +
   #geom_line( aes( x = rho.YY, y = n.rej.bt.mn, color = method ), size=1.1 ) +
@@ -228,7 +228,7 @@ p = ggplot( data = ci2.short ) +
   scale_shape_manual( values = c('the shape' = 4),
                       name = "Original dataset", guide = 'legend', labels = c("Mean rejections")) +
   
-  theme_bw() +
+  theme_classic() +
   #  facet_wrap(~ group ) +
   facet_wrap(~ group, nrow = 2 ) +
   ylab("Average null CIs") +
@@ -245,3 +245,20 @@ p = ggplot( data = ci2.short ) +
 
 ggsave( filename = paste("null_ci_short.png"),
         plot=p, path=NULL, width=10, height=8, units="in")
+
+
+##### For Paper #####
+
+# upper CI limits under independence vs. moderate correlation
+ci %>% filter(method=="ours.0.05") %>%
+  group_by(rho.YY) %>%
+  summarise(bt.hi.mn = mean(bt.hi.mn) )
+
+# mean rejections for a certain scenario
+ci %>%
+  filter(method=="ours.0.05") %>%
+  filter(rho.XY == 0.10) %>%
+  filter(prop.corr == 0.50) %>%
+  #group_by(rho.YY) %>%
+  summarise(n.rej.mn = mean(n.rej.mn) )
+
