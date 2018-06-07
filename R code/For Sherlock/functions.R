@@ -101,14 +101,7 @@ get_crit = function( p.dat, col.p ) {
   
   # sort bootstrapped p-values according to original ones
   col.p.sort = col.p[ p.dat$ind ]
-  
-  # # OLD VERSION (wrong)
-  # qstar = rep( NA, length(col.p.sort) )
-  # for ( i in 1:length(col.p.sort) ) {
-  #   if (i == 1) qstar[i] = col.p.sort[1]
-  #   else qstar[i] = min( qstar[i-1], col.p.sort[i] )
-  # }
-  
+
   qstar = rep( NA, length(col.p.sort) )
 
   k = length(col.p.sort)
@@ -125,16 +118,21 @@ get_crit = function( p.dat, col.p ) {
 
 ########################### FN: RETURN CORRELATION BETWEEN TWO ARBITRARY CELLS ###########################
 
-# eventually could make this an argument in the scen_params matrix somehow so that it can be varied
-# assume that X1 is the covariate of interest
-# assume that none of the other covariates are associated with any outcomes
+# Returns correlation between a pair of variables given
+#  desired correlation structure.
 
-# .half: Should only the last half the outcomes have the specified correlation?
-#  (if FALSE, correlation matrix is exchangeable; otherwise first half are 0 and 
-#  second half are rho.XY)
-# This is only included for backward compatibility because now we have the more flexible .prop.corr thing
+# Notes: 
+# Assumes X1 is the covariate of interest and none of the other covariates
+#  is associated with any outcomes.
 
-# .prop.corr: What proportion of Ys should be correlated with X?
+# Arguments:
+# vname.1: Quoted name of first variable
+# vname.2: Quoted name of second variable
+# .rho.XX: Correlation between pairs of Xs
+# .rho.XY: Correlation between pairs of X-Y (of non-null ones)
+# .nY: Number of Ys
+# .prop.corr: Proportion of X-Y pairs that are non-null
+#  (non-nulls will be first .prop.corr * .nY pairs)
 
 cell_corr = function( vname.1,
                       vname.2,
@@ -142,7 +140,6 @@ cell_corr = function( vname.1,
                       .rho.YY,
                       .rho.XY,
                       .nY,
-                      #.half = 0,
                       .prop.corr = 1) {
   
   # use grep to figure out if variables are covariates or outcomes
@@ -168,37 +165,16 @@ cell_corr = function( vname.1,
   # case 3: both are outcomes
   if ( vtype.1 == "outcome" & vtype.2 == "outcome" ) return( .rho.YY )
   
-  # browser()
-
   # case 4: one is a covariate and one is an outcome
   if ( vtype.1 != vtype.2 ) {
     # check if this is the covariate of interest
     # equal correlation between X1 and all outcomes
     # all other covariates have correlation 0 with outcome
-    if( "X1" %in% c( vname.1, vname.2 ) ) {
+    if ( "X1" %in% c( vname.1, vname.2 ) ) {
       
-      # ##### ONLY FOR BACKWARD COMPATIBILITY #####
-      # # exchangeable case
-      # if ( .half == 0 ) return( .rho.XY )
-      # 
-      # # "half are correlated" case
-      # if ( .half == 1 ) {
-      #   # find the one that is the outcome
-      #   outcome.name = ifelse( vtype.1 == "outcome", vname.1, vname.2 )
-      #   
-      #   # extract its number (4 for "Y4")
-      #   num = substring( outcome.name, first = 2 )
-      #   
-      #   # see if its number is greater than halfway or not
-      #   return( ifelse( num > .nY / 2, .rho.XY, 0 ) )
-      # }
-      # ##### END PART FOR BACKWARD COMPATIBILITY #####
-      
-
-      # ~~~ MODIFIED
-      # this generalizes the above
-      # some other proportion of nulls are false
       if (.prop.corr == 1) return( .rho.XY ) 
+      
+      # if only some X-Y pairs are non-null
       if ( .prop.corr != 1 ) {
         # find the one that is the outcome
         outcome.name = ifelse( vtype.1 == "outcome", vname.1, vname.2 )
@@ -215,14 +191,57 @@ cell_corr = function( vname.1,
       }
     }
     
-    # if we have multiple covariates and this isn't the one of interest
+    # if we have multiple covariates and this isn't the one of interest,
+    #  its effect size should be 0
     else return(0)
   }
 }
 
-# test drive
-# cell_corr( vname.1 = "X1", vname.2 = "Y3", .rho.XX = 0,
-#            .rho.YY = 0.04, .rho.X1.Y = 0.8, .rho.Xj.Y = .1 )
+# # sanity checks
+# # should be -0.1
+# cell_corr( vname.1 = "X1",
+#            vname.2 = "Y3",
+#            .rho.XX = 0,
+#            .rho.YY = 0.25,
+#            .rho.XY = -0.1,
+#            .nY = 6,
+#            .prop.corr = 1 )
+# 
+# # should be 0.25
+# cell_corr( vname.1 = "Y1",
+#            vname.2 = "Y3",
+#            .rho.XX = 0,
+#            .rho.YY = 0.25,
+#            .rho.XY = -0.1,
+#            .nY = 6,
+#            .prop.corr = 1 )
+# 
+# # should be 0
+# cell_corr( vname.1 = "X2",
+#            vname.2 = "Y3",
+#            .rho.XX = 0,
+#            .rho.YY = 0.25,
+#            .rho.XY = -0.1,
+#            .nY = 6,
+#            .prop.corr = 1 )
+# 
+# # should be -0.1
+# cell_corr( vname.1 = "X1",
+#            vname.2 = "Y2",
+#            .rho.XX = 0,
+#            .rho.YY = 0.25,
+#            .rho.XY = -0.1,
+#            .nY = 10,
+#            .prop.corr = .2 )
+# 
+# # should be 0
+# cell_corr( vname.1 = "X1",
+#            vname.2 = "Y3",
+#            .rho.XX = 0,
+#            .rho.YY = 0.25,
+#            .rho.XY = -0.1,
+#            .nY = 10,
+#            .prop.corr = .2 )
 
 
 ########################### FN: CREATE CORRELATION MATRIX ###########################
