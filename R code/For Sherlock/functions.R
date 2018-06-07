@@ -248,6 +248,8 @@ cell_corr = function( vname.1,
 
 ########################### FN: CREATE CORRELATION MATRIX ###########################
 
+# AUDITED :) 
+
 # Makes correlation matrix
 
 # Notes:
@@ -315,18 +317,24 @@ make_corr_mat = function( .nX,
 
 ########################### FN: SIMULATE 1 DATASET ###########################
 
-# simulate 1 dataset with correlated covariates
-# then simulate 
+# AUDITED :) 
+
+# Simulates 1 dataset with MVN(0,1) correlated covariates and outcomes
+
+# Arguments: 
+# .n: sample size
+# .cor: correlation matrix from above function
 
 sim_data = function( .n, .cor ) {
 
+  # variable names
   vnames = names( .cor )
   
   # simulate the dataset
   # everything is a standard Normal
   d = as.data.frame( rmvnorm( n = .n,
-                              mean = rep( 0, dim( .cor )[1] ),
-                              sigma = as.matrix( .cor ) ) )
+                              mean = rep( 0, dim(.cor)[1] ),
+                              sigma = as.matrix(.cor) ) )
   names(d) = vnames
   
   # return the dataset
@@ -335,14 +343,15 @@ sim_data = function( .n, .cor ) {
 
 # # test drive
 # cor = make_corr_mat( .nX = 1,
-#                .nY = 6,
+#                .nY = 40,
 #                .rho.XX = 0,
 #                .rho.YY = 0.25,
 #                .rho.XY = 0.1,
-#                .prop.corr = 0.5 )
+#                .prop.corr = 0.2 )
 # 
-# d = sim_data( .n = 5000, .cor = cor )
-# round( cor(d), 2 ); cor
+# d = sim_data( .n = 1000, .cor = cor )
+# # plot empirical vs. real correlations
+# plot( as.numeric(cor(d)), as.numeric(as.matrix(cor)) ); abline( a = 0, b = 1, col="red")
 
 
 
