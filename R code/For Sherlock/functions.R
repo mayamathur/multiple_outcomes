@@ -2,10 +2,15 @@
 
 ######################## FNS FOR WESTFALL's SINGLE-STEP ########################
 
-# returns minP-adjusted p-values (single-step)
+# AUDITED :) 
 
-# p = original p-values
-# p.bt = bootstrapped p-values (vector) - an m X B matrix
+# Returns minP-adjusted p-values (single-step)
+# See Westfall text, pg. 48.
+
+# Arguments: 
+# p: Original p-values (vector)
+# p.bt: Bootstrapped p-values (an m X B matrix)
+
 adjust_minP = function( p, p.bt ) {
   
   n.boot = ncol(p.bt)
@@ -20,14 +25,23 @@ adjust_minP = function( p, p.bt ) {
   return(p.adj)
 }
 
-# # test
+# # sanity check
 # B = 200
 # n.tests = 10
+# 
+# # generate fake p-values under strong null
 # p.bt = matrix( runif(B*n.tests, 0, 1), nrow = n.tests)
-# p = runif( n.tests, 0, .1)
+# 
+# # generate fake p-values from real dataset
+# p = runif( n.tests, 0, .1)  
 # 
 # p.adj = adjust_minP( p, p.bt )
-# plot(p,p.adj)
+# plot(p, p.adj)
+# 
+# # manually adjust second p-value
+# mins = apply( p.bt, MARGIN = 2, FUN = min )
+# prop.table( table( mins <= p[2] ) )[["TRUE"]]
+# p.adj[2]
 
 
 ######################## FNS FOR WESTFALL's STEP-DOWN ########################
@@ -95,7 +109,7 @@ adj_Wstep = function( p, p.bt ) {
 # plot( p, p.adj.Wstep )
 
 
-
+########################### FN: CALCULATE CRITICAL VALUES FOR WESTFALL ###########################
 
 get_crit = function( p.dat, col.p ) {
   
