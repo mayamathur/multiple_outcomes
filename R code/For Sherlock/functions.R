@@ -357,10 +357,23 @@ sim_data = function( .n, .cor ) {
 
 ########################### FN: FIT REGRESSION MODEL FOR A PARTICULAR OUTCOME ###########################
 
-# fit regression model for a single outcome Y regressed on all Xs
-# return p-value for the exposure of interest (X1)
+# AUDITED :) 
 
-# p: parameters matrix
+# Fits regression model for a single outcome Y regressed on all Xs
+# Returns p-value and various stats for just the exposure of interest (X1)
+
+# Arguments: 
+#
+# Y.name: Quoted name of a single outcome
+#
+# .dat: Dataframe
+#
+# .center.stats: If TRUE, subtract .bhat.orig (original data estimates) from 
+#   estimates (for use with bootstrapping under null)
+#
+# .bhat.orig: Original data estimates for use with .center.stats=TRUE; ignored
+#   otherwise. Even though fit_model is for only one outcome, .bhat.orig should
+#  have length W (one per outcome). 
 
 fit_model = function( Y.name,
                       .dat,
@@ -378,7 +391,6 @@ fit_model = function( Y.name,
   RHS = paste(X.names, collapse=" + ")
   formula = paste( c( Y.name, RHS ), collapse = " ~ ")
   
-  
   # extract p-value for exposure of interest (X1)
   m = lm( eval( parse(text=formula) ), data=.dat )
 
@@ -393,8 +405,10 @@ fit_model = function( Y.name,
     tval.return = summary(m)$coefficients[ "X1", 3 ]
   }
   if( .center.stats ) {
-    # second term pulls out the correct beta-hat from the original vector by using the Yname that we're regressing on
-    bhat.return = coef(m)[["X1"]] - .bhat.orig[ as.numeric( substr( Y.name, 2, nchar(Y.name) ) ) ]
+    # pull out the correct beta-hat from the original vector by using the
+    #  Yname that we're regressing on
+    bhat.orig.w = .bhat.orig[ as.numeric( substr( Y.name, 2, nchar(Y.name) ) ) ]
+    bhat.return = coef(m)[["X1"]] - bhat.orig.w
     tval.return = bhat.return / se.return
   }
   
@@ -410,10 +424,31 @@ fit_model = function( Y.name,
   
 }
 
-# test drive
-# cor = make_corr_mat(3, 40)
+# # test drive 1: not centered
+# cor = make_corr_mat( .nX = 1,
+#                 .nY = 40,
+#                 .rho.XX = 0,
+#                 .rho.YY = 0.25,
+#                 .rho.XY = 0.1,
+#                 .prop.corr = 8/40 )
 # d = sim_data( .n = 5000, .cor = cor )
-# fit_model( "Y2", .dat = d )
+# 
+# res = fit_model( "Y2",
+#            .dat = d,
+#            .center.stats = FALSE )
+# 
+# # verify manually
+# m = lm( Y2 ~ X1, data = d )
+# summary(m)
+# any( residuals(m) != res$resid )  # should be FALSE
+
+# # test drive 2: centered stats
+# d2 = sim_data( .n = 5000, .cor = cor )
+# 
+# res2 = fit_model( "Y2",
+#                  .dat = d2,
+#                  .center.stats = TRUE,
+#                  .bhat.orig = c( NA, res$bhat ) )  # NA because we've only fit one model
 
 
 ########################### FN: GIVEN DATASET, RETURN STATS ###########################
