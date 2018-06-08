@@ -451,15 +451,28 @@ fit_model = function( Y.name,
 #                  .bhat.orig = c( NA, res$bhat ) )  # NA because we've only fit one model
 
 
+
 ########################### FN: GIVEN DATASET, RETURN STATS ###########################
-# .resid: should it return dataset with residuals (for regenerating residuals)?
-# . sigma: should it return fitted error SD (for regenerating residuals)?
-# .intercept: should it return fitted intercept (for regenerating residuals)?
-dataset_result = function(
-                          .dat,
+
+# AUDITED :) 
+
+# Arguments: 
+#
+# .alpha: Alpha-level for individual hypothesis tests
+#
+# .dat: Dataframe
+#
+# .center.stats: If TRUE, subtract .bhat.orig (original data estimates) from 
+#   estimates (for use with bootstrapping under null)
+#
+# .bhat.orig: Original data estimates for use with .center.stats=TRUE; ignored
+#   otherwise. Even though fit_model is for only one outcome, .bhat.orig should
+#  have length W (one per outcome). 
+
+dataset_result = function( .dat,
                            .alpha,
                            .center.stats = FALSE,
-                           .bhat.orig = NA ) {  # used for centering test stats
+                           .bhat.orig = NA ) {  
 
   # extract names of outcome variables
   X.names = names( .dat )[ grep( "X", names(.dat) ) ]
@@ -473,8 +486,7 @@ dataset_result = function(
   #  each entry is another list
   # with elements "pval" (scalar) and "resid" (length matches number of subjects)
   lists = lapply( X = Y.names,
-                  FUN = function(y) fit_model(
-                                                Y.name = y,
+                  FUN = function(y) fit_model( Y.name = y,
                                                .dat = .dat,
                                                .center.stats = .center.stats,
                                                .bhat.orig = .bhat.orig ) )
@@ -484,12 +496,12 @@ dataset_result = function(
   pvals = as.vector( u[ names(u) == "pval" ] )
 
   # save residuals
-    # names of object u are resid.1, resid.2, ..., hence use of grepl 
-    mat = matrix( u[ grepl( "resid", names(u) ) ], byrow=FALSE, ncol=length(Y.names) ) 
-    resid = as.data.frame(mat)
-    names(resid) = Y.names
+  # names of object u are resid.1, resid.2, ..., hence use of grepl 
+  mat = matrix( u[ grepl( "resid", names(u) ) ], byrow=FALSE, ncol=length(Y.names) ) 
+  resid = as.data.frame(mat)
+  names(resid) = Y.names
   
-
+  # save stats
   sigmas = as.vector( u[ names(u) == "sigma" ] )
   intercepts = as.vector( u[ names(u) == "intercept" ] )
   tvals = as.vector( u[ names(u) == "tval" ] )
@@ -514,19 +526,85 @@ dataset_result = function(
                 bhats = bhats ) )
 }
 
-
+# # sanity check: simulate 1 dataset, calculate all returned things manually,
+# #  and check against fn's results
 # cor = make_corr_mat( .nX = 1,
 #                      .nY = 6,
 #                      .rho.XX = 0,
 #                      .rho.YY = 0.25,
-#                      .rho.XY = 0.1,
-#                      .prop.corr = 0.5 )
+#                      .rho.XY = 0.05,
+#                      .prop.corr = 0.2 )
 # 
-# d = sim_data( .n = 5000, .cor = cor )
-# dataset_result( .dat = d,
-#                 .alpha = 0.05 )
-
-
+# d = sim_data( .n = 1000, .cor = cor )
+# bhat.orig = c(0.1, 0.2, 0.3, 0.3, 0.2, 0.1)
+# res = dataset_result( .dat = d,
+#                 .alpha = c( 0.01, 0.05 ),
+#                 .center.stats = TRUE, 
+#                 .bhat.orig = bhat.orig )
+# 
+#
+# rej.0.01.man = rep(NA, 6)
+# rej.0.05.man = rep(NA, 6)
+#   
+# for (i in 1:6) {
+#   m = lm( d[ , 1 + i ] ~ d$X1 )
+#   
+#   # compare coefficient of interest
+#   cat("-----------Compare bhats-----------\n")
+#   man = coef(m)[2]
+#   fn = res$bhat[i] + bhat.orig[i]
+#   print(man)
+#   print(fn)  # uncenter it
+#   cat( paste("AGREES:",
+#              all.equal( as.numeric(man), fn ) ) )
+#   cat("\n")
+#   
+#   cat("\n-----------Compare uncentered tvals-----------\n")
+#   fn = ( res$bhat[i] + bhat.orig[i] ) / summary(m)$coefficients[2,"Std. Error"]
+#   man = summary(m)$coefficients[2,"t value"]
+#   print(man)
+#   print(fn)  # uncenter it
+#   cat( paste("AGREES:",
+#              all.equal( as.numeric(man), fn ) ) )
+#   cat("\n")
+#   
+#   cat("\n-----------Compare centered pvals-----------\n")
+#   tval.cent.man = ( coef(m)[2] - bhat.orig[i] ) / summary(m)$coefficients[2,"Std. Error"]
+#   man = 2 * ( 1 - pt( abs( tval.cent.man ),
+#                       df = nrow(d)-2 ) )
+#   fn = res$pvals[i]
+#   print(man)
+#   print(fn)  # uncenter it
+#   cat( paste("AGREES:",
+#              all.equal( as.numeric(man), fn ) ) )
+#   cat("\n")
+#   
+#   # record whether p-value was < each alpha threshold
+#   rej.0.01.man[i] = res$pvals[i] < 0.01
+#   rej.0.05.man[i] = res$pvals[i] < 0.05
+# 
+#   # spot-check a randomly chosen residual
+#   cat("\n-----------Compare random residual-----------\n")
+#   id = sample( 1:nrow(d), size=1 )
+#   man = m$residuals[id]
+#   fn = res$resid[id, i]
+#   print(man)
+#   print(fn)  # uncenter it
+#   cat( paste("AGREES:",
+#              all.equal( as.numeric(man), fn ) ) )
+#   cat("\n")
+# }
+# 
+# # rejections
+# cat("\n-----------Compare rejections-----------\n")
+# fn.0.01 = sum(res$rej[1])
+# man.0.01 = sum(rej.0.01.man)
+# fn.0.05 = sum(res$rej[2])
+# man.0.05 = sum(rej.0.05.man)
+# cat( paste("AGREES:",
+#            all.equal( as.numeric(man.0.01), fn.0.01 ) ) )
+# cat( paste("AGREES:",
+#            all.equal( as.numeric(man.0.05), fn.0.05 ) ) )
 
 
 ########################### FN: STITCH RESULTS FILES ###########################
