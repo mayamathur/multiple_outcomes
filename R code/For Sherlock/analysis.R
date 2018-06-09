@@ -2,10 +2,12 @@
 ########################### READ IN DATA ###########################
 
 setwd("~/Desktop")
+
+# read in scenario parameters
 scen.params = read.csv("scen_params.csv")
 names(scen.params)[ names(scen.params) == "scen.name" ] = "scen"
 
-# just use a single file instead of stitched one
+# read in stitched data
 s = read.csv("stitched.csv", header=TRUE)
 s = merge(s, scen.params, by = "scen" )
 
@@ -35,39 +37,57 @@ library(tidyr)
 ( jt.rej.names = c( names(s)[ grep( "jt.rej.", names(s) ) ],
                     names(s)[ grep( "rej.jt", names(s) ) ] ) )
 
-# MAKE SURE TO LIST THEM IN SAME ORDER  AS JT.REJ.NAMES
-method.names = c("bonf.naive",
+# MAKE SURE TO LIST THEM IN SAME ORDER AS JT.REJ.NAMES
+( method.names = c("bonf.naive",
                  "holm",
                  "minP",
                  "Wstep",
                  "Romano",
                  "meanP",
                  "ours.0.01",
-                 "ours.0.05")
+                 "ours.0.05") )
 
 # reshape wide to long
 # https://stackoverflow.com/questions/12466493/reshaping-multiple-sets-of-measurement-columns-wide-format-into-single-columns
 lp = reshape( s[ , names(s) %in% c(jt.rej.names, "scen") ],
               varying = jt.rej.names,
-              v.names="jt.rej",
+              v.names = "jt.rej",
               times = method.names,
-              timevar = "method",  # name of the above variable
+              timevar = "method",  # name to use for the above variable
               direction="long" )
 
-# sanity check
-# long data should have 1 row per method-scenario combination
+
+# # sanity check
+# # long data should have 1 row per method-scenario combination
 # nrow( lp[ lp$scen == 1, ] ); nrow( s[ s$scen == 1, ]) * length(method.names)
 
 
 # fix factor levels because of scenario that was TRUE/FALSE as strings
-fake = NA
-fake[lp$jt.rej == "FALSE"] = FALSE
-fake[lp$jt.rej == "TRUE"] = TRUE
-lp$jt.rej = fake
+lp$jt.rej = as.logical(lp$jt.rej)
+
+
+# # sanity check
+# # reconstruct for a given scenario
+# # stack results for each method
+# scen = s$scen[1]
+# 
+# s.chunk = s[ s$scen == scen, jt.rej.names ]
+# 
+# jt.rej = c()
+# for ( i in 1:ncol(s.chunk) ) {
+#   jt.rej = c( jt.rej, as.logical(s.chunk[,i]) )
+# }
+# 
+# lp.chunk = lp[ lp$scen == scen, ]
+# all( jt.rej == lp.chunk$jt.rej )  # should be TRUE
+# # make sure it's a scenario with not 100% rejections
+# #  to avoid chance matches
+# table(jt.rej)
+
 
 # since each scenario still has multiple rows, take means 
 pwr = lp %>% group_by(scen, method) %>%
-  summarise( power = mean(jt.rej) )
+  summarise( power = mean( as.logical(jt.rej) ) )
 
 # merge in scenario parameters
 pwr = merge(pwr, scen.params, by = "scen" )
@@ -80,7 +100,7 @@ pwr$group = paste( "X-Y correlation: ", pwr$rho.XY,
                    sep = "" )
 
 # for more plotting joy
-labels = c("NB", "H", "MP", "LP", "J1", "J5", "WS", "R")
+labels = c("B", "H", "MP", "LP", "G1", "G5", "WS", "R")
 pwr$method.label = NA
 pwr$method.label[ pwr$method == "bonf.naive" ] = labels[1]
 pwr$method.label[ pwr$method == "holm" ] = labels[2]
@@ -103,8 +123,6 @@ pwr2 = pwr
 lp2 = lp
 #write.csv( lp2, "results_pwr_long.csv")
 
-lp2 = lp
-
 
 ########################### COMPARATIVE POWER PLOT ###########################
 
@@ -114,7 +132,7 @@ lp2 = lp
 # Lines: Different methods
 
 # remove experimental method
-pwr = pwr[!pwr$method == "meanP",]
+pwr = pwr[ pwr$method != "meanP", ]
 
 # for main text: simplify the plot 
 # by removing intermediate effect sizes
@@ -132,7 +150,7 @@ p = ggplot( data = pwr, aes( x = rho.YY, y = power,
                          color = method,
                          label = method ) ) +
   geom_text( aes( label = method.label) ) +
-  theme_classic() +
+  theme_bw() +
   facet_wrap( ~group) +
   #facet_wrap(~ group, nrow = 2 ) +  # for changing rows/columns
   ylab("Power") +
@@ -164,8 +182,7 @@ name = "joint_test_full.png"
 ( bt.lo.names = names(s)[ grep( "bt.lo.", names(s) ) ] )
 ( bt.hi.names = names(s)[ grep( "bt.hi.", names(s) ) ] )
 
-# MAKE SURE TO LIST THEM IN SAME ORDER AS JT.REJ.NAMES
-# I DON'T GET WHY COLS GET ARRANGED IN OPPOSITE ORDER!!!!!
+# MAKE SURE TO LIST THEM IN SAME ORDER AS IN JT.REJ.NAMES
 method.names = c("ours.0.01", "ours.0.05")
 
 # reshape wide to long
@@ -175,9 +192,10 @@ lc = reshape( s,
                               C = bt.lo.names, D = bt.hi.names ),
               v.names= c( "n.rej", "n.rej.bt", "bt.lo", "bt.hi" ),
               times = method.names,
-              timevar = "method",  # name of the above variable
+              timevar = "method",  # name to be used for the above variable
               direction="long" )
 
+# average CI limits and rejections in bootstraps
 ci = lc %>% group_by(scen, method) %>%
   summarise( n.rej.mn = mean(n.rej),
              n.rej.bt.mn = mean(n.rej.bt),
@@ -209,7 +227,7 @@ library(ggplot2)
 y.breaks = seq(0, 1, 0.1)
 
 colors = c( "#E69F00", "#D55E00" )
-legend.labs = c( "J1 (alpha = 0.01)", "J5 (alpha = 0.05)" )
+legend.labs = c( "G1 (alpha = 0.01)", "G5 (alpha = 0.05)" )
 
 # shorter version for main text
 # run this, then re-run the above
@@ -228,7 +246,7 @@ p = ggplot( data = ci2 ) +
   scale_shape_manual( values = c('the shape' = 4),
                       name = "Original dataset", guide = 'legend', labels = c("Mean rejections")) +
   
-  theme_classic() +
+  theme_bw() +
   #  facet_wrap(~ group ) +
   facet_wrap(~ group, nrow = 2 ) +
   ylab("Average null CIs") +
@@ -247,7 +265,8 @@ ggsave( filename = paste("null_ci_short.png"),
         plot=p, path=NULL, width=10, height=8, units="in")
 
 
-##### For Paper #####
+
+########################### OTHER STATS FOR PAPER ###########################
 
 # upper CI limits under independence vs. moderate correlation
 ci %>% filter(method=="ours.0.05") %>%
