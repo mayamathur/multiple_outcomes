@@ -47,7 +47,10 @@ adjust_minP = function( p, p.bt ) {
 ######################## FNS FOR WESTFALL's STEP-DOWN ########################
 
 # Westfall textbook, pages 66-67
+
 adj_Wstep = function( p, p.bt ) {
+  
+  browser()
   
   # attach indices to original p-values
   # to keep track of their original order
@@ -92,24 +95,98 @@ adj_Wstep = function( p, p.bt ) {
 }
 
 
-# sanity check
-# # TEST ONLY
-# p = structure(c(0.636112475277457, 0.116408752390887, 0.260603159221029,
-#                 0.575086408582202, 0.625789849782125), .Dim = c(5L, 1L))
-# p.bt = structure(c(0.728140113074014, 0.828557135138776, 0.728464927503583,
-#                    0.376518353153738, 0.241363541131996, 0.415330227654616, 0.75686321503498,
-#                    0.865494617532842, 0.839819273240726, 0.540707408457488, 0.149482739547785,
-#                    0.506274953008223, 0.122605643925883, 0.747018941160177, 0.168076477020114,
-#                    0.0582566955778811, 0.284459435324328, 0.561050485854955, 0.13839444320949,
-#                    0.641335055023296, 0.195313599009888, 0.174692123827015, 0.982035588216878,
-#                    0.713525352129964, 0.548770486028363), .Dim = c(5L, 5L), .Dimnames = list(
-#                      NULL, c("result.1", "result.2", "result.3", "result.4", "result.5"
-#                      )))
-# p.adj.Wstep = adj_Wstep(pvals, p.bt)
-# plot( p, p.adj.Wstep )
+# # Sanity Check
+# nX = 1
+# nY = 3
+# B = 5
+# cor = make_corr_mat( .nX = nX,
+#                      .nY = nY,
+#                      .rho.XX = 0,
+#                      .rho.YY = 0.25,
+#                      .rho.XY = 0.05,
+#                      .prop.corr = 1 )
+# 
+# d = sim_data( .n = 1000, .cor = cor )
+# 
+# samp.res = dataset_result( .dat = d,
+#                 .alpha = 0.05,
+#                 .center.stats = FALSE )
+# 
+# 
+# p.bt = matrix( NA, nrow = B, ncol = nY)
+# 
+# # do 5 bootstraps
+# for (i in 1:B) {
+#   # extract residuals from original data
+#   # matrix with same dimensions as the outcomes matrix
+#   resid = samp.res$resid
+#   
+#   # compute Y-hat using residuals
+#   Ys = d[ , (nX + 1) : ncol(d) ]  # remove covariates
+#   Yhat = Ys - resid
+#   
+#   # fix the existing covariates
+#   Xs = as.data.frame( d[ , 1 : nX ] )
+#   names(Xs) = X.names
+#   
+#   # resample residuals and add them to fitted values
+#   ids = sample( 1:nrow(d) )
+#   b = as.data.frame( cbind( Xs, Yhat + resid[ids,] ) )
+#   
+#   bt.res = dataset_result( .dat = b,
+#                            .alpha = 0.05,
+#                            .center.stats = TRUE,
+#                            .bhat.orig = samp.res$bhats )
+#   
+#   p.bt[i,] = bt.res$pvals
+# }
+# 
+# pvals = c(0.00233103655078803, 0.470366742594242, 0.00290278216035089
+# )
+# 
+# p.bt = structure(c(0.308528665936264, 0.517319402377912, 0.686518314693482, 
+#                    0.637306248855186, 0.106805510862352, 0.116705315041494, 0.0732076817175753, 
+#                    0.770308936364482, 0.384405349738909, 0.0434358213611965, 0.41497067850141, 
+#                    0.513471489744384, 0.571213377144122, 0.628054979652722, 0.490196884985226
+# ), .Dim = c(5L, 3L))
+# 
+# 
+# 
+# p.adj.Wstep = adj_Wstep(pvals, t(p.bt))
+# plot( samp.res$pvals, p.adj.Wstep )
+# 
+# # BOOKMARK - CHECK MANUALLY AS IN PREVIOUS TOY EXAMPLE
+# 
+# # indicators of which hypothesis the sorted p-vals go with
+# sort(pvals)
+# r = c(1,3,2)
+# 
+# qstar = matrix( NA, nrow = B, ncol = 3)
+# 
+# for (i in 1:nrow(p.bt)) {
+#   qstar[i,3] = p.bt[ i, r[3] ]
+#   qstar[i,2] = min( qstar[i,3], p.bt[ i, r[2] ] )
+#   qstar[i,1] = min( qstar[i,2], p.bt[ i, r[1] ] )
+# }
+# 
+# less = t( apply( qstar, MARGIN = 1,
+#               function(row) row <= sort(pvals) ) )
+# 
+# p.tilde = colMeans(less)
+# 
+# # enforce monotonicity
+# p.tilde.sort = sort(p.tilde)
+# p.tilde.sort[2] = max( p.tilde.sort[1], p.tilde.sort[2] )
+# p.tilde.sort[3] = max( p.tilde.sort[2], p.tilde.sort[3] )
 
 
-########################### FN: CALCULATE CRITICAL VALUES FOR WESTFALL ###########################
+
+########################### FN: CALCULATE CRITICAL VALUES FOR WSTEP ###########################
+
+# Arguments: 
+#  p.dat: p-values from dataset (W-vector?)
+#  col.p: Column of resampled p-values (for the single p-value for which we're
+#   getting the critical value)?
 
 get_crit = function( p.dat, col.p ) {
   
@@ -127,12 +204,33 @@ get_crit = function( p.dat, col.p ) {
   return(qstar)
 }
 
+# sanity check with 5 p-values
+# these are dputted from a single simulation rep (B=5 resamples)
+p.dat = structure(c(0.636112475277457, 0.116408752390887, 0.260603159221029,
+                0.575086408582202, 0.625789849782125), .Dim = c(5L, 1L))
+p.bt = structure(c(0.728140113074014, 0.828557135138776, 0.728464927503583,
+                   0.376518353153738, 0.241363541131996, 0.415330227654616, 0.75686321503498,
+                   0.865494617532842, 0.839819273240726, 0.540707408457488, 0.149482739547785,
+                   0.506274953008223, 0.122605643925883, 0.747018941160177, 0.168076477020114,
+                   0.0582566955778811, 0.284459435324328, 0.561050485854955, 0.13839444320949,
+                   0.641335055023296, 0.195313599009888, 0.174692123827015, 0.982035588216878,
+                   0.713525352129964, 0.548770486028363), .Dim = c(5L, 5L), .Dimnames = list(
+                     NULL, c("result.1", "result.2", "result.3", "result.4", "result.5"
+                     )))
 
+get_crit( p.dat = p, col.p = p.bt[2,] )
+
+crit.mat = apply( p.bt, MARGIN = 2,
+                  FUN = function(x) get_crit( p.dat, x) )
+
+
+p.adj.Wstep = adj_Wstep(pvals, p.bt)
+plot( p, p.adj.Wstep )
 
 
 ########################### FN: RETURN CORRELATION BETWEEN TWO ARBITRARY CELLS ###########################
 
-# AUDITED
+# AUDITED :) 
 
 # Returns correlation between a pair of variables given
 #  desired correlation structure.
