@@ -747,7 +747,7 @@ stitch_files = function(.results.singles.path,
 
 ########################### FN: RETURN FILES THAT AREN'T COMPLETED ###########################
 
-# given a folder path for results and a common beginning of file name of results files
+# Given a folder path for results and a common beginning of file name of results files
 #   written by separate workers in parallel, stitch results files together into a
 #   single csv.
 
@@ -755,20 +755,12 @@ sbatch_not_run = function(.results.singles.path,
                           .results.write.path,
                         .name.prefix) {
   
-  # .results.singles.path = "/home/groups/manishad/multTest/sim_results/short"
-  # .results.write.path = "/home/groups/manishad/multTest/sim_results"
-  # .name.prefix = "short"
-  
   # get list of all files in folder
   all.files = list.files(.results.singles.path, full.names=TRUE)
   
   # we only want the ones whose name includes .name.prefix
   keepers = all.files[ grep( .name.prefix, all.files ) ]
   
-  # ~~~ TEST ONLY
-  # keepers = c( "/share/PI/manishad/multTest/sim_results/short_results_job_2_.csv",
-  #              "/share/PI/manishad/multTest/sim_results/short_results_job_5_.csv")
-
   # extract job numbers
   sbatch.nums = as.numeric( unlist( lapply( strsplit( keepers, split = "_"), FUN = function(x) x[5] ) ) )
   
@@ -796,6 +788,7 @@ sbatch_not_run = function(.results.singles.path,
 
 ########################### SLURM FUNCTIONS ###########################
 
+# These just generate the sbatch files
 
 # DO NOT CHANGE THE INDENTATION IN THE BELOW OR ELSE SLURM 
 #  WILL SILENTLY IGNORE THE BATCH COMMANDS DUE TO EXTRA WHITESPACE!!
