@@ -1,5 +1,9 @@
 
 
+# NOTE:
+# Had sent 1-1000 using normal,owners
+# Just sent 1001-1010 using manishad
+
 ########################### SET SIMULATION PARAMETERS MATRIX ###########################
 
 # FOR CLUSTER USE
@@ -106,8 +110,8 @@ n.files
 
 # 10,400 files
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in 1:1000) {
-  system( paste("sbatch -p normal,owners /home/groups/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
+for (i in 1013:1023) {
+  system( paste("sbatch -p manishad,bigmem,gpu /home/groups/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
 }
 
 

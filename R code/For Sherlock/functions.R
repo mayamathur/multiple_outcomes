@@ -704,12 +704,21 @@ dataset_result = function( .dat,
 
 ########################### FN: STITCH RESULTS FILES ###########################
 
-# given a folder path for results and a common beginning of file name of results files
+# Given a folder path for results and a common beginning of file name of results files
 #   written by separate workers in parallel, stitch results files together into a
 #   single csv.
 
-stitch_files = function(.results.singles.path, .results.stitched.write.path=.results.singles.path,
-                        .name.prefix, .stitch.file.name="stitched_model_fit_results.csv") {
+# Arguments: 
+#  .results.singles.path: Path of unstitched single results files
+#  .results.stitched.write.path: Path to which stitched data should be written
+#  .name.prefix: String contained anywhere in name of each single results files, but
+#   not in name of any other random files at .results.singles.path
+#  .stitch.file.name: What to call the stitched file
+
+stitch_files = function(.results.singles.path,
+                        .results.stitched.write.path = .results.singles.path,
+                        .name.prefix,
+                        .stitch.file.name="stitched_model_fit_results.csv") {
 
   # get list of all files in folder
   all.files = list.files(.results.singles.path, full.names=TRUE)
