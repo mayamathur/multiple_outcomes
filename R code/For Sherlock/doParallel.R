@@ -172,6 +172,7 @@ for ( j in 1:sim.reps ) {
       }
 
       ##### Bootstrap Under Null #3 - Regenerate Y Parametrically #####
+      # doesn't work! (generates uncorrelated Ys)
       # re-attach residuals
       if ( p$bt.type == "h0.parametric" ) {
         # extract fitted model parameters
@@ -186,7 +187,6 @@ for ( j in 1:sim.reps ) {
         new.Ys = matrix( NA, nrow = nrow(d), ncol = length(Y.names) )
         n.cells = length(new.Ys)
 
-        # ~~~ NOOOOO - THIS IS GENERATING UNCORRELATED YS!!!!!!
         # go through each outcome (column)
         #  and generate using appropriate parameter estimates
         new.Ys = sapply( 1:ncol(new.Ys),
@@ -223,7 +223,7 @@ for ( j in 1:sim.reps ) {
 
 
       ##### Bootstrap Under HA #3 - Regenerate Residuals #####
-      # THIS ACTUALLY LOSES CORRELATION BETWEEN YS
+      #  doesn't work! (loses correlation between Ys)
       # re-attach residuals
       if ( p$bt.type == "ha.resid.2" ) {
         # extract residuals from original data
@@ -286,7 +286,7 @@ for ( j in 1:sim.reps ) {
   # cols = resamples
   p.bt = do.call( cbind, r[ , "pvals" ] )
 
-  # resampled test statistic matrix (uncentered) for Romano
+  # resampled test statistic matrix (centered) for Romano
   # rows = Ys
   # cols = resamples
   t.bt = do.call( cbind, r[ , "tvals" ] )
@@ -294,14 +294,13 @@ for ( j in 1:sim.reps ) {
 
   ###### Joint Test Results for This Simulation Rep #####
 
-    # names(r) = paste( "n.rej.bt.", as.character(alpha), sep="" )
-    #
-    # performance: rejection of joint null hypothesis
+    # performance: one-sided rejection of joint null hypothesis
     # alpha for joint test is set to 0.05 regardless of alpha for individual tests
     # crit.bonf = quantile( n.rej.bt.0.005, 1 - 0.05 )
     crit.0.05 = quantile( n.rej.bt.0.05, 1 - 0.05 )
     crit.0.01 = quantile( n.rej.bt.0.01, 1 - 0.05 )
 
+    # null interval limits
     bt.lo.0.01 = quantile( n.rej.bt.0.01, 0.025 )
     bt.hi.0.01 = quantile( n.rej.bt.0.01, 0.975 )
 
@@ -321,14 +320,12 @@ for ( j in 1:sim.reps ) {
     rej.jt.0.05 = jt.pval.0.05 < 0.05
 
     ######## Bonferroni joint test ########
-
     # Bonferroni test of joint null using just original data
     # i.e., do we reject at least one outcome using Bonferroni threshold?
     jt.rej.bonf.naive = n.rej[1] > 0
 
 
     ######## Holm joint test ########
-
     p.adj.holm = p.adjust( p = pvals, method = "holm" )
     jt.rej.holm = any( p.adj.holm < 0.05 )
 
@@ -340,12 +337,11 @@ for ( j in 1:sim.reps ) {
     jt.rej.Wstep = any( p.adj.stepdown < 0.05 )
 
     ######## Romano ########
-    # regular FWER control
-    
+    # regular FWER control (not k-FWER)
+  
     # if we bootstrapped under Ha
     if ( p$bt.type %in% ha.methods ) {
-      # center the test stats to recover null sampling distribution
-      #t.bt.centered = t.bt - tvals
+      # test stats are already centered
       res = FWERkControl(tvals, as.matrix(t.bt), k = 1, alpha = 0.05)
       jt.rej.Romano = sum(res$Reject) > 0
     }
@@ -357,6 +353,7 @@ for ( j in 1:sim.reps ) {
     
 
     ######## Mean Log-P-Value Joint Test ########
+    # reject if mean log p-value is small compared to those in bootstraps
     mean.log.p.bt = colMeans( log(p.bt) )
     jt.rej.mean.p = mean( log(pvals) ) < quantile( mean.log.p.bt, 0.025 )
 
@@ -388,25 +385,25 @@ for ( j in 1:sim.reps ) {
                       jt.rej.Romano,
                       jt.rej.mean.p,
 
-                      # crit.bonf,
+                      # crit.bonf
                       crit.0.05,
                       crit.0.01,
 
-                      # bt.lo.bonf, bt.hi.bonf,
+                      # bt.lo.bonf, bt.hi.bonf
                       bt.lo.0.01, bt.hi.0.01,
                       bt.lo.0.05, bt.hi.0.05,
 
-                      # jt.pval.bonf,
+                      # jt.pval.bonf
                       jt.pval.0.01,
                       jt.pval.0.05,
 
-                      # rej.jt.bonf,
+                      # rej.jt.bonf
                       rej.jt.0.01,
                       rej.jt.0.05
                       ) )
 
-    # ALL ROWS ARE STATIC VARIABLES BECAUSE WE'RE NOT MERGING IN RESAMPLE-LEVEL
-    #  RESULTS.
+    # all rows are static variables because we're not merging in resample-level
+    #  results
 
     # merge in the individual bootstrap results and parameters
     # new.rows = cbind( p, new.rows, n.rej, r )
@@ -430,7 +427,6 @@ write.csv( results, paste( "long_results", jobname, ".csv", sep="_" ) )
 
 
 ########################### WRITE SHORT RESULTS ###########################
-
 # keep only 1 row per simulation rep
 keep.row = rep( c( TRUE, rep(FALSE, boot.reps - 1) ), sim.reps )
 
