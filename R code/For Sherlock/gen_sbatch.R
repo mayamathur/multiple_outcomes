@@ -109,9 +109,10 @@ n.files
 # sent first 1,000 at 1:30pm on Tues
 
 # 10,400 files
+# 1013-1023 were like this as well
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in 1013:1023) {
-  system( paste("sbatch -p manishad,bigmem,gpu /home/groups/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
+for (i in 2001:2296) {
+  system( paste("sbatch -p normal /home/groups/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
 }
 
 

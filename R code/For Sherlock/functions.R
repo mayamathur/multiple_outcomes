@@ -735,9 +735,11 @@ stitch_files = function(.results.singles.path,
   
   # stitch the files
   for ( i in 1:length(keepers) ) {
-    new.chunk = read.csv(keepers[i])[,-1]
+    new.chunk = try( read.csv(keepers[i])[,-1] )
+    if ( inherits(new.chunk, 'try-error') ) warning( paste( keepers[i], "has a problem!") )
     s = rbind(s, new.chunk)
   }
+  
   
   s = s[-1,]  # delete annoying NA row
   write.csv(s, paste(.results.stitched.write.path, .stitch.file.name, sep="/") )

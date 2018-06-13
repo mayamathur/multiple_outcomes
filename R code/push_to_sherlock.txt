@@ -1,25 +1,6 @@
 
-# push all the individual files
-scp /Users/mmathur/Dropbox/Personal\ computer/HARVARD/THESIS/Thesis\ paper\ \#2\ \(MO\)/git_multiple_outcomes/R\ code/For\ Sherlock/* mmathur@login.sherlock.stanford.edu:/home/groups/manishad/multTest
 
-
-# see the sbatch files
-cd /home/groups/manishad/multTest/sbatch_files
-nano rm_1.err
-
-# move error file to Desktop
-scp -r mmathur@sherlock:/home/groups/manishad/multTest/sbatch_files/rm_19.err ~/Desktop
-scp -r mmathur@sherlock:/home/groups/manishad/multTest/sbatch_files/rm_19.out ~/Desktop
-
-
-# run one of them on Manisha's nodes
-sbatch -p manishad /home/groups/manishad/multTest/sbatch_files/10934.sbatch
-# not on Manisha's nodes
-sbatch -p normal,owners /home/groups/manishad/multTest/sbatch_files/1.sbatch
-
-
-sbatch -p normal,owners /home/groups/manishad/multTest/sbatch_files/99.sbatch
-
+####################### CHECK IN ####################### 
 # see the sbatches
 cd /home/groups/manishad/multTest/sbatch_files
 
@@ -37,21 +18,49 @@ ls -l . | egrep -c '^-'
 # see the stitched results
 nano /home/groups/manishad/multTest/sim_results/overall_stitched/sti*
 
+
+
+####################### CODE -> SHERLOCK ####################### 
+
+# push all the individual files
+scp /Users/mmathur/Dropbox/Personal\ computer/HARVARD/THESIS/Thesis\ paper\ \#2\ \(MO\)/git_multiple_outcomes/R\ code/For\ Sherlock/* mmathur@login.sherlock.stanford.edu:/home/groups/manishad/multTest
+
+
+# see the sbatch files
+cd /home/groups/manishad/multTest/sbatch_files
+nano rm_1.err
+
+
+####################### SHERLOCK -> DESKTOP (DEBUGGING) ####################### 
+
+# move error file to Desktop
+scp -r mmathur@sherlock:/home/groups/manishad/multTest/sbatch_files/rm_19.err ~/Desktop
+scp -r mmathur@sherlock:/home/groups/manishad/multTest/sbatch_files/rm_19.out ~/Desktop
+
+# move one sbatch file to Desktop
+scp -r mmathur@login.sherlock.stanford.edu:/home/groups/manishad/multTest/sbatch_files/2296.sbatch ~/Desktop
+
+
+####################### RUN SBATCH ####################### 
+
+# run one of them on Manisha's nodes
+sbatch -p manishad /home/groups/manishad/multTest/sbatch_files/10934.sbatch
+# not on Manisha's nodes
+sbatch -p normal,owners /home/groups/manishad/multTest/sbatch_files/1.sbatch
+
+
+
+####################### RESULTS -> DESKTOP FOR ANALYSIS ####################### 
+
 # move all datasets to local machine
 scp -r mmathur@sherlock:/home/groups/manishad/multTest/sim_results.zip ~/Desktop
-
-
 
 # move stitched dataset and parameters to local machine
 scp mmathur@sherlock:/home/groups/manishad/multTest/sim_results/stitched.csv ~/Desktop
 scp mmathur@sherlock:/home/groups/manishad/multTest/scen_params.csv ~/Desktop
 
-scp mmathur@sherlock:/home/groups/manishad/multTest/sbatch_files/1.sbatch ~/Desktop
-
-
 # move parameters to Desktop
 scp mmathur@sherlock:/home/groups/manishad/multTest/scen_params.csv ~/Desktop
-
 
 # zip the results files
 cd /home/groups/manishad/multTest/sim_results/long
@@ -63,7 +72,6 @@ zip -r long.zip long
 # move zipped results 
 scp mmathur@sherlock:/home/groups/manishad/multTest/sim_results/long.zip ~/Desktop
 
-
 # move code files to local machine
 scp mmathur@sherlock:/home/groups/manishad/multTest/sim_results/stitched.csv ~/Desktop
 scp mmathur@sherlock:/home/groups/manishad/multTest/analysis.R ~/Desktop
@@ -71,11 +79,13 @@ scp mmathur@sherlock:/home/groups/manishad/multTest/doParallel.R ~/Desktop
 scp mmathur@sherlock:/home/groups/manishad/multTest/functions.R ~/Desktop
 scp mmathur@sherlock:/home/groups/manishad/multTest/stitch_on_sherlock.R ~/Desktop
 
+
+####################### CLEAN UP ####################### 
+
 # clean up the directory
 rm /home/groups/manishad/multTest/sim_results/*
 rm /home/groups/manishad/multTest/sim_results/short/*
 rm /home/groups/manishad/multTest/sim_results/long/*
 rm /home/groups/manishad/multTest/sbatch_files/rm*
   
-
 rm -r /home/groups/manishad/multTest/sbatch_files/*
