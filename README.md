@@ -4,6 +4,8 @@ This repository contains all code required to reproduce analyses in:
 
 >Mathur MB & VanderWeele TJ. XXX. 
 
+Address any inquiries to mmathur [AT] stanford [DOT] edu.
+
 # How to re-run the simulation study from scratch
 
 Simulation scripts are parallelized and were run on a SLURM cluster. All files required to re-run the simulation study are in R code/For Sherlock:
@@ -32,7 +34,22 @@ To reproduce the simulation analyses locally using our saved results without re-
 
 (SAVE THE SIMULATION RESULTS FOR PAPER IN THEIR OWN FOLDER)
 
-
+These scripts produce both the extended simulation results in the Appendix and the short versions in the main text. 
 
 # How to reproduce the applied example
+
+Chronologically, the applied example can be reproduced as follows: 
+
+1. Optionally, to start from the raw data, download the MIDUS data by XXX. Run the SAS script in Ying's data prep code/Extract dataset for MAYA.sas to produce the dataset flourish_new.sas7bdat. This SAS script reproduces inclusion/exclusion criteria from Chen et al. (2018) and randomly selects one sibling from each sibship. 
+
+2. Run **data_prep_applied_example.R**, which does additional data cleaning to turn flourish_new.sas7bdat into the analysis-ready dataset in Prepped data/flourish_prepped.csv. Note that this script makes additional subject exclusions (e.g., removing subjects with incomplete data). This script calls the helper functions in **helper_applied_example.R**. 
+
+3. Run **analyses_applied_example.R**, which uses the prepped dataset, flourish_prepped.csv, to produce all plots, stats, and tables reported in the paper. 
+
+
+# How to reproduce the p-value scatterplot in the Appendix
+
+Run the script in R code/Auxiliary code/Compare joint tests/plot_adjusted_pvalues.R.
+
+
 
