@@ -11,28 +11,27 @@ setwd(path)
 # setwd(path)
 
 
-# FOR DEBUGGING ONLY
-n = 1000
-nX = 1
-nY = 40
-rho.XX = 0
-rho.YY = c(0.6)
-rho.XY = c(0) # null hypothesis: 0
-prop.corr = c(1)  # exchangeable vs. half-correlated matrix
-
+# # ~~~~ FOR DEBUGGING ONLY
 # n = 1000
 # nX = 1
 # nY = 40
 # rho.XX = 0
-# rho.YY = c(0, 0.1, 0.3, 0.6)
-# rho.XY = c(0, 0.03, 0.05, 0.10, 0.15 ) # null hypothesis: 0
-# prop.corr = c(0.20, 0.5, 1)  # exchangeable vs. half-correlated matrix
+# rho.YY = c(0.6)
+# rho.XY = c(0) # null hypothesis: 0
+# prop.corr = c(1)  # exchangeable vs. half-correlated matrix
+
+n = 1000
+nX = 1
+nY = 40
+rho.XX = 0
+rho.YY = c(0, 0.1, 0.3, 0.6)
+rho.XY = c(0, 0.03, 0.05, 0.10, 0.15) # null hypothesis: 0
+prop.corr = c(0.20, 0.5, 1)  # exchangeable vs. half-correlated matrix
 
 
-# ~~~ CHANGED FOR DEBUGGING
-boot.reps = 500
+# boot.reps = 500
 # bootstrap iterates and type
-#boot.reps = 2000
+boot.reps = 1000
 bt.type = c( "ha.resid" )
 
 # matrix of scenario parameters
@@ -59,7 +58,7 @@ scen.params = scen.params[ order(scen.params$rho.XY,
 
 ######## Name the Scenarios ########
 # if merging results with other simulations, set this to the last letter already used
-start.at = 4
+start.at = 1
 
 # remove letters that are privileged variables in R
 # letter.names = c(letters, LETTERS, paste(letters, letters, sep="") )
@@ -84,8 +83,8 @@ source("functions.R")
 
 # ~~CHANGED
 # number of sbatches to generate (i.e., iterations within each scenario)
-n.reps.per.scen = 200
-n.reps.in.doParallel = 20
+n.reps.per.scen = 500
+n.reps.in.doParallel = 10
 # n.reps.per.scen = 500
 # n.reps.in.doParallel = 5
 n.files = ( n.reps.per.scen / n.reps.in.doParallel ) * n.scen
@@ -100,7 +99,6 @@ errorfile = paste("rm_", 1:n.files, ".err", sep="")
 write_path = paste(path, "/sbatch_files/", 1:n.files, ".sbatch", sep="")
 runfile_path = paste(path, "/testRunFile.R", sep="")
 
-# was 5 hours with 2K bootstrap and n = 5e4
 sbatch_params <- data.frame(jobname,
                             outfile,
                             errorfile,
@@ -118,13 +116,13 @@ sbatch_params <- data.frame(jobname,
                             stringsAsFactors = F,
                             server_sbatch_path = NA)
 
-generateSbatch(sbatch_params, runfile_path)
+#generateSbatch(sbatch_params, runfile_path)
 
 n.files
 
-
+# 2600 files
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in 1:10) {
+for (i in 1:100) {
   system( paste("sbatch -p manishad /home/groups/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
 }
 

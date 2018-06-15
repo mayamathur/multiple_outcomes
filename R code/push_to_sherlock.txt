@@ -93,6 +93,7 @@ scp mmathur@sherlock:/home/groups/manishad/multTest/stitch_on_sherlock.R ~/Deskt
 rm /home/groups/manishad/multTest/sim_results/*
 rm /home/groups/manishad/multTest/sim_results/short/*
 rm /home/groups/manishad/multTest/sim_results/long/*
+rm /home/groups/manishad/multTest/sim_results/overall_stitched/*
 rm /home/groups/manishad/multTest/sbatch_files/rm*
   
 rm -r /home/groups/manishad/multTest/sbatch_files/*
