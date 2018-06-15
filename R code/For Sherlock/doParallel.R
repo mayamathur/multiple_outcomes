@@ -66,7 +66,7 @@ alpha = c( crit.bonf, 0.01, 0.05 )
 
 # simulation reps to run within this job
 # this need to match n.reps.in.doParallel in the genSbatch script
-sim.reps = 20
+sim.reps = 10
 
 # EDITED FOR C++ ISSUE WITH PACKAGE INSTALLATION
 library(doParallel, lib.loc = "/home/groups/manishad/Rpackages/")
@@ -469,7 +469,7 @@ for ( j in 1:sim.reps ) {
 
 # results dataframe should now have boot.reps * sim.reps rows
 
-# ~~~ TEMP - THESE RESULTS ACTUALLY MAKE SENSE...
+# sanity check of results
 r = results
 print( mean(r$jt.pval.0.05) )
 print( mean(r$rej.jt.0.05) )
