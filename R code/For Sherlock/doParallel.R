@@ -1,5 +1,52 @@
 
+# ######### FOR DEBUGGING ON CLUSTER #########
+# 
+# # THIS WORKS
+# 
+# # load command line arguments
+# args = commandArgs(trailingOnly = TRUE)
+# jobname = "fake"
+# scen = args[2]  
+# boot.reps = as.numeric(args[3])
+# 
+# # get scen parameters
+# setwd("/home/groups/manishad/multTest")
+# scen.params = read.csv( "scen_params.csv" )
+# p = scen.params[ scen.params$scen.name == scen, ]
+# 
+# print(p)
+# 
+# # no longer included in parameters because it's a vector
+# crit.bonf = 0.05 / p$nY
+# alpha = c( crit.bonf, 0.01, 0.05 )
+# 
+# # simulation reps to run within this job
+# # this need to match n.reps.in.doParallel in the genSbatch script
+# sim.reps = 200
+# 
+# # EDITED FOR C++ ISSUE WITH PACKAGE INSTALLATION
+# library(doParallel, lib.loc = "/home/groups/manishad/Rpackages/")
+# library(foreach, lib.loc = "/home/groups/manishad/Rpackages/")
+# library(mvtnorm, lib.loc = "/home/groups/manishad/Rpackages/")
+# library(StepwiseTest, lib.loc = "/home/groups/manishad/Rpackages/")  # Romano
+# library(matrixcalc, lib.loc = "/home/groups/manishad/Rpackages/")
+# 
+# # for use in ml load R
+# # install.packages( c("doParallel", "foreach", "mvtnorm", "StepwiseTest", "matrixcalc"), lib = "/home/groups/manishad/Rpackages/" )
+# 
+# source("functions.R")
+# 
+# # set the number of cores
+# registerDoParallel(cores=16)
+
+
+
+
 ######### FOR CLUSTER USE #########
+
+# because Sherlock 2.0 restores previous workspace
+rm( list = ls() )
+
 # load command line arguments
 args = commandArgs(trailingOnly = TRUE)
 jobname = args[1]
@@ -19,7 +66,7 @@ alpha = c( crit.bonf, 0.01, 0.05 )
 
 # simulation reps to run within this job
 # this need to match n.reps.in.doParallel in the genSbatch script
-sim.reps = 5
+sim.reps = 20
 
 # EDITED FOR C++ ISSUE WITH PACKAGE INSTALLATION
 library(doParallel, lib.loc = "/home/groups/manishad/Rpackages/")
@@ -36,24 +83,25 @@ source("functions.R")
 # set the number of cores
 registerDoParallel(cores=16)
 ######### END OF CLUSTER PART #########
-
-
+# 
+# 
 # ######### FOR LOCAL USE #########
 # # setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Sandbox/2018-1-13")
 # # p = read.csv("scen_params.csv")  # should be a single row, I think
 # 
+# # THIS SCENARIO WORKED FINE LOCALLY
 # n = 1000
 # nX = 1
 # nY = 40
 # rho.XX = 0
-# rho.YY = c(0.25)
-# rho.XY = c(0.15)  # null hypothesis: 0
+# rho.YY = c(0)
+# rho.XY = c(0)  # null hypothesis: 0
 # prop.corr = 1
 # 
 # # bootstrap iterates and type
-# boot.reps = 50
-# sim.reps = 3
-# scen = "a"
+# boot.reps = 500
+# sim.reps = 50
+# scen = 1
 # bt.type = c( "ha.resid" )
 # 
 # 
@@ -85,8 +133,8 @@ registerDoParallel(cores=16)
 # 
 # # set the number of cores
 # registerDoParallel(cores=16)
-# 
-# ######### END OF LOCAL PART #########
+
+######### END OF LOCAL PART #########
 
 
 ########################### THIS SCRIPT COMPLETELY RUNS 1 SIMULATION  ###########################
@@ -419,6 +467,14 @@ for ( j in 1:sim.reps ) {
 }  # end loop over j simulation reps
 
 
+# results dataframe should now have boot.reps * sim.reps rows
+
+# ~~~ TEMP - THESE RESULTS ACTUALLY MAKE SENSE...
+r = results
+print( mean(r$jt.pval.0.05) )
+print( mean(r$rej.jt.0.05) )
+print( mean(r$jt.rej.Romano) )
+print( mean(r$jt.rej.Wstep) )
 
 
 ########################### WRITE LONG RESULTS  ###########################

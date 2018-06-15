@@ -4,8 +4,9 @@
 # see the sbatches
 cd /home/groups/manishad/multTest/sbatch_files
 
-# check on running jobs
+# check on my running or pending jobs
 squeue -u mmathur -t RUNNING
+squeue -u mmathur -t PENDING
 
 # see the datasets
 cd /home/groups/manishad/multTest/sim_results/short
@@ -14,6 +15,9 @@ ls -l . | egrep -c '^-'
 # see the datasets
 cd /home/groups/manishad/multTest/sim_results/long
 ls -l . | egrep -c '^-'
+
+# see the scen parameters
+nano /home/groups/manishad/multTest/scen_params.csv
 
 # see the stitched results
 nano /home/groups/manishad/multTest/sim_results/overall_stitched/sti*
@@ -44,9 +48,10 @@ scp -r mmathur@login.sherlock.stanford.edu:/home/groups/manishad/multTest/sbatch
 ####################### RUN SBATCH ####################### 
 
 # run one of them on Manisha's nodes
-sbatch -p manishad /home/groups/manishad/multTest/sbatch_files/10934.sbatch
+sbatch -p manishad /home/groups/manishad/multTest/sbatch_files/5200.sbatch
 # not on Manisha's nodes
 sbatch -p normal,owners /home/groups/manishad/multTest/sbatch_files/1.sbatch
+
 
 
 
@@ -56,8 +61,10 @@ sbatch -p normal,owners /home/groups/manishad/multTest/sbatch_files/1.sbatch
 scp -r mmathur@sherlock:/home/groups/manishad/multTest/sim_results.zip ~/Desktop
 
 # move stitched dataset and parameters to local machine
-scp mmathur@sherlock:/home/groups/manishad/multTest/sim_results/stitched.csv ~/Desktop
-scp mmathur@sherlock:/home/groups/manishad/multTest/scen_params.csv ~/Desktop
+scp mmathur@login.sherlock.stanford.edu:/home/groups/manishad/multTest/sim_results/overall_stitched/stitched.csv ~/Desktop
+Vegemite2017
+scp mmathur@login.sherlock.stanford.edu:/home/groups/manishad/multTest/scen_params.csv ~/Desktop
+Vegemite2017
 
 # move parameters to Desktop
 scp mmathur@sherlock:/home/groups/manishad/multTest/scen_params.csv ~/Desktop

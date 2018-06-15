@@ -1,9 +1,5 @@
 
 
-# NOTE:
-# Had sent 1-1000 using normal,owners
-# Just sent 1001-1010 using manishad
-
 ########################### SET SIMULATION PARAMETERS MATRIX ###########################
 
 # FOR CLUSTER USE
@@ -14,17 +10,29 @@ setwd(path)
 # path = "~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Sandbox/2018-1-13"
 # setwd(path)
 
+
+# FOR DEBUGGING ONLY
 n = 1000
 nX = 1
 nY = 40
 rho.XX = 0
-rho.YY = c(0, 0.1, 0.3, 0.6)
-rho.XY = c(0, 0.03, 0.05, 0.10, 0.15 ) # null hypothesis: 0
-prop.corr = c(0.20, 0.5, 1)  # exchangeable vs. half-correlated matrix
+rho.YY = c(0.6)
+rho.XY = c(0) # null hypothesis: 0
+prop.corr = c(1)  # exchangeable vs. half-correlated matrix
+
+# n = 1000
+# nX = 1
+# nY = 40
+# rho.XX = 0
+# rho.YY = c(0, 0.1, 0.3, 0.6)
+# rho.XY = c(0, 0.03, 0.05, 0.10, 0.15 ) # null hypothesis: 0
+# prop.corr = c(0.20, 0.5, 1)  # exchangeable vs. half-correlated matrix
 
 
+# ~~~ CHANGED FOR DEBUGGING
+boot.reps = 500
 # bootstrap iterates and type
-boot.reps = 2000
+#boot.reps = 2000
 bt.type = c( "ha.resid" )
 
 # matrix of scenario parameters
@@ -44,10 +52,14 @@ names(scen.params) = c( "bt.type", "n", "nX", "nY", "rho.XX", "rho.YY", "rho.XY"
 scen.params = scen.params[ scen.params$rho.XY != 0 |
                              scen.params$rho.XY == 0 & scen.params$prop.corr == 1, ]
 
+# choose order in which you want them to run
+scen.params = scen.params[ order(scen.params$rho.XY,
+                                 scen.params$prop.corr,
+                                 decreasing = FALSE), ]
 
 ######## Name the Scenarios ########
 # if merging results with other simulations, set this to the last letter already used
-start.at = 1
+start.at = 4
 
 # remove letters that are privileged variables in R
 # letter.names = c(letters, LETTERS, paste(letters, letters, sep="") )
@@ -59,6 +71,8 @@ start.at = 1
 scen.params$scen.name = start.at : ( start.at + nrow(scen.params) - 1 )
 n.scen = length(scen.params[,1])
 
+
+
 # write the csv file of params (to Sherlock)
 write.csv( scen.params, "scen_params.csv" )
 
@@ -68,10 +82,12 @@ write.csv( scen.params, "scen_params.csv" )
 # load functions for generating sbatch files
 source("functions.R")
 
-
+# ~~CHANGED
 # number of sbatches to generate (i.e., iterations within each scenario)
-n.reps.per.scen = 1000
-n.reps.in.doParallel = 5
+n.reps.per.scen = 200
+n.reps.in.doParallel = 20
+# n.reps.per.scen = 500
+# n.reps.in.doParallel = 5
 n.files = ( n.reps.per.scen / n.reps.in.doParallel ) * n.scen
 
 
@@ -102,17 +118,14 @@ sbatch_params <- data.frame(jobname,
                             stringsAsFactors = F,
                             server_sbatch_path = NA)
 
-#generateSbatch(sbatch_params, runfile_path)
+generateSbatch(sbatch_params, runfile_path)
 
 n.files
 
-# sent first 1,000 at 1:30pm on Tues
 
-# 10,400 files
-# 1013-1023 were like this as well
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in 2001:2296) {
-  system( paste("sbatch -p normal /home/groups/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
+for (i in 1:10) {
+  system( paste("sbatch -p manishad /home/groups/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
 }
 
 
