@@ -18,7 +18,7 @@ Simulation scripts are parallelized and were run on a SLURM cluster. All files r
 
 - **analysis.R** uses stitched.csv and the scenario parameters, scen_params.csv, to create the plots and stats reported for the simulation study. 
 
-Additional files that are not necessary to re-run the simulation study: 
+Auxiliary files that are not necessary to re-run the simulation study: 
 
 - **choose_scen_params.R** helps choose reasonable scenario parameters using theoretical calculations for the independent case. 
 
@@ -32,7 +32,7 @@ To reproduce the simulation analyses locally using our saved results without re-
 
 (SAVE THE SIMULATION RESULTS FOR PAPER IN THEIR OWN FOLDER)
 
- 
+
 
 # How to reproduce the applied example
 
