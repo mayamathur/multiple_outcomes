@@ -18,7 +18,10 @@ nrow(s) / (n.reps.per.scen * nrow(scen.params))
 table(s$scen)
 
 # quick check
-mean(s$jt.rej.holm)
+mean(s$jt.pval.0.05)
+mean(s$rej.jt.0.05)
+mean(s$jt.rej.Romano)
+mean(s$jt.rej.Wstep)
 
 # move it to Desktop
 scp mmathur@login.sherlock.stanford.edu:/home/groups/manishad/multTest/sim_results/overall_stitched/stitched.csv ~/Desktop
