@@ -6,9 +6,9 @@ This repository contains all code required to reproduce analyses in:
 
 # How to re-run the simulation study from scratch
 
-Simulation scripts are parallelized and were run on a SLURM cluster. All files required to reproduce the simulation study are in R code/For Sherlock:
+Simulation scripts are parallelized and were run on a SLURM cluster. All files required to re-run the simulation study are in R code/For Sherlock:
 
-- **functions.R** contains helper functions that can be run locally.  
+- **functions.R** contains helper functions that can be run locally, as well as unit tests for each function. 
 
 - **doParallel.R** runs a parallelized simulation study. Specifically, it runs sim.reps=10 simulation reps (each with B=2000 bootstrap iterates) on each computing node. Each scenario has 1000 total simulation reps that were spread across multiple sbatch files. For each simulation rep, doParallel.R generates an original dataset, resamples according to a user-specified algorithm, calls functions from functions.R to conduct analyses, and aggregates the joint test and null interval results. Output consists of two types of files: "Short" results files have one row per simulation rep (that aggregates over all B=2000 bootstraps), so should each have sim.reps=5 rows. "Long" results files have a row for every bootstrap rep.
 
@@ -25,7 +25,13 @@ Additional files that are not necessary to re-run the simulation study:
 - **push_to_sherlock.txt** contains Unix commands to move local files to and from our cluster computing system. This file is highly specific to our file paths and cluster. 
 
 
-# How to re-run the simulation study from scratch
+
+# How to reproduce simulation analyses from our saved results
+
+To reproduce the simulation analyses locally using our saved results without re-running the simulations themselves:
+
+(SAVE THE SIMULATION RESULTS FOR PAPER IN THEIR OWN FOLDER)
+
  
 
 # How to reproduce the applied example
