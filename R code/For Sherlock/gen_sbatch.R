@@ -122,10 +122,13 @@ n.files
 
 # 2600 files
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in 1:100) {
-  system( paste("sbatch -p manishad /home/groups/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
+for (i in 401:500) {
+  system( paste("sbatch -p owners /home/groups/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
 }
 
+# experiment to see if it ever runs
+sbatch -p normal /home/groups/manishad/multTest/sbatch_files/2599.sbatch
+sbatch -p owners /home/groups/manishad/multTest/sbatch_files/2600.sbatch
 
 # ######## If Running Only Some Jobs To Fill Gaps ######## 
 # 

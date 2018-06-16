@@ -12,7 +12,8 @@ s = read.csv("stitched.csv", header=TRUE)
 s = merge(s, scen.params, by = "scen" )
 
 # what percent done are we?
-nrow(s) / (1000 * nrow(scen.params))
+n.reps.per.scen = 500
+nrow(s) / (500 * nrow(scen.params))
 
 # how many reps per scenario do we have?
 table( s$scen )
@@ -139,7 +140,7 @@ pwr = pwr[ pwr$method != "meanP", ]
 pwr.short = pwr[ !pwr$rho.XY %in% c(0.02, .1), ]
 
 library(ggplot2)
-x.breaks = seq(0, 0.5, 0.25)
+x.breaks = c(0, 0.1, 0.3, 0.6)
 y.breaks = seq(0, 1, 0.1)
 
 colors = c( "#999999", "orange", "#009E73", "black", "#E69F00", "#D55E00", "black", "darkgreen" )
@@ -165,7 +166,7 @@ name = "joint_test_full.png"
 #ggsave( filename = paste(name),
 #        plot=p, path=NULL, width=10, height=8, units="in")
 
-
+p
 
 ########################### NULL CI PLOTS ###########################
 
@@ -261,9 +262,9 @@ p = ggplot( data = ci2 ) +
 # ggsave( filename = paste("null_ci_full.png"),
 #         plot=p, path=NULL, width=16, height=8, units="in")
 
-ggsave( filename = paste("null_ci_short.png"),
-        plot=p, path=NULL, width=10, height=8, units="in")
-
+# ggsave( filename = paste("null_ci_short.png"),
+#         plot=p, path=NULL, width=10, height=8, units="in")
+p
 
 
 ########################### OTHER STATS FOR PAPER ###########################
