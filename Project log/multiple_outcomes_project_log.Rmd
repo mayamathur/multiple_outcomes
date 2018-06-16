@@ -523,6 +523,13 @@ Normal  & F    & 0.10      & 0.10        \\ \bottomrule
 \end{table}
 
 
+\subsection{2018-6-XXX re-running Freedman simulations }
+
+Re-running Freedman simulations after catching bug in prop.corr function that was causing too few of the X-Y pairs to be correlated. Also reduced $B$ from 2000 to 1000 and sim.reps from 1000 to 500. 
+
+Results do look a bit less stable with these reduced values. When everything is done running, maybe try running an additional 1000 sim reps of the strong null scenarios (1-4) to see if that causes all the methods to hit 5% power exactly. If not, then maybe this suggests we really do need B=2000 (and should put that in paper). 
+
+
 \subsection{2018-4-7 unsaved local simulations using \texttt{mice\_validation.R} }
 
 "2 normal outcomes": 
