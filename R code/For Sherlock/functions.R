@@ -741,7 +741,7 @@ stitch_files = function(.results.singles.path,
   }
   
   
-  s = s[-1,]  # delete annoying NA row
+  #s = s[-1,]  # delete annoying NA row
   write.csv(s, paste(.results.stitched.write.path, .stitch.file.name, sep="/") )
   return(s)
 }
@@ -782,9 +782,9 @@ sbatch_not_run = function(.results.singles.path,
   
 }
 
-# sbatch_not_run( "/share/PI/manishad/multTest/sim_results/short",
-#                 "/share/PI/manishad/multTest/sim_results",
-#                 .name.prefix = "short" )
+# sbatch_not_run( "/home/groups/manishad/multTest/sim_results/short",
+#                 "/home/groups/manishad/multTest/sim_results",
+#                 .name.prefix = "short_results" )
 # scp mmathur@sherlock:/share/PI/manishad/multTest/sim_results/missed_job_nums.csv ~/Desktop
 
 
