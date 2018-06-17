@@ -380,6 +380,7 @@ print( paste( round( n.rej.mean, 1 ),
               round( n.rej.mean - bt.hi$bt.hi.mn[ bt.hi$rho.YY == 0 ], 1 ),
               sep="" ) )
 
+
 # Bonferroni rejections
 ( bonf.rej = s %>%
     filter(rho.YY==0.6) %>%
@@ -387,36 +388,5 @@ print( paste( round( n.rej.mean, 1 ),
     filter(prop.corr == 1) %>%
     summarise( n.rej.bonf = mean(n.rej.0.00125) )
   )
-
-
-
-
-
-# ( n.rej.mean = ci %>%
-#     filter(method=="ours.0.05") %>%
-#     filter(rho.XY == 0.1) %>%
-#     filter(prop.corr == 0.50) %>%
-#     summarise(n.rej.mn = mean(n.rej.mn) ) )
-# 
-# # excess hits at different rho.YY
-# # very unlikely under independence...
-# print( paste( round( n.rej.mean, 2 ),
-#               " - ",
-#               round( bt.hi$bt.hi.mn[ bt.hi$rho.YY == 0 ], 2 ),
-#               " = ",
-#               round( n.rej.mean - bt.hi$bt.hi.mn[ bt.hi$rho.YY == 0 ], 2 ),
-#               sep="" ) )
-# 
-# # ...but pretty likely under high correlation
-# print( paste( round( n.rej.mean, 2 ),
-#               " - ",
-#               round( bt.hi$bt.hi.mn[ bt.hi$rho.YY == 0.6 ], 2 ),
-#               " = ",
-#               round( n.rej.mean - bt.hi$bt.hi.mn[ bt.hi$rho.YY == 0.6 ], 2 ),
-#               sep="" ) )
-
-
-
-
 
 
