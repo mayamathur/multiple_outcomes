@@ -11,8 +11,8 @@ pwr_plot = function(dat) {
                            label = method ) ) +
     geom_text( aes( label = method.label) ) +
     theme_bw() +
-    facet_wrap( ~group) +
-    #facet_wrap(~ group, nrow = 2 ) +  # for changing rows/columns
+    #facet_wrap( ~group) +
+    facet_wrap(~ group, ncol = 3 ) +  # for changing rows/columns
     ylab("Power") +
     scale_color_manual( values = colors) +
     scale_x_continuous( limits = c( min(x.breaks), max(x.breaks) ), breaks = x.breaks ) +
@@ -241,7 +241,7 @@ write.csv(ci, "results_null_interval.csv")
 
 # for main text: simplify the plot 
 # by removing intermediate effect sizes
-pwr.short = pwr[ !pwr$rho.XY %in% c(0.15), ]
+pwr.short = pwr[ !pwr$rho.XY %in% c(0.1, 0.15), ]
 
 # set global variables needed for plotting fn
 x.breaks = c(0, 0.1, 0.3, 0.6)
@@ -253,14 +253,19 @@ colors = c( "#999999", "orange", "#009E73", "black", "#E69F00", "#D55E00", "blac
 p1 = pwr_plot(pwr); p1
 p2 = pwr_plot(pwr.short); p2
 
-  
+width = 8
+square.size = 8/3 # divide by number of cols
+height = square.size*5  # multiply by number of rows
 name = "joint_test_full.png"
 ggsave( filename = paste(name),
-       plot=p1, path=NULL, width=10, height=8, units="in")
+       plot=p1, path=NULL, width=width, height=height, units="in")
 
+width = 8
+square.size = 8/3 # divide by number of cols
+height = square.size*3  # multiply by number of rows
 name = "joint_test_short.png"
 ggsave( filename = paste(name),
-        plot=p2, path=NULL, width=10, height=8, units="in")
+        plot=p2, path=NULL, width=width, height=height, units="in")
 
 
 
@@ -287,16 +292,24 @@ legend.labs = c( "G1 (alpha = 0.01)", "G5 (alpha = 0.05)" )
 p3 = ci_plot(ci2); p3
 p4 = ci_plot(ci2.short); p4
 
-
+width = 8
+square.size = 8/3 # divide by number of cols
+height = square.size*5  # multiply by number of rows
 ggsave( filename = paste("null_ci_full.png"),
-         plot=p3, path=NULL, width=16, height=8, units="in")
+         plot=p3, path=NULL, width=width, height=height, units="in")
 
+width = 8
+square.size = 8/3  # divide by number of cols
+height = square.size*4  # multiply by number of rows
 ggsave( filename = paste("null_ci_short.png"),
-         plot=p4, path=NULL, width=10, height=8, units="in")
+         plot=p4, path=NULL, width=width, height=height, units="in")
 
 
 
 ########################### OTHER STATS FOR PAPER ###########################
+
+
+# "mean upper limit of the null interval was more than twice as high"
 
 # back to ci dataframe because has unstaggered X-axis
 # upper CI limits under independence vs. moderate correlation
@@ -304,28 +317,82 @@ ggsave( filename = paste("null_ci_short.png"),
   group_by(rho.YY) %>%
   summarise(bt.hi.mn = mean(bt.hi.mn) ) )
 
+print( paste( "...more than twice as high for rhoYY = 0.60 versus rhoYY = 0 (i.e., ",
+              round( bt.hi$bt.hi.mn[ bt.hi$rho.YY == 0.60 ], 1 ),
+              " versus ",
+              round( bt.hi$bt.hi.mn[ bt.hi$rho.YY == 0 ], 1 ),
+              " rejections; ",
+              sep=""
+              ) )
+
+
 ##### Look at a Particular Scenario #####
+
+# "Thus, with a true effect size of..."
+
+true.ES = 0.05
 # mean rejections
 ( n.rej.mean = ci %>%
   filter(method=="ours.0.05") %>%
-  filter(rho.XY == 0.05) %>%
-  filter(prop.corr == 0.50) %>%
+  filter(rho.XY == true.ES) %>%
+  filter(prop.corr == 1) %>%
   summarise(n.rej.mn = mean(n.rej.mn) ) )
 
 # excess hits at different rho.YY
-# very unlikely under independence...
-print( paste( round( n.rej.mean, 2 ),
+print( paste( "...the mean number of observed rejections at alpha = 0.05 (",
+              round( n.rej.mean, 1 ),
+       ")",
+       sep=""
+       ) )
+
+# "would be only just outside the null interval if..."
+print( paste( round( n.rej.mean, 1 ),
               " - ",
-              round( bt.hi$bt.hi.mn[ bt.hi$rho.YY == 0 ], 2 ),
+              round( bt.hi$bt.hi.mn[ bt.hi$rho.YY == 0.6 ], 1 ),
               " = ",
-              round( n.rej.mean - bt.hi$bt.hi.mn[ bt.hi$rho.YY == 0 ], 2 ),
+              round( n.rej.mean - bt.hi$bt.hi.mn[ bt.hi$rho.YY == 0.6 ], 1 ),
               sep="" ) )
 
-# ...but pretty likely under high correlation
-print( paste( round( n.rej.mean, 2 ),
+# "...but would be well outside the null interval if"...
+print( paste( round( n.rej.mean, 1 ),
               " - ",
-              round( bt.hi$bt.hi.mn[ bt.hi$rho.YY == 0.3 ], 2 ),
+              round( bt.hi$bt.hi.mn[ bt.hi$rho.YY == 0 ], 1 ),
               " = ",
-              round( n.rej.mean - bt.hi$bt.hi.mn[ bt.hi$rho.YY == 0.3 ], 2 ),
+              round( n.rej.mean - bt.hi$bt.hi.mn[ bt.hi$rho.YY == 0 ], 1 ),
               sep="" ) )
+
+
+
+
+
+
+
+
+# ( n.rej.mean = ci %>%
+#     filter(method=="ours.0.05") %>%
+#     filter(rho.XY == 0.1) %>%
+#     filter(prop.corr == 0.50) %>%
+#     summarise(n.rej.mn = mean(n.rej.mn) ) )
+# 
+# # excess hits at different rho.YY
+# # very unlikely under independence...
+# print( paste( round( n.rej.mean, 2 ),
+#               " - ",
+#               round( bt.hi$bt.hi.mn[ bt.hi$rho.YY == 0 ], 2 ),
+#               " = ",
+#               round( n.rej.mean - bt.hi$bt.hi.mn[ bt.hi$rho.YY == 0 ], 2 ),
+#               sep="" ) )
+# 
+# # ...but pretty likely under high correlation
+# print( paste( round( n.rej.mean, 2 ),
+#               " - ",
+#               round( bt.hi$bt.hi.mn[ bt.hi$rho.YY == 0.6 ], 2 ),
+#               " = ",
+#               round( n.rej.mean - bt.hi$bt.hi.mn[ bt.hi$rho.YY == 0.6 ], 2 ),
+#               sep="" ) )
+
+
+
+
+
 

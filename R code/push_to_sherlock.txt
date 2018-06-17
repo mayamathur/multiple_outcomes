@@ -70,9 +70,8 @@ Vegemite2017
 scp mmathur@sherlock:/home/groups/manishad/multTest/scen_params.csv ~/Desktop
 
 # zip the results files
-cd /home/groups/manishad/multTest/sim_results/long
-ls -1 | wc -l
 
+cd /home/groups/manishad/multTest/sim_results
 zip -r short.zip short
 zip -r long.zip long
 
@@ -93,6 +92,7 @@ scp mmathur@sherlock:/home/groups/manishad/multTest/stitch_on_sherlock.R ~/Deskt
 rm /home/groups/manishad/multTest/sim_results/*
 rm /home/groups/manishad/multTest/sim_results/short/*
 rm /home/groups/manishad/multTest/sim_results/long/*
+
 rm /home/groups/manishad/multTest/sim_results/overall_stitched/*
 rm /home/groups/manishad/multTest/sbatch_files/rm*
   

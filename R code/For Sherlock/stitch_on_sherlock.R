@@ -15,6 +15,7 @@ s = stitch_files(.results.singles.path = "/home/groups/manishad/multTest/sim_res
 # how close are we to being done?
 n.reps.per.scen = 500
 nrow(s) / (n.reps.per.scen * nrow(scen.params))
+nrow(s)/26000
 table(s$scen)
 
 # quick check
