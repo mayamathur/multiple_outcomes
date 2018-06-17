@@ -1,4 +1,53 @@
 
+
+########################### HELPER FNS ###########################
+
+# Note that these access global variables for, e.g., method.label
+
+pwr_plot = function(dat) {
+  library(ggplot2)
+  ggplot( data = dat, aes( x = rho.YY, y = power,
+                           color = method,
+                           label = method ) ) +
+    geom_text( aes( label = method.label) ) +
+    theme_bw() +
+    facet_wrap( ~group) +
+    #facet_wrap(~ group, nrow = 2 ) +  # for changing rows/columns
+    ylab("Power") +
+    scale_color_manual( values = colors) +
+    scale_x_continuous( limits = c( min(x.breaks), max(x.breaks) ), breaks = x.breaks ) +
+    scale_y_continuous( limits = c( min(y.breaks), max(y.breaks) ), breaks = y.breaks ) +
+    xlab( "Correlation between each pair of outcomes" ) +
+    #ggtitle("Power of bootstrapped hypothesis test of joint null") +
+    theme(legend.position="none") # remove legend
+}
+
+ci_plot = function(dat) {
+  library(ggplot2)
+  ggplot( data = dat ) +
+    # bootstrap results
+    geom_point( aes( x = rho.YY, y = n.rej.bt.mn, color = method ), size=2.5 ) +
+    geom_errorbar( aes( x=rho.YY, ymin = bt.lo.mn,
+                        ymax = bt.hi.mn, color = method ), width=0.02, size=1.05 ) +
+    
+    # original dataset results
+    geom_point( aes( x = rho.YY, y = n.rej.mn, shape="the shape" ), color = "black", size=3.5 ) +
+    scale_shape_manual( values = c('the shape' = 4),
+                        name = "Original dataset", guide = 'legend', labels = c("Mean rejections")) +
+    
+    theme_bw() +
+    facet_wrap(~ group, ncol = 3 ) +
+    ylab("Average null CIs") +
+    scale_color_manual( name="Joint test", values = colors, labels = legend.labs ) +
+    
+    xlab( "Correlation between each pair of outcomes" ) +
+    #ggtitle("Average CI limits and rejections in resamples and originals") +
+    theme(legend.position="none") # remove legend
+}
+
+
+
+
 ########################### READ IN DATA ###########################
 
 setwd("~/Desktop")
@@ -23,7 +72,7 @@ library(gdata)
 s = drop.levels(s)
 
 
-########################### DATA PREP ###########################
+########################### DATA PREP: FOR POWER PLOT ###########################
 
 # need 1 row per scenario-method combination
 # methods are ours, Wstep, bonf.naive, and minP
@@ -115,60 +164,20 @@ pwr$method.label[ pwr$method == "Romano" ] = labels[8]
 # sanity check
 # table(pwr$method, pwr$method.label)
 
-
-##### Save Results ##### 
-pwr2 = pwr
-#setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Simulation results/2019-5-18 all scenarios Freedman resampling")
-#write.csv( pwr2, "results_pwr.csv")
-
-lp2 = lp
-#write.csv( lp2, "results_pwr_long.csv")
-
-
-########################### COMPARATIVE POWER PLOT ###########################
-
-# X-axis: Strength of YY correlation
-# Y-axis: Power to reject joint null
-# Panels: Strength of XY correlation
-# Lines: Different methods
-
 # remove experimental method
 pwr = pwr[ pwr$method != "meanP", ]
 
-# for main text: simplify the plot 
-# by removing intermediate effect sizes
-pwr.short = pwr[ !pwr$rho.XY %in% c(0.02, .1), ]
 
-library(ggplot2)
-x.breaks = c(0, 0.1, 0.3, 0.6)
-y.breaks = seq(0, 1, 0.1)
+##### Save Results ##### 
+pwr2 = pwr
+setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Simulation results/2018-6-17 rerun Freedman after fixing bug")
+write.csv( pwr2, "results_pwr.csv")
 
-colors = c( "#999999", "orange", "#009E73", "black", "#E69F00", "#D55E00", "black", "darkgreen" )
+lp2 = lp
+write.csv( lp2, "results_pwr_long.csv")
 
 
-# for Appendix version, use pwr instead of pwr.short
-p = ggplot( data = pwr, aes( x = rho.YY, y = power,
-                         color = method,
-                         label = method ) ) +
-  geom_text( aes( label = method.label) ) +
-  theme_bw() +
-  facet_wrap( ~group) +
-  #facet_wrap(~ group, nrow = 2 ) +  # for changing rows/columns
-  ylab("Power") +
-  scale_color_manual( values = colors) +
-  scale_x_continuous( limits = c( min(x.breaks), max(x.breaks) ), breaks = x.breaks ) +
-  scale_y_continuous( limits = c( min(y.breaks), max(y.breaks) ), breaks = y.breaks ) +
-  xlab( "Correlation between each pair of outcomes" ) +
-  #ggtitle("Power of bootstrapped hypothesis test of joint null") +
-  theme(legend.position="none") # remove legend
-
-name = "joint_test_full.png"
-#ggsave( filename = paste(name),
-#        plot=p, path=NULL, width=10, height=8, units="in")
-
-p
-
-########################### NULL CI PLOTS ###########################
+########################### DATA PREP: FOR NULL INTERVAL PLOT ###########################
 
 # only need our method
 
@@ -217,6 +226,51 @@ ci2 = ci
 buffer = 0.02
 ci2$rho.YY[ ci2$method == "ours.0.05" ] = ci2$rho.YY[ ci2$method == "ours.0.05" ] + buffer
 
+# save results (unstaggered dataset)
+setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Simulation results/2018-6-17 rerun Freedman after fixing bug")
+write.csv(ci, "results_null_interval.csv")
+
+
+
+########################### JOINT TEST POWER PLOTS ###########################
+
+# X-axis: Strength of YY correlation
+# Y-axis: Power to reject joint null
+# Panels: Strength of XY correlation
+# Lines: Different methods
+
+# for main text: simplify the plot 
+# by removing intermediate effect sizes
+pwr.short = pwr[ !pwr$rho.XY %in% c(0.15), ]
+
+# set global variables needed for plotting fn
+x.breaks = c(0, 0.1, 0.3, 0.6)
+y.breaks = seq(0, 1, 0.1)
+colors = c( "#999999", "orange", "#009E73", "black", "#E69F00", "#D55E00", "black", "darkgreen" )
+
+
+# for Appendix version, use pwr instead of pwr.short
+p1 = pwr_plot(pwr); p1
+p2 = pwr_plot(pwr.short); p2
+
+  
+name = "joint_test_full.png"
+ggsave( filename = paste(name),
+       plot=p1, path=NULL, width=10, height=8, units="in")
+
+name = "joint_test_short.png"
+ggsave( filename = paste(name),
+        plot=p2, path=NULL, width=10, height=8, units="in")
+
+
+
+########################### NULL INTERVAL PLOTS ###########################
+
+# shorter version for main text
+# run this, then re-run the above
+ci2.short = ci2[ ci2$rho.XY %in% c(0, 0.05, 0.1, 0.15), ]
+
+
 ##### Make Plot #####
 
 # X-axis: Strength of YY correlation
@@ -230,55 +284,48 @@ y.breaks = seq(0, 1, 0.1)
 colors = c( "#E69F00", "#D55E00" )
 legend.labs = c( "G1 (alpha = 0.01)", "G5 (alpha = 0.05)" )
 
-# shorter version for main text
-# run this, then re-run the above
-ci2.short = ci2[ ci2$rho.XY %in% c(0, 0.05, 0.1), ]
-
-# for Appendix version, run this with ci2 instead of ci2.short
-p = ggplot( data = ci2 ) +
-  # bootstrap results
-  geom_point( aes( x = rho.YY, y = n.rej.bt.mn, color = method ), size=2.5 ) +
-  #geom_line( aes( x = rho.YY, y = n.rej.bt.mn, color = method ), size=1.1 ) +
-  geom_errorbar( aes( x=rho.YY, ymin = bt.lo.mn,
-                      ymax = bt.hi.mn, color = method ), width=0.02, size=1.05 ) +
-  
-  # original dataset results
-  geom_point( aes( x = rho.YY, y = n.rej.mn, shape="the shape" ), color = "black", size=3.5 ) +
-  scale_shape_manual( values = c('the shape' = 4),
-                      name = "Original dataset", guide = 'legend', labels = c("Mean rejections")) +
-  
-  theme_bw() +
-  #  facet_wrap(~ group ) +
-  facet_wrap(~ group, nrow = 2 ) +
-  ylab("Average null CIs") +
-  scale_color_manual( name="Joint test", values = colors, labels = legend.labs ) +
-  
-  #scale_y_continuous( limits = c(0,1), breaks = y.breaks ) +
-  xlab( "Correlation between each pair of outcomes" ) +
-  #ggtitle("Average CI limits and rejections in resamples and originals") +
-  theme(legend.position="none") # remove legend
+p3 = ci_plot(ci2); p3
+p4 = ci_plot(ci2.short); p4
 
 
-# ggsave( filename = paste("null_ci_full.png"),
-#         plot=p, path=NULL, width=16, height=8, units="in")
+ggsave( filename = paste("null_ci_full.png"),
+         plot=p3, path=NULL, width=16, height=8, units="in")
 
-# ggsave( filename = paste("null_ci_short.png"),
-#         plot=p, path=NULL, width=10, height=8, units="in")
-p
+ggsave( filename = paste("null_ci_short.png"),
+         plot=p4, path=NULL, width=10, height=8, units="in")
+
 
 
 ########################### OTHER STATS FOR PAPER ###########################
 
+# back to ci dataframe because has unstaggered X-axis
 # upper CI limits under independence vs. moderate correlation
-ci %>% filter(method=="ours.0.05") %>%
+( bt.hi = ci %>% filter(method=="ours.0.05") %>%
   group_by(rho.YY) %>%
-  summarise(bt.hi.mn = mean(bt.hi.mn) )
+  summarise(bt.hi.mn = mean(bt.hi.mn) ) )
 
-# mean rejections for a certain scenario
-ci %>%
+##### Look at a Particular Scenario #####
+# mean rejections
+( n.rej.mean = ci %>%
   filter(method=="ours.0.05") %>%
-  filter(rho.XY == 0.10) %>%
+  filter(rho.XY == 0.05) %>%
   filter(prop.corr == 0.50) %>%
-  #group_by(rho.YY) %>%
-  summarise(n.rej.mn = mean(n.rej.mn) )
+  summarise(n.rej.mn = mean(n.rej.mn) ) )
+
+# excess hits at different rho.YY
+# very unlikely under independence...
+print( paste( round( n.rej.mean, 2 ),
+              " - ",
+              round( bt.hi$bt.hi.mn[ bt.hi$rho.YY == 0 ], 2 ),
+              " = ",
+              round( n.rej.mean - bt.hi$bt.hi.mn[ bt.hi$rho.YY == 0 ], 2 ),
+              sep="" ) )
+
+# ...but pretty likely under high correlation
+print( paste( round( n.rej.mean, 2 ),
+              " - ",
+              round( bt.hi$bt.hi.mn[ bt.hi$rho.YY == 0.3 ], 2 ),
+              " = ",
+              round( n.rej.mean - bt.hi$bt.hi.mn[ bt.hi$rho.YY == 0.3 ], 2 ),
+              sep="" ) )
 
