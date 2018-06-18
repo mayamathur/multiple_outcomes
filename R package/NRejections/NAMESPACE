@@ -2,6 +2,9 @@
 
 export(adj_Wstep)
 export(adjust_minP)
+export(cell_corr)
 export(corr_tests)
 export(get_crit)
+export(make_corr_mat)
 export(resample_resid)
+export(sim_data)

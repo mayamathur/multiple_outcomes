@@ -8,7 +8,7 @@
 ########################### FN: FIT ONE OUTCOME MODEL (OLS) ###########################
 
 fit_model = function( X,
-                      C,
+                      C = NA,
                       Y,
                       Ys,
                       d,
@@ -17,14 +17,19 @@ fit_model = function( X,
                       alpha = 0.05 ) {
 
   # all covariates, including the one of interest
-  covars = c(X,C)
+  if ( is.na(C) ) covars = X
+  else covars = c( X, C )
   
+  if ( is.na(C) ) m = lm( d[[Y]] ~ d[[X]] )
   # https://stackoverflow.com/questions/6065826/how-to-do-a-regression-of-a-series-of-variables-without-typing-each-variable-nam
-  m = lm( d[[Y]] ~ ., data = d[ , covars] )
+  else m = lm( d[[Y]] ~ ., data = d[ , covars] )
+  
+  #browser()
   
   # stats for covariate of interest
-  m.stats = summary(m)$coefficients[ X, ]
-  
+  if ( is.na(C) ) m.stats = summary(m)$coefficients[ 2, ]
+  else m.stats = summary(m)$coefficients[ X, ]
+    
   # should we center stats by the original-sample estimates?
   if( !center.stats ) {
     b = m.stats[["Estimate"]]
@@ -75,7 +80,7 @@ fit_model = function( X,
 ########################### FN: GIVEN DATASET, RETURN STATS ###########################
 
 dataset_result = function( X,
-                           C,
+                           C = NA,
                            Ys,  # all outcome names
                            d,
                            alpha = 0.05,
@@ -84,7 +89,8 @@ dataset_result = function( X,
   
   # for each outcome, fit regression model
   # see if each has p < alpha for covariate of interest
-  covars = c( X, C )
+  if ( is.na(C) ) covars = X
+  else covars = c( X, C )
   
   # get the correct bhat for the outcome we're using
   
@@ -158,7 +164,7 @@ dataset_result = function( X,
 
 resample_resid = function( 
                            X,
-                           C,
+                           C = NA,
                            Ys,
                            d,
                            alpha,
@@ -167,14 +173,15 @@ resample_resid = function(
                            B=20,
                            cores = NULL ) {
   
-
-  covars = c( X, C )
+  if ( is.na(C) ) covars = X
+  else covars = c( X, C )
   
   # compute Y-hat using residuals
   Yhat = d[, Ys] - resid
   
   # fix the existing covariates
   Xs = as.data.frame( d[ , covars ] )
+  if( is.na(C) ) names(Xs) = X
   
   # run all bootstrap iterates
   library(doParallel)
@@ -187,7 +194,7 @@ resample_resid = function(
     ids = sample( 1:nrow(d), replace=TRUE )
     b = as.data.frame( cbind( Xs, Yhat + resid[ids,] ) )
     
-    bhats = rep( NA, length(Y) )
+    bhats = rep( NA, length(Ys) )
     
     bt.res = dataset_result( X = X,
                              C = C,
@@ -598,7 +605,7 @@ make_corr_mat = function( nX,
                                rho.XX = rho.XX,
                                rho.YY = rho.YY,
                                rho.XY = rho.XY,
-                               nY = .nY,
+                               nY = nY,
                                prop.corr = prop.corr )
     }
   }
@@ -608,18 +615,6 @@ make_corr_mat = function( nX,
   
   return(cor)  # this is still a data.frame in order to keep names
 }
-
-
-# # sanity checks
-# ( cor = make_corr_mat( .nX = 1,
-#                 .nY = 40,
-#                 .rho.XX = 0,
-#                 .rho.YY = 0.25,
-#                 .rho.XY = 0.1,
-#                 .prop.corr = 8/40 ) )
-# 
-# # check that the X-Y correlations make sense
-# table( as.character(cor[1,]) )
 
 
 
@@ -663,10 +658,10 @@ cell_corr = function( vname.1,
   
   # case 2: both are covariates
   # fixed correlation between covariates
-  if ( vtype.1 == "covariate" & vtype.2 == "covariate" ) return( .rho.XX )
+  if ( vtype.1 == "covariate" & vtype.2 == "covariate" ) return( rho.XX )
   
   # case 3: both are outcomes
-  if ( vtype.1 == "outcome" & vtype.2 == "outcome" ) return( .rho.YY )
+  if ( vtype.1 == "outcome" & vtype.2 == "outcome" ) return( rho.YY )
   
   # case 4: one is a covariate and one is an outcome
   if ( vtype.1 != vtype.2 ) {
@@ -675,10 +670,10 @@ cell_corr = function( vname.1,
     # all other covariates have correlation 0 with outcome
     if ( "X1" %in% c( vname.1, vname.2 ) ) {
       
-      if (.prop.corr == 1) return( .rho.XY ) 
+      if (prop.corr == 1) return( rho.XY ) 
       
       # if only some X-Y pairs are non-null
-      if ( .prop.corr != 1 ) {
+      if ( prop.corr != 1 ) {
         # find the one that is the outcome
         outcome.name = ifelse( vtype.1 == "outcome", vname.1, vname.2 )
         
@@ -687,10 +682,10 @@ cell_corr = function( vname.1,
         
         # the first last.correlated outcomes are correlated with X (rho.XY)
         #  and the rest aren't
-        last.correlated = round( .nY * .prop.corr )
+        last.correlated = round( nY * prop.corr )
         
         # see if number for chosen outcome exceeds the last correlated one
-        return( ifelse( num > last.correlated, 0, .rho.XY ) )
+        return( ifelse( num > last.correlated, 0, rho.XY ) )
       }
     }
     
@@ -705,52 +700,26 @@ cell_corr = function( vname.1,
 
 ########################### FN: SIMULATE 1 DATASET ###########################
 
-# AUDITED :) 
-
-# Simulates 1 dataset with MVN(0,1) correlated covariates and outcomes
-
-# Arguments: 
-# .n: sample size
-# .cor: correlation matrix from above function
-
-
-#' Makes correlation matrix to simulate data
+#' Simulate MVN data
 #' 
-#' If correlation matrix isn't positive definite, try reducing some of the correlations
+#' Simulates 1 dataset with MVN(0,1) correlated covariates and outcomes
 #' @param n Number of covariates, including the one of interest 
-#' @param nY Number of outcomes
-#' @param rho.XX Correlation between all pairs of Xs
-#' @param rho.YY Correlation between all pairs of Ys
-#' @param rho.XY Correlation between pairs of X-Y that are not null (see below)
-#' @param prop.corr Proportion of X-Y pairs that are non-null (non-nulls will be first .prop.corr * .nY pairs)
+#' @param cor Correlation matrix (e.g., from make_corr_mat)
 #' @export
 
-sim_data = function( .n, .cor ) {
+sim_data = function( n, cor ) {
   
   # variable names
-  vnames = names( .cor )
+  vnames = names( cor )
   
   # simulate the dataset
   # everything is a standard Normal
-  d = as.data.frame( rmvnorm( n = .n,
-                              mean = rep( 0, dim(.cor)[1] ),
-                              sigma = as.matrix(.cor) ) )
+  d = as.data.frame( rmvnorm( n = n,
+                              mean = rep( 0, dim(cor)[1] ),
+                              sigma = as.matrix(cor) ) )
   names(d) = vnames
   
   # return the dataset
   return(d)
 }
-
-# # test drive
-# cor = make_corr_mat( .nX = 1,
-#                .nY = 40,
-#                .rho.XX = 0,
-#                .rho.YY = 0.25,
-#                .rho.XY = 0.1,
-#                .prop.corr = 0.2 )
-# 
-# d = sim_data( .n = 1000, .cor = cor )
-# # plot empirical vs. real correlations
-# plot( as.numeric(cor(d)), as.numeric(as.matrix(cor)) ); abline( a = 0, b = 1, col="red")
-
 
