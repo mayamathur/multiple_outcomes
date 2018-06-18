@@ -79,8 +79,6 @@ dataset_result = function( X,
                            center.stats = TRUE,
                            bhat.orig = NA ) {  
   
-  #browser()
-  
   # for each outcome, fit regression model
   # see if each has p < alpha for covariate of interest
   covars = c( X, C )
@@ -109,6 +107,12 @@ dataset_result = function( X,
   tvals = as.vector( u[ names(u) == "stats.tval" ] )
   bhats = as.vector( u[ names(u) == "stats.b" ] )
   pvals = as.vector( u[ names(u) == "stats.pval" ] )
+
+  # save residuals
+  # names of object u are resid.1, resid.2, ..., hence use of grepl 
+  mat = matrix( u[ grepl( "resid", names(u) ) ], byrow=FALSE, ncol=length(Ys) ) 
+  resid = as.data.frame(mat)
+  names(resid) = Ys
   
   # returns vector for number of rejections at each alpha level
   # length should match length of .alpha
@@ -117,12 +121,13 @@ dataset_result = function( X,
   return( list( rej = n.reject,
                 tvals = tvals,
                 bhats = bhats,
-                pvals = pvals ) )
+                pvals = pvals,
+                resid = resid ) )
 }
 
 
 
-dataset_result( X = "complaints",
+samp.res = dataset_result( X = "complaints",
            C = c("privileges", "learning"),
            Ys = c("rating", "raises"),
            d = attitude,
@@ -131,7 +136,8 @@ dataset_result( X = "complaints",
            alpha = 0.05 )
 
 
-########################### FN:  ###########################
+
+########################### FN: GENERATE RESAMPLES ###########################
 
 
 #' Generate OLS resamples under global null
@@ -147,17 +153,95 @@ dataset_result( X = "complaints",
 #' # compute E-value if Cohen's d = 0.5 with SE = 0.25
 #' evalues.MD( .5, .25 )
 
-resample_resid = function( d, X, Y, B=2000 ) {
+resample_resid = function( 
+                           X,
+                           C,
+                           Ys,
+                           d,
+                           alpha,
+                           resid,
+                           bhat.orig,
+                           B=20,
+                           cores = NULL ) {
   
-  # discard incomplete cases and warn user
+
+  covars = c( X, C )
   
-  # fit original OLS model to get bhat.orig
+  # compute Y-hat using residuals
+  Yhat = d[, Ys] - resid
   
-  # do parallelized Freedman resampling for B iterates
+  # fix the existing covariates
+  Xs = as.data.frame( d[ , covars ] )
   
-  # return list of resamples
+  # run all bootstrap iterates
+  library(doParallel)
+  registerDoParallel(cores=cores) 
+  
+  # run all resamples: takes ~10 min
+  r = foreach( i = 1:B, .combine=rbind ) %dopar% {
+    
+    # resample residuals and add them to fitted values
+    ids = sample( 1:nrow(d), replace=TRUE )
+    b = as.data.frame( cbind( Xs, Yhat + resid[ids,] ) )
+    
+    bhats = rep( NA, length(Y) )
+    
+    bt.res = dataset_result( X = X,
+                             C = C,
+                             Ys = Ys, 
+                             d = b,
+                             alpha = alpha,
+                             center.stats = TRUE,
+                             bhat.orig = bhat.orig )
+
+    # return all the things
+    list( rej = bt.res$rej,
+          pvals = bt.res$pvals,
+          tvals = bt.res$tvals )
+    
+  } ###### end r-loop (parallelized bootstrap)
+  
+  # resampled p-value matrix for Westfall
+  # rows = Ys
+  # cols = resamples
+  p.bt = do.call( cbind, r[ , "pvals" ] )
+  
+  # resampled test statistic matrix (uncentered) for Romano
+  # rows = Ys
+  # cols = resamples
+  t.bt = do.call( cbind, r[ , "tvals" ] )
+  
+  # number of rejections
+  rej.bt = do.call( cbind, r[ , "rej" ] )
+  #rej.bt.0.05 = rej.bt[1,]
+  #rej.bt.0.01 = rej.bt[2,]
+  
+  return( list( p.bt = as.matrix(p.bt),
+                t.bt = as.matrix(t.bt),
+                rej.bt = as.matrix(rej.bt) ) )
   
 }
+
+samp.res = dataset_result( X = "complaints",
+                C = c("privileges", "learning"),
+                Ys = c("rating", "raises"),
+                d = attitude,
+                center.stats = FALSE,
+                bhat.orig = NA,  # bhat.orig is a single value now for just the correct Y
+                alpha = 0.05 )
+
+resamps = resample_resid(  X = "complaints",
+                  C = c("privileges", "learning"),
+                  Ys = c("rating", "raises"),
+                  d = attitude,
+                  alpha = 0.05,
+                  resid = samp.res$resid,
+                  bhat.orig = samp.res$b,
+                  B=20,
+                  cores = 8)
+
+
+########################### FN: GENERATE RESAMPLES ###########################
 
 
 #' Our metrics
@@ -174,7 +258,8 @@ resample_resid = function( d, X, Y, B=2000 ) {
 
 
 corr_tests = function( d, X, C, Y, B=2000, alpha, method = "nreject" ) {
-  
+  # discard incomplete cases and warn user
+  # fit original OLS model to get bhat.orig
   # check to exclude any weird lm() specifications that we can't handle
   
   resamps = resample_resids(...)
