@@ -1,4 +1,9 @@
 
+# library(devtools)
+# setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/git_multiple_outcomes/R package/NRejections")
+# document()
+# library(NRejections)
+# test()
 
 ########################### FN: FIT ONE OUTCOME MODEL (OLS) ###########################
 
@@ -55,15 +60,15 @@ fit_model = function( X,
 #             .covars = covars,
 #             .center.stats = FALSE )
 
-data(attitude)
-fit_model( X = "complaints",
-           C = c("privileges", "learning"),
-           Y = "rating",
-           Ys = c("rating", "raises"),
-           d = attitude,
-           center.stats = FALSE,
-           bhat.orig = NA,  # bhat.orig is a single value now for just the correct Y
-           alpha = 0.05 )
+# data(attitude)
+# fit_model( X = "complaints",
+#            C = c("privileges", "learning"),
+#            Y = "rating",
+#            Ys = c("rating", "raises"),
+#            d = attitude,
+#            center.stats = FALSE,
+#            bhat.orig = NA,  # bhat.orig is a single value now for just the correct Y
+#            alpha = 0.05 )
 
 
 
@@ -125,13 +130,13 @@ dataset_result = function( X,
 
 
 
-samp.res = dataset_result( X = "complaints",
-           C = c("privileges", "learning"),
-           Ys = c("rating", "raises"),
-           d = attitude,
-           center.stats = FALSE,
-           bhat.orig = NA,  # bhat.orig is a single value now for just the correct Y
-           alpha = 0.05 )
+# samp.res = dataset_result( X = "complaints",
+#            C = c("privileges", "learning"),
+#            Ys = c("rating", "raises"),
+#            d = attitude,
+#            center.stats = FALSE,
+#            bhat.orig = NA,  # bhat.orig is a single value now for just the correct Y
+#            alpha = 0.05 )
 
 
 
@@ -220,23 +225,23 @@ resample_resid = function(
   
 }
 
-samp.res = dataset_result( X = "complaints",
-                C = c("privileges", "learning"),
-                Ys = c("rating", "raises"),
-                d = attitude,
-                center.stats = FALSE,
-                bhat.orig = NA,  # bhat.orig is a single value now for just the correct Y
-                alpha = 0.05 )
-
-resamps = resample_resid(  X = "complaints",
-                  C = c("privileges", "learning"),
-                  Ys = c("rating", "raises"),
-                  d = attitude,
-                  alpha = 0.05,
-                  resid = samp.res$resid,
-                  bhat.orig = samp.res$b,
-                  B=20,
-                  cores = 8)
+# samp.res = dataset_result( X = "complaints",
+#                 C = c("privileges", "learning"),
+#                 Ys = c("rating", "raises"),
+#                 d = attitude,
+#                 center.stats = FALSE,
+#                 bhat.orig = NA,  # bhat.orig is a single value now for just the correct Y
+#                 alpha = 0.05 )
+# 
+# resamps = resample_resid(  X = "complaints",
+#                   C = c("privileges", "learning"),
+#                   Ys = c("rating", "raises"),
+#                   d = attitude,
+#                   alpha = 0.05,
+#                   resid = samp.res$resid,
+#                   bhat.orig = samp.res$b,
+#                   B=20,
+#                   cores = 8)
 
 
 ########################### WRAPPER FN: ESTIMATE OUR METRICS ###########################
@@ -266,7 +271,6 @@ corr_tests = function( d,
   
   # ~~~ TO DO:
   # discard incomplete cases and warn user
-  # fit original OLS model to get bhat.orig
   # check to exclude any weird lm() specifications that we can't handle
   
   # fit models to original data
@@ -389,16 +393,16 @@ corr_tests = function( d,
                 ) )
 }
 
-# BOOKMARK
-corr_tests( d = attitude,
-          X = "complaints",
-          C = c("privileges", "learning"),
-          Ys = c("rating", "raises"),
-          B=50,
-          cores = 8,
-          alpha = 0.05,
-          alpha.fam = 0.05,
-          method = c( "nreject", "bonferroni", "holm", "minP", "Wstep", "romano" ) )
+# # BOOKMARK
+# corr_tests( d = attitude,
+#           X = "complaints",
+#           C = c("privileges", "learning"),
+#           Ys = c("rating", "raises"),
+#           B=50,
+#           cores = 8,
+#           alpha = 0.05,
+#           alpha.fam = 0.05,
+#           method = c( "nreject", "bonferroni", "holm", "minP", "Wstep", "romano" ) )
 
 
 ######################## FNS FOR WESTFALL's SINGLE-STEP ########################
@@ -447,14 +451,12 @@ adjust_minP = function( p, p.bt ) {
 
 ######################## FNS FOR WESTFALL's SINGLE-STEP ########################
 
-# AUDITED :) 
-
-# Returns minP-adjusted p-values (single-step)
-# See Westfall text, pg. 48.
-
-# Arguments: 
-# p: Original p-values (vector)
-# p.bt: Bootstrapped p-values (an W X B matrix)
+#' Return ordered critical values for Wstep
+#' 
+#' Returns minP-adjusted p-values (single-step). See Westfall text, pg. 48. 
+#' @param p Original dataset p-values (W-vector) 
+#' @param p.bt Bootstrapped p-values (an W X B matrix)
+#' @export
 
 adjust_minP = function( p, p.bt ) {
   
@@ -470,34 +472,18 @@ adjust_minP = function( p, p.bt ) {
   return(p.adj)
 }
 
-# # sanity check
-# B = 200
-# n.tests = 10
-# 
-# # generate fake p-values under strong null
-# p.bt = matrix( runif(B*n.tests, 0, 1), nrow = n.tests)
-# 
-# # generate fake p-values from real dataset
-# p = runif( n.tests, 0, .1)  
-# 
-# p.adj = adjust_minP( p, p.bt )
-# plot(p, p.adj)
-# 
-# # manually adjust second p-value
-# mins = apply( p.bt, MARGIN = 2, FUN = min )
-# prop.table( table( mins <= p[2] ) )[["TRUE"]]
-# p.adj[2]
 
 
 
 ######################## FNS FOR WESTFALL's STEP-DOWN ########################
 
-# AUDITED :) 
-# Westfall textbook, pages 66-67
 
-# Arguments: 
-#  p.dat: p-values from dataset (W-vector?)
-#  p.bt: Bootstrapped p-values (a W X B matrix)
+#' Return Wstep-adjusted p-values
+#' 
+#' Returns Wstep-adjusted p-values. See Westfall text, pg. 66-67. 
+#' @param p Original dataset p-values (W-vector) 
+#' @param p.bt Bootstrapped p-values (an W X B matrix)
+#' @export
 
 adj_Wstep = function( p, p.bt ) {
   
@@ -544,100 +530,17 @@ adj_Wstep = function( p, p.bt ) {
 }
 
 
-# # Sanity Check
-# nX = 1
-# nY = 3
-# B = 5
-# cor = make_corr_mat( .nX = nX,
-#                      .nY = nY,
-#                      .rho.XX = 0,
-#                      .rho.YY = 0.25,
-#                      .rho.XY = 0.05,
-#                      .prop.corr = 1 )
-# 
-# d = sim_data( .n = 1000, .cor = cor )
-# 
-# samp.res = dataset_result( .dat = d,
-#                 .alpha = 0.05,
-#                 .center.stats = FALSE )
-# 
-# 
-# p.bt = matrix( NA, nrow = B, ncol = nY)
-# 
-# # do 5 bootstraps
-# for (i in 1:B) {
-#   # extract residuals from original data
-#   # matrix with same dimensions as the outcomes matrix
-#   resid = samp.res$resid
-#   
-#   # compute Y-hat using residuals
-#   Ys = d[ , (nX + 1) : ncol(d) ]  # remove covariates
-#   Yhat = Ys - resid
-#   
-#   # fix the existing covariates
-#   Xs = as.data.frame( d[ , 1 : nX ] )
-#   names(Xs) = X.names
-#   
-#   # resample residuals and add them to fitted values
-#   ids = sample( 1:nrow(d) )
-#   b = as.data.frame( cbind( Xs, Yhat + resid[ids,] ) )
-#   
-#   bt.res = dataset_result( .dat = b,
-#                            .alpha = 0.05,
-#                            .center.stats = TRUE,
-#                            .bhat.orig = samp.res$bhats )
-#   
-#   p.bt[i,] = bt.res$pvals
-# }
-# 
-# pvals = c(0.00233103655078803, 0.470366742594242, 0.00290278216035089
-# )
-# 
-# p.bt = structure(c(0.308528665936264, 0.517319402377912, 0.686518314693482, 
-#                    0.637306248855186, 0.106805510862352, 0.116705315041494, 0.0732076817175753, 
-#                    0.770308936364482, 0.384405349738909, 0.0434358213611965, 0.41497067850141, 
-#                    0.513471489744384, 0.571213377144122, 0.628054979652722, 0.490196884985226
-# ), .Dim = c(5L, 3L))
-# 
-# 
-# 
-# p.adj.Wstep = adj_Wstep(pvals, t(p.bt))
-# plot( samp.res$pvals, p.adj.Wstep )
-# 
-# # BOOKMARK - CHECK MANUALLY AS IN PREVIOUS TOY EXAMPLE
-# 
-# # indicators of which hypothesis the sorted p-vals go with
-# sort(pvals)
-# r = c(1,3,2)
-# 
-# qstar = matrix( NA, nrow = B, ncol = 3)
-# 
-# for (i in 1:nrow(p.bt)) {
-#   qstar[i,3] = p.bt[ i, r[3] ]
-#   qstar[i,2] = min( qstar[i,3], p.bt[ i, r[2] ] )
-#   qstar[i,1] = min( qstar[i,2], p.bt[ i, r[1] ] )
-# }
-# 
-# less = t( apply( qstar, MARGIN = 1,
-#               function(row) row <= sort(pvals) ) )
-# 
-# p.tilde = colMeans(less)
-# 
-# # enforce monotonicity
-# p.tilde.sort = sort(p.tilde)
-# p.tilde.sort[2] = max( p.tilde.sort[1], p.tilde.sort[2] )
-# p.tilde.sort[3] = max( p.tilde.sort[2], p.tilde.sort[3] )
-
 
 
 ########################### FN: CALCULATE CRITICAL VALUES FOR WSTEP ###########################
 
-# AUDITED :) 
-
-# Arguments: 
-#  p.dat: p-values from dataset (W-vector?)
-#  col.p: Column of resampled p-values (for the single p-value for which we're
+#' Return ordered critical values for Wstep
+#' 
+#' XXX 
+#' @param p.dat p-values from dataset (W-vector?) 
+#' @param col.p Column of resampled p-values (for the single p-value for which we're
 #   getting the critical value)?
+#' @export
 
 get_crit = function( p.dat, col.p ) {
   
@@ -655,4 +558,199 @@ get_crit = function( p.dat, col.p ) {
   return(qstar)
 }
 
-# sanity check: see above for Wstep
+########################### FN: CREATE CORRELATION MATRIX ###########################
+
+#' Makes correlation matrix to simulate data
+#' 
+#' If correlation matrix isn't positive definite, try reducing some of the correlations
+#' @param nX Number of covariates, including the one of interest 
+#' @param nY Number of outcomes
+#' @param rho.XX Correlation between all pairs of Xs
+#' @param rho.YY Correlation between all pairs of Ys
+#' @param rho.XY Correlation between pairs of X-Y that are not null (see below)
+#' @param prop.corr Proportion of X-Y pairs that are non-null (non-nulls will be first .prop.corr * .nY pairs)
+#' @export
+
+make_corr_mat = function( nX,
+                          nY,
+                          rho.XX,
+                          rho.YY,
+                          rho.XY,
+                          prop.corr = 1) {
+  
+  nVar = nX + nY
+  
+  # name the variables
+  X.names = paste0( "X", 1 : nX )
+  Y.names = paste0( "Y", 1 : nY )
+  vnames = c( X.names, Y.names )
+  
+  # initialize correlation matrix
+  cor = as.data.frame( matrix( NA, nrow = nVar, ncol = nVar ) )
+  names(cor) = vnames
+  row.names(cor) = vnames
+  
+  # populate each cell 
+  for ( r in 1:dim(cor)[1] ) {
+    for ( c in 1:dim(cor)[2] ) {
+      cor[ r, c ] = cell_corr( vname.1 = vnames[r],
+                               vname.2 = vnames[c],
+                               rho.XX = rho.XX,
+                               rho.YY = rho.YY,
+                               rho.XY = rho.XY,
+                               nY = .nY,
+                               prop.corr = prop.corr )
+    }
+  }
+  
+  # check if positive definite
+  if( ! is.positive.definite( as.matrix(cor) ) ) stop( "Correlation matrix not positive definite")
+  
+  return(cor)  # this is still a data.frame in order to keep names
+}
+
+
+# # sanity checks
+# ( cor = make_corr_mat( .nX = 1,
+#                 .nY = 40,
+#                 .rho.XX = 0,
+#                 .rho.YY = 0.25,
+#                 .rho.XY = 0.1,
+#                 .prop.corr = 8/40 ) )
+# 
+# # check that the X-Y correlations make sense
+# table( as.character(cor[1,]) )
+
+
+
+########################### FN: CREATE CORRELATION MATRIX ###########################
+
+#' Cell correlation for simulating data
+#' 
+#' Assumes X1 is the covariate of interest and that none of the covariates is associated with any outcomes. 
+#' @param vname.1 Quoted name of first variable 
+#' @param vname.2 Quoted name of second variable
+#' @param rho.XX Correlation between pairs of Xs
+#' @param rho.YY Correlation between all pairs of Ys
+#' @param rho.XY rho.XY Correlation between pairs of X-Y (of non-null ones)
+#' @param nY Number of outcomes
+#' @param prop.corr Proportion of X-Y pairs that are non-null (non-nulls will be first .prop.corr * .nY pairs)
+#' @export
+
+cell_corr = function( vname.1,
+                      vname.2,
+                      rho.XX,
+                      rho.YY,
+                      rho.XY,
+                      nY,
+                      prop.corr = 1) {
+  
+  # use grep to figure out if variables are covariates or outcomes
+  if ( length( grep("X", vname.1 ) ) == 1 ) {
+    vtype.1 = "covariate"
+  } else if ( length( grep("Y", vname.1 ) ) == 1 ) {
+    vtype.1 = "outcome"
+  }
+  
+  if ( length( grep("X", vname.2 ) ) == 1 ) { 
+    vtype.2 = "covariate"
+  } else if ( length( grep("Y", vname.2 ) ) == 1 ) {
+    vtype.2 = "outcome"
+  }
+  
+  # case 1: diagonal entry
+  if ( vname.1 == vname.2 ) return(1)
+  
+  # case 2: both are covariates
+  # fixed correlation between covariates
+  if ( vtype.1 == "covariate" & vtype.2 == "covariate" ) return( .rho.XX )
+  
+  # case 3: both are outcomes
+  if ( vtype.1 == "outcome" & vtype.2 == "outcome" ) return( .rho.YY )
+  
+  # case 4: one is a covariate and one is an outcome
+  if ( vtype.1 != vtype.2 ) {
+    # check if this is the covariate of interest
+    # equal correlation between X1 and all outcomes
+    # all other covariates have correlation 0 with outcome
+    if ( "X1" %in% c( vname.1, vname.2 ) ) {
+      
+      if (.prop.corr == 1) return( .rho.XY ) 
+      
+      # if only some X-Y pairs are non-null
+      if ( .prop.corr != 1 ) {
+        # find the one that is the outcome
+        outcome.name = ifelse( vtype.1 == "outcome", vname.1, vname.2 )
+        
+        # extract its number ("4" for "Y4")
+        num = as.numeric( substring( outcome.name, first = 2 ) )
+        
+        # the first last.correlated outcomes are correlated with X (rho.XY)
+        #  and the rest aren't
+        last.correlated = round( .nY * .prop.corr )
+        
+        # see if number for chosen outcome exceeds the last correlated one
+        return( ifelse( num > last.correlated, 0, .rho.XY ) )
+      }
+    }
+    
+    # if we have multiple covariates and this isn't the one of interest,
+    #  its effect size should be 0
+    else return(0)
+  }
+}
+
+
+
+
+########################### FN: SIMULATE 1 DATASET ###########################
+
+# AUDITED :) 
+
+# Simulates 1 dataset with MVN(0,1) correlated covariates and outcomes
+
+# Arguments: 
+# .n: sample size
+# .cor: correlation matrix from above function
+
+
+#' Makes correlation matrix to simulate data
+#' 
+#' If correlation matrix isn't positive definite, try reducing some of the correlations
+#' @param n Number of covariates, including the one of interest 
+#' @param nY Number of outcomes
+#' @param rho.XX Correlation between all pairs of Xs
+#' @param rho.YY Correlation between all pairs of Ys
+#' @param rho.XY Correlation between pairs of X-Y that are not null (see below)
+#' @param prop.corr Proportion of X-Y pairs that are non-null (non-nulls will be first .prop.corr * .nY pairs)
+#' @export
+
+sim_data = function( .n, .cor ) {
+  
+  # variable names
+  vnames = names( .cor )
+  
+  # simulate the dataset
+  # everything is a standard Normal
+  d = as.data.frame( rmvnorm( n = .n,
+                              mean = rep( 0, dim(.cor)[1] ),
+                              sigma = as.matrix(.cor) ) )
+  names(d) = vnames
+  
+  # return the dataset
+  return(d)
+}
+
+# # test drive
+# cor = make_corr_mat( .nX = 1,
+#                .nY = 40,
+#                .rho.XX = 0,
+#                .rho.YY = 0.25,
+#                .rho.XY = 0.1,
+#                .prop.corr = 0.2 )
+# 
+# d = sim_data( .n = 1000, .cor = cor )
+# # plot empirical vs. real correlations
+# plot( as.numeric(cor(d)), as.numeric(as.matrix(cor)) ); abline( a = 0, b = 1, col="red")
+
+

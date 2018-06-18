@@ -1,4 +1,4 @@
-Package: EValue
+Package: NRejections
 Type: Package
 Title: Sensitivity Analyses for Unmeasured Confounding in Observational Studies and Meta-Analyses
 Version: 1.1.4
