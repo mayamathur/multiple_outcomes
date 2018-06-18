@@ -1,6 +1,4 @@
 
-# BOOKMARK: Was working on both of the first 2 functions. In a preliminary way, they both seem fine. 
-#  Try moving on to the third one. :) 
 
 ########################### FN: FIT ONE OUTCOME MODEL (OLS) ###########################
 
@@ -241,8 +239,7 @@ resamps = resample_resid(  X = "complaints",
                   cores = 8)
 
 
-########################### FN: GENERATE RESAMPLES ###########################
-
+########################### WRAPPER FN: ESTIMATE OUR METRICS ###########################
 
 #' Our metrics
 #' 
@@ -257,33 +254,151 @@ resamps = resample_resid(  X = "complaints",
 #' @export
 
 
-corr_tests = function( d, X, C, Y, B=2000, alpha, method = "nreject" ) {
+corr_tests = function( d,
+                       X,
+                       C,
+                       Ys,
+                       B=20,
+                       cores,
+                       alpha = 0.05,
+                       alpha.fam = 0.05,
+                       method = "nreject" ) {
+  
+  # ~~~ TO DO:
   # discard incomplete cases and warn user
   # fit original OLS model to get bhat.orig
   # check to exclude any weird lm() specifications that we can't handle
   
-  resamps = resample_resids(...)
+  # fit models to original data
+  samp.res = dataset_result( X = X,
+                             C = C,
+                             Ys = Ys,
+                             d = d,
+                             center.stats = FALSE,
+                             bhat.orig = NA, 
+                             alpha = alpha )
   
-  # apply to each alpha:
-    fit_models(alpha)
+  resamps = resample_resid(  X = X,
+                             C = C,
+                             Ys = Ys,
+                             d = attitude,
+                             alpha = alpha,
+                             resid = samp.res$resid,
+                             bhat.orig = samp.res$b,
+                             B=B,
+                             cores = cores)
+
+  ###### Joint Test Results for This Simulation Rep #####
   
-  # return resamples in a list of dataframes
-  # and return list: 
+  # initialize results
+  global.test = data.frame( method = method, 
+                            reject = rep( NA, length(method) ),
+                            pval = rep( NA, length(method) ), 
+                            crit = rep( NA, length(method) ) )
   
-  #   $ original lm() object
+  # null interval limits
+  bt.lo = quantile( resamps$rej.bt, alpha.fam/2 )
+  bt.hi = quantile( resamps$rej.bt, 1 - alpha.fam/2 )
   
-  #   $ alpha = first one in user's list
-  #     theta-hat
-  #     mean rejections in resamples (i.e., average test power)
-  #     null interval limits
-  #     global test p-value for each method that user wanted
+  if ( "nreject" %in% method ) {
+    # performance: one-sided rejection of joint null hypothesis
+    # alpha for joint test is set to 0.05 regardless of alpha for individual tests
+    # crit.bonf = quantile( n.rej.bt.0.005, 1 - 0.05 )
+    crit = quantile( resamps$rej.bt, 1 - alpha.fam )
+    
+    # p-values for observed rejections
+    jt.pval = sum( resamps$rej.bt >= samp.res$n.rej ) /
+      length( resamps$rej.bt )
+    
+    # did joint tests reject?
+    rej.jt = jt.pval < alpha.fam
+    
+    # store results
+    global.test$reject[ global.test$method == "nreject" ] = rej.jt
+    global.test$pval[ global.test$method == "nreject" ] = jt.pval
+    global.test$crit[ global.test$method == "nreject" ] = crit
+  }
+
   
-  #   $ alpha = second one
-  #     same as above
+  ######## Bonferroni joint test ########
+  if ( "bonferroni" %in% method ) {
+    # Bonferroni test of joint null using just original data
+    # i.e., do we reject at least one outcome using Bonferroni threshold?
+    p.adj.bonf = p.adjust( p = samp.res$pvals, method = "bonferroni" )
+    jt.rej.bonf.naive = any( p.adj.bonf < alpha.fam )
+    
+    # store results
+    global.test$reject[ global.test$method == "bonferroni" ] = jt.rej.bonf.naive
+    global.test$pval[ global.test$method == "bonferroni" ] = min(p.adj.bonf)
+  }
+  
+  ######## Holm joint test ########
+  if ( "holm" %in% method ) {
+    p.adj.holm = p.adjust( p = samp.res$pvals, method = "holm" )
+    jt.rej.holm = any( p.adj.holm < alpha.fam )
+    
+    # store results
+    global.test$reject[ global.test$method == "holm" ] = jt.rej.holm
+    global.test$pval[ global.test$method == "holm" ] = min(p.adj.holm)
+  }
+  
+  ######## Westfall's single-step and step-down ########
+  
+  library(StepwiseTest)
+  
+  if ( "minP" %in% method ) {
+    p.adj.minP = adjust_minP( samp.res$pvals, resamps$p.bt )
+    jt.rej.minP = any( p.adj.minP < alpha.fam )
+    
+    # store results
+    global.test$reject[ global.test$method == "minP" ] = jt.rej.minP
+    global.test$pval[ global.test$method == "minP" ] = min(p.adj.minP)
+  }
+  
+  if ( "Wstep" %in% method ) {
+    p.adj.stepdown = adj_Wstep( samp.res$pvals, resamps$p.bt )
+    jt.rej.Wstep = any( p.adj.stepdown < alpha.fam )
+    
+    # store results
+    global.test$reject[ global.test$method == "Wstep" ] = jt.rej.Wstep
+    global.test$pval[ global.test$method == "Wstep" ] = min(p.adj.stepdown)
+  }
+  
+  ######## Romano ########
+
+  if ("romano" %in% method ) {
+  
+    # test stats are already centered
+    rom = FWERkControl( samp.res$tvals, as.matrix( resamps$t.bt ), k = 1, alpha = alpha.fam )
+    jt.rej.Romano = sum(rom$Reject) > 0
+    
+    # store results
+    global.test$reject[ global.test$method == "romano" ] = jt.rej.Romano
+  }
+  
+  ######## Return Stuff ########
+  
+  # for global tests, concantante them and their names to a new vector
+  
+  
+  return( list( samp.res = samp.res,
+                nrej.bt = resamps$rej.bt,
+                null.int = c(bt.lo, bt.hi), # ours
+                excess.hits = as.numeric( samp.res$rej - bt.hi ), # ours
+                global.test = global.test # dataframe of all user-specified methods with their names
+                ) )
 }
 
-
-
+# BOOKMARK
+corr_tests( d = attitude,
+          X = "complaints",
+          C = c("privileges", "learning"),
+          Ys = c("rating", "raises"),
+          B=50,
+          cores = 8,
+          alpha = 0.05,
+          alpha.fam = 0.05,
+          method = c( "nreject", "bonferroni", "holm", "minP", "Wstep", "romano" ) )
 
 
 ######################## FNS FOR WESTFALL's SINGLE-STEP ########################
@@ -328,6 +443,51 @@ adjust_minP = function( p, p.bt ) {
 # mins = apply( p.bt, MARGIN = 2, FUN = min )
 # prop.table( table( mins <= p[2] ) )[["TRUE"]]
 # p.adj[2]
+
+
+######################## FNS FOR WESTFALL's SINGLE-STEP ########################
+
+# AUDITED :) 
+
+# Returns minP-adjusted p-values (single-step)
+# See Westfall text, pg. 48.
+
+# Arguments: 
+# p: Original p-values (vector)
+# p.bt: Bootstrapped p-values (an W X B matrix)
+
+adjust_minP = function( p, p.bt ) {
+  
+  n.boot = ncol(p.bt)
+  
+  # keep only minimum p-value in each resample
+  minP.bt = apply( p.bt, MARGIN = 2, FUN = min )
+  
+  # for each element of p, get the proportion of resamples
+  #  whose minP was less than the present p-value
+  p.adj = unlist( lapply( p, FUN = function(x) sum( minP.bt <= x ) / n.boot ) )
+  
+  return(p.adj)
+}
+
+# # sanity check
+# B = 200
+# n.tests = 10
+# 
+# # generate fake p-values under strong null
+# p.bt = matrix( runif(B*n.tests, 0, 1), nrow = n.tests)
+# 
+# # generate fake p-values from real dataset
+# p = runif( n.tests, 0, .1)  
+# 
+# p.adj = adjust_minP( p, p.bt )
+# plot(p, p.adj)
+# 
+# # manually adjust second p-value
+# mins = apply( p.bt, MARGIN = 2, FUN = min )
+# prop.table( table( mins <= p[2] ) )[["TRUE"]]
+# p.adj[2]
+
 
 
 ######################## FNS FOR WESTFALL's STEP-DOWN ########################
