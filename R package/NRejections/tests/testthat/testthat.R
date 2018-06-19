@@ -63,6 +63,78 @@ test_that("dataset_result #1", {
   expect_equal( as.matrix(resid.man), as.matrix(samp.res$resid) )
 } )
 
+
+
+# with centered test stats
+test_that("dataset_result #2", {
+  
+  cor = make_corr_mat( nX = 5,
+                       nY = 20,
+                       rho.XX = 0.16,
+                       rho.YY = 0.1,
+                       rho.XY = 0.1,
+                       prop.corr = 1 )
+  
+  d = sim_data( n = 50, cor = cor )
+  
+  # try to confuse fn by choosing a different X as covariate of interest
+  Ys = names(d)[ grep( "Y", names(d) ) ]
+  X = "X2"
+  all.covars = names(d)[ grep( "X", names(d) ) ]
+  C = all.covars[ !all.covars == X ]
+  
+  
+  # do analysis manually
+  # choose an unusual alpha level to make sure it's working
+  alpha = 0.4
+  
+  rej.man = 0
+  tvals.man = c()
+  bhats.man = c()
+  pvals.man = c()
+  resid.man = matrix( NA, nrow = 50, ncol = length(Ys) )
+  
+  # fake original coefficients
+  bhat.orig = rnorm( n=length(Ys), mean = 0.8, sd = 2 )
+
+  for ( i in 1:length(Ys) ) {
+    m = lm( d[[ Ys[i] ]] ~ X1 + X2 + X3 + X4 + X5, data = d )
+    bhats.man[i] = coef(m)[[X]] - bhat.orig[i]
+    
+    df = 50 - 5 - 1
+    se = summary(m)$coefficients[X, "Std. Error"]
+    tvals.man[i] = bhats.man[i] / se
+    
+    pvals.man[i] = 2 * ( 1 - pt( abs( tvals.man[i] ), df = df ) )
+    
+    resid.man[,i] = residuals(m)
+    
+    # did we reject it?
+    if ( pvals.man[i] < alpha ) rej.man = rej.man + 1
+  }  
+  
+  # with function
+  samp.res = dataset_result( d = d,
+                             X = X,
+                             C = C,
+                             Ys = Ys,  # all outcome names
+                             alpha = alpha,
+                             center.stats = TRUE,
+                             bhat.orig = bhat.orig )
+  
+  resid.man = as.data.frame(resid.man)
+  names(resid.man) = Ys
+  
+  expect_equal( rej.man, samp.res$rej )
+  expect_equal( bhats.man, samp.res$bhat )
+  expect_equal( tvals.man, samp.res$tvals )
+  expect_equal( pvals.man, samp.res$pvals )
+  expect_equal( as.matrix(resid.man), as.matrix(samp.res$resid) )
+} )
+
+
+
+
 ###################### TEST FNS FOR SIMULATING DATA ###################### 
 
 test_that("cell_corr #1", {
