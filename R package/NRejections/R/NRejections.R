@@ -79,10 +79,34 @@ fit_model = function( X,
 
 ########################### FN: GIVEN DATASET, RETURN STATS ###########################
 
-dataset_result = function( X,
+# BOOKMARK
+
+#' Resample residuals for OLS
+#' 
+#' XXX 
+#' @param d Dataframe 
+#' @param X Single quoted name of covariate of interest
+#' @param C Vector of quoted covariate names
+#' @param Ys Vector of quoted outcome names
+#' @param alpha Alpha level for individual tests
+#' @param center.stats Should test statistics be centered by original-sample estimates to enforce
+#' global null?
+#' @param bhat.orig Estimated coefficients for covariate of interest in original sample (W-vector).
+#' Can be left NA for non-centered stats. 
+#' @export
+#' @examples
+#' samp.res = dataset_result( X = "complaints",
+#'            C = c("privileges", "learning"),
+#'            Ys = c("rating", "raises"),
+#'            d = attitude,
+#'            center.stats = FALSE,
+#'            bhat.orig = NA,  # bhat.orig is a single value now for just the correct Y
+#'            alpha = 0.05 )
+
+dataset_result = function( d,
+                           X,
                            C = NA,
                            Ys,  # all outcome names
-                           d,
                            alpha = 0.05,
                            center.stats = TRUE,
                            bhat.orig = NA ) {  
@@ -136,37 +160,46 @@ dataset_result = function( X,
 
 
 
-# samp.res = dataset_result( X = "complaints",
-#            C = c("privileges", "learning"),
-#            Ys = c("rating", "raises"),
-#            d = attitude,
-#            center.stats = FALSE,
-#            bhat.orig = NA,  # bhat.orig is a single value now for just the correct Y
-#            alpha = 0.05 )
-
-
 
 ########################### FN: GENERATE RESAMPLES ###########################
 
-
-#' Generate OLS resamples under global null
+#' Resample residuals for OLS
 #' 
 #' XXX 
 #' @param d Dataframe 
 #' @param X Single quoted name of covariate of interest
 #' @param C Vector of quoted covariate names
-#' @param Y Vector of quoted outcome names
+#' @param Ys Vector of quoted outcome names
+#' @param alpha Alpha level for individual tests
+#' @param resid Residuals from original sample (XXX matrix)
+#' @param bhat.orig Estimated coefficients for covariate of interest in original sample (W-vector)
 #' @param B Number of resamples to generate
+#' @param cores Number of cores available for parallelization
 #' @export
 #' @examples
 #' # compute E-value if Cohen's d = 0.5 with SE = 0.25
-#' evalues.MD( .5, .25 )
+#' samp.res = dataset_result( X = "complaints",
+#'                 C = c("privileges", "learning"),
+#'                 Ys = c("rating", "raises"),
+#'                 d = attitude,
+#'                 center.stats = FALSE,
+#'                 bhat.orig = NA,  # bhat.orig is a single value now for just the correct Y
+#'                 alpha = 0.05 )
+#' 
+#' resamps = resample_resid(  X = "complaints",
+#'                   C = c("privileges", "learning"),
+#'                   Ys = c("rating", "raises"),
+#'                   d = attitude,
+#'                   alpha = 0.05,
+#'                   resid = samp.res$resid,
+#'                   bhat.orig = samp.res$b,
+#'                   B=20,
+#'                   cores = 8)
 
-resample_resid = function( 
-                           X,
+resample_resid = function( d,
+                          X,
                            C = NA,
                            Ys,
-                           d,
                            alpha,
                            resid,
                            bhat.orig,
@@ -232,23 +265,7 @@ resample_resid = function(
   
 }
 
-# samp.res = dataset_result( X = "complaints",
-#                 C = c("privileges", "learning"),
-#                 Ys = c("rating", "raises"),
-#                 d = attitude,
-#                 center.stats = FALSE,
-#                 bhat.orig = NA,  # bhat.orig is a single value now for just the correct Y
-#                 alpha = 0.05 )
-# 
-# resamps = resample_resid(  X = "complaints",
-#                   C = c("privileges", "learning"),
-#                   Ys = c("rating", "raises"),
-#                   d = attitude,
-#                   alpha = 0.05,
-#                   resid = samp.res$resid,
-#                   bhat.orig = samp.res$b,
-#                   B=20,
-#                   cores = 8)
+
 
 
 ########################### WRAPPER FN: ESTIMATE OUR METRICS ###########################
@@ -414,14 +431,12 @@ corr_tests = function( d,
 
 ######################## FNS FOR WESTFALL's SINGLE-STEP ########################
 
-# AUDITED :) 
-
-# Returns minP-adjusted p-values (single-step)
-# See Westfall text, pg. 48.
-
-# Arguments: 
-# p: Original p-values (vector)
-# p.bt: Bootstrapped p-values (an W X B matrix)
+#' Adjust p-values using minP
+#' 
+#' Returns minP-adjusted p-values (single-step). See Westfall text, pg. 48. 
+#' @param p Original dataset p-values (W-vector) 
+#' @param p.bt Bootstrapped p-values (an W X B matrix)
+#' @export
 
 adjust_minP = function( p, p.bt ) {
   
@@ -437,23 +452,6 @@ adjust_minP = function( p, p.bt ) {
   return(p.adj)
 }
 
-# # sanity check
-# B = 200
-# n.tests = 10
-# 
-# # generate fake p-values under strong null
-# p.bt = matrix( runif(B*n.tests, 0, 1), nrow = n.tests)
-# 
-# # generate fake p-values from real dataset
-# p = runif( n.tests, 0, .1)  
-# 
-# p.adj = adjust_minP( p, p.bt )
-# plot(p, p.adj)
-# 
-# # manually adjust second p-value
-# mins = apply( p.bt, MARGIN = 2, FUN = min )
-# prop.table( table( mins <= p[2] ) )[["TRUE"]]
-# p.adj[2]
 
 
 ######################## FNS FOR WESTFALL's SINGLE-STEP ########################
@@ -543,7 +541,6 @@ adj_Wstep = function( p, p.bt ) {
 
 #' Return ordered critical values for Wstep
 #' 
-#' XXX 
 #' @param p.dat p-values from dataset (W-vector?) 
 #' @param col.p Column of resampled p-values (for the single p-value for which we're
 #   getting the critical value)?
@@ -694,7 +691,6 @@ cell_corr = function( vname.1,
     else return(0)
   }
 }
-
 
 
 
