@@ -5,7 +5,201 @@
 # library(NRejections)
 # test()
 
+########################### WRAPPER FN: ESTIMATE OUR METRICS ###########################
+
+# bookmark: work on this
+
+#' Our metrics
+#' 
+#' XXX 
+#' @param d Dataframe 
+#' @param X Single quoted name of covariate of interest
+#' @param C Vector of quoted covariate names
+#' @param Y Vector of quoted outcome names
+#' @param B Number of resamples to generate
+#' @param alpha Vector of alpha levels
+#' @param method Which methods to report (ours, Westfall's two methods, Bonferroni, Holm, Romano)
+#' @export
+
+corr_tests = function( d,
+                       X,
+                       C,
+                       Ys,
+                       B=20,
+                       cores,
+                       alpha = 0.05,
+                       alpha.fam = 0.05,
+                       method = "nreject" ) {
+  
+  # ~~~ TO DO:
+  # discard incomplete cases and warn user
+  # check to exclude any weird lm() specifications that we can't handle
+  # check that all covariates are mean-centered; if not, do it ourselves
+  
+  # fit models to original data
+  samp.res = dataset_result( X = X,
+                             C = C,
+                             Ys = Ys,
+                             d = d,
+                             center.stats = FALSE,
+                             bhat.orig = NA, 
+                             alpha = alpha )
+  
+  resamps = resample_resid(  X = X,
+                             C = C,
+                             Ys = Ys,
+                             d = attitude,
+                             alpha = alpha,
+                             resid = samp.res$resid,
+                             bhat.orig = samp.res$b,
+                             B=B,
+                             cores = cores)
+  
+  ###### Joint Test Results for This Simulation Rep #####
+  
+  # initialize results
+  global.test = data.frame( method = method, 
+                            reject = rep( NA, length(method) ),
+                            pval = rep( NA, length(method) ), 
+                            crit = rep( NA, length(method) ) )
+  
+  # null interval limits
+  bt.lo = quantile( resamps$rej.bt, alpha.fam/2 )
+  bt.hi = quantile( resamps$rej.bt, 1 - alpha.fam/2 )
+  
+  if ( "nreject" %in% method ) {
+    # performance: one-sided rejection of joint null hypothesis
+    # alpha for joint test is set to 0.05 regardless of alpha for individual tests
+    # crit.bonf = quantile( n.rej.bt.0.005, 1 - 0.05 )
+    crit = quantile( resamps$rej.bt, 1 - alpha.fam )
+    
+    # p-values for observed rejections
+    jt.pval = sum( resamps$rej.bt >= samp.res$n.rej ) /
+      length( resamps$rej.bt )
+    
+    # did joint tests reject?
+    rej.jt = jt.pval < alpha.fam
+    
+    # store results
+    global.test$reject[ global.test$method == "nreject" ] = rej.jt
+    global.test$pval[ global.test$method == "nreject" ] = jt.pval
+    global.test$crit[ global.test$method == "nreject" ] = crit
+  }
+  
+  
+  ######## Bonferroni joint test ########
+  if ( "bonferroni" %in% method ) {
+    # Bonferroni test of joint null using just original data
+    # i.e., do we reject at least one outcome using Bonferroni threshold?
+    p.adj.bonf = p.adjust( p = samp.res$pvals, method = "bonferroni" )
+    jt.rej.bonf.naive = any( p.adj.bonf < alpha.fam )
+    
+    # store results
+    global.test$reject[ global.test$method == "bonferroni" ] = jt.rej.bonf.naive
+    global.test$pval[ global.test$method == "bonferroni" ] = min(p.adj.bonf)
+  }
+  
+  ######## Holm joint test ########
+  if ( "holm" %in% method ) {
+    p.adj.holm = p.adjust( p = samp.res$pvals, method = "holm" )
+    jt.rej.holm = any( p.adj.holm < alpha.fam )
+    
+    # store results
+    global.test$reject[ global.test$method == "holm" ] = jt.rej.holm
+    global.test$pval[ global.test$method == "holm" ] = min(p.adj.holm)
+  }
+  
+  ######## Westfall's single-step and step-down ########
+  
+  library(StepwiseTest)
+  
+  if ( "minP" %in% method ) {
+    p.adj.minP = adjust_minP( samp.res$pvals, resamps$p.bt )
+    jt.rej.minP = any( p.adj.minP < alpha.fam )
+    
+    # store results
+    global.test$reject[ global.test$method == "minP" ] = jt.rej.minP
+    global.test$pval[ global.test$method == "minP" ] = min(p.adj.minP)
+  }
+  
+  if ( "Wstep" %in% method ) {
+    p.adj.stepdown = adj_Wstep( samp.res$pvals, resamps$p.bt )
+    jt.rej.Wstep = any( p.adj.stepdown < alpha.fam )
+    
+    # store results
+    global.test$reject[ global.test$method == "Wstep" ] = jt.rej.Wstep
+    global.test$pval[ global.test$method == "Wstep" ] = min(p.adj.stepdown)
+  }
+  
+  ######## Romano ########
+  
+  if ("romano" %in% method ) {
+    
+    # test stats are already centered
+    rom = FWERkControl( samp.res$tvals, as.matrix( resamps$t.bt ), k = 1, alpha = alpha.fam )
+    jt.rej.Romano = sum(rom$Reject) > 0
+    
+    # store results
+    global.test$reject[ global.test$method == "romano" ] = jt.rej.Romano
+  }
+  
+  ######## Return Stuff ########
+  
+  # for global tests, concantante them and their names to a new vector
+  
+  
+  return( list( samp.res = samp.res,
+                nrej.bt = resamps$rej.bt,
+                null.int = c(bt.lo, bt.hi), # ours
+                excess.hits = as.numeric( samp.res$rej - bt.hi ), # ours
+                global.test = global.test # dataframe of all user-specified methods with their names
+  ) )
+}
+
+# # BOOKMARK
+# corr_tests( d = attitude,
+#           X = "complaints",
+#           C = c("privileges", "learning"),
+#           Ys = c("rating", "raises"),
+#           B=50,
+#           cores = 8,
+#           alpha = 0.05,
+#           alpha.fam = 0.05,
+#           method = c( "nreject", "bonferroni", "holm", "minP", "Wstep", "romano" ) )
+
+
 ########################### FN: FIT ONE OUTCOME MODEL (OLS) ###########################
+
+#' Fit OLS model for a single outcome
+#' 
+#' Fits OLS model for a single outcome with or without centering the test statistics
+#' to enforce the global null. 
+#' @param d Dataframe 
+#' @param X Single quoted name of covariate of interest
+#' @param C Vector of quoted covariate names
+#' @param Ys Vector of quoted outcome names
+#' @param alpha Alpha level for individual tests
+#' @param center.stats Should test statistics be centered by original-sample estimates to enforce
+#' global null?
+#' @param bhat.orig Estimated coefficients for covariate of interest in original sample (W-vector).
+#' Can be left NA for non-centered stats. 
+#' @export
+#' @examples
+#' raw.res = fit_model(  Y.name = outcomes[1],
+#'             X.name = "A1SEPA_z",
+#'             .d = d,
+#'             .covars = covars,
+#'             .center.stats = FALSE )
+#'
+#' data(attitude)
+#' fit_model( X = "complaints",
+#'            C = c("privileges", "learning"),
+#'            Y = "rating",
+#'            Ys = c("rating", "raises"),
+#'            d = attitude,
+#'            center.stats = FALSE,
+#'            bhat.orig = NA,  # bhat.orig is a single value now for just the correct Y
+#'            alpha = 0.05 )
 
 fit_model = function( X,
                       C = NA,
@@ -24,8 +218,6 @@ fit_model = function( X,
   # https://stackoverflow.com/questions/6065826/how-to-do-a-regression-of-a-series-of-variables-without-typing-each-variable-nam
   else m = lm( d[[Y]] ~ ., data = d[ , covars] )
   
-  #browser()
-  
   # stats for covariate of interest
   if ( all( is.na(C) ) ) m.stats = summary(m)$coefficients[ 2, ]
   else m.stats = summary(m)$coefficients[ X, ]
@@ -37,7 +229,6 @@ fit_model = function( X,
     SE = m.stats[["Std. Error"]]
   }
   if( center.stats ) {
-    # ~~~ CHECK THIS WAY OF ACCESSING BHAT.ORIG
     b = m.stats[["Estimate"]] - bhat.orig[ which(Ys==Y) ]
     SE = m.stats[["Std. Error"]]
     tval = b / SE
@@ -58,32 +249,14 @@ fit_model = function( X,
                 resids = residuals(m) ) )
 }
 
-# # test for 1 outcome
-# raw.res = fit_model(  Y.name = outcomes[1],
-#             X.name = "A1SEPA_z",
-#             .d = d,
-#             .covars = covars,
-#             .center.stats = FALSE )
-
-# data(attitude)
-# fit_model( X = "complaints",
-#            C = c("privileges", "learning"),
-#            Y = "rating",
-#            Ys = c("rating", "raises"),
-#            d = attitude,
-#            center.stats = FALSE,
-#            bhat.orig = NA,  # bhat.orig is a single value now for just the correct Y
-#            alpha = 0.05 )
-
 
 
 ########################### FN: GIVEN DATASET, RETURN STATS ###########################
 
-# BOOKMARK
-
-#' Resample residuals for OLS
+#' Fit all models for a single dataset
 #' 
-#' XXX 
+#' Fits all W OLS models for a single dataset, with or without centering the test statistics
+#' to enforce the global null. 
 #' @param d Dataframe 
 #' @param X Single quoted name of covariate of interest
 #' @param C Vector of quoted covariate names
@@ -176,7 +349,6 @@ dataset_result = function( d,
 #' @param cores Number of cores available for parallelization
 #' @export
 #' @examples
-#' # compute E-value if Cohen's d = 0.5 with SE = 0.25
 #' samp.res = dataset_result( X = "complaints",
 #'                 C = c("privileges", "learning"),
 #'                 Ys = c("rating", "raises"),
@@ -264,169 +436,6 @@ resample_resid = function( d,
   
 }
 
-
-
-
-########################### WRAPPER FN: ESTIMATE OUR METRICS ###########################
-
-#' Our metrics
-#' 
-#' XXX 
-#' @param d Dataframe 
-#' @param X Single quoted name of covariate of interest
-#' @param C Vector of quoted covariate names
-#' @param Y Vector of quoted outcome names
-#' @param B Number of resamples to generate
-#' @param alpha Vector of alpha levels
-#' @param method Which methods to report (ours, Westfall's two methods, Bonferroni, Holm, Romano)
-#' @export
-
-
-corr_tests = function( d,
-                       X,
-                       C,
-                       Ys,
-                       B=20,
-                       cores,
-                       alpha = 0.05,
-                       alpha.fam = 0.05,
-                       method = "nreject" ) {
-  
-  # ~~~ TO DO:
-  # discard incomplete cases and warn user
-  # check to exclude any weird lm() specifications that we can't handle
-  # check that all covariates are mean-centered; if not, do it ourselves
-  
-  # fit models to original data
-  samp.res = dataset_result( X = X,
-                             C = C,
-                             Ys = Ys,
-                             d = d,
-                             center.stats = FALSE,
-                             bhat.orig = NA, 
-                             alpha = alpha )
-  
-  resamps = resample_resid(  X = X,
-                             C = C,
-                             Ys = Ys,
-                             d = attitude,
-                             alpha = alpha,
-                             resid = samp.res$resid,
-                             bhat.orig = samp.res$b,
-                             B=B,
-                             cores = cores)
-
-  ###### Joint Test Results for This Simulation Rep #####
-  
-  # initialize results
-  global.test = data.frame( method = method, 
-                            reject = rep( NA, length(method) ),
-                            pval = rep( NA, length(method) ), 
-                            crit = rep( NA, length(method) ) )
-  
-  # null interval limits
-  bt.lo = quantile( resamps$rej.bt, alpha.fam/2 )
-  bt.hi = quantile( resamps$rej.bt, 1 - alpha.fam/2 )
-  
-  if ( "nreject" %in% method ) {
-    # performance: one-sided rejection of joint null hypothesis
-    # alpha for joint test is set to 0.05 regardless of alpha for individual tests
-    # crit.bonf = quantile( n.rej.bt.0.005, 1 - 0.05 )
-    crit = quantile( resamps$rej.bt, 1 - alpha.fam )
-    
-    # p-values for observed rejections
-    jt.pval = sum( resamps$rej.bt >= samp.res$n.rej ) /
-      length( resamps$rej.bt )
-    
-    # did joint tests reject?
-    rej.jt = jt.pval < alpha.fam
-    
-    # store results
-    global.test$reject[ global.test$method == "nreject" ] = rej.jt
-    global.test$pval[ global.test$method == "nreject" ] = jt.pval
-    global.test$crit[ global.test$method == "nreject" ] = crit
-  }
-
-  
-  ######## Bonferroni joint test ########
-  if ( "bonferroni" %in% method ) {
-    # Bonferroni test of joint null using just original data
-    # i.e., do we reject at least one outcome using Bonferroni threshold?
-    p.adj.bonf = p.adjust( p = samp.res$pvals, method = "bonferroni" )
-    jt.rej.bonf.naive = any( p.adj.bonf < alpha.fam )
-    
-    # store results
-    global.test$reject[ global.test$method == "bonferroni" ] = jt.rej.bonf.naive
-    global.test$pval[ global.test$method == "bonferroni" ] = min(p.adj.bonf)
-  }
-  
-  ######## Holm joint test ########
-  if ( "holm" %in% method ) {
-    p.adj.holm = p.adjust( p = samp.res$pvals, method = "holm" )
-    jt.rej.holm = any( p.adj.holm < alpha.fam )
-    
-    # store results
-    global.test$reject[ global.test$method == "holm" ] = jt.rej.holm
-    global.test$pval[ global.test$method == "holm" ] = min(p.adj.holm)
-  }
-  
-  ######## Westfall's single-step and step-down ########
-  
-  library(StepwiseTest)
-  
-  if ( "minP" %in% method ) {
-    p.adj.minP = adjust_minP( samp.res$pvals, resamps$p.bt )
-    jt.rej.minP = any( p.adj.minP < alpha.fam )
-    
-    # store results
-    global.test$reject[ global.test$method == "minP" ] = jt.rej.minP
-    global.test$pval[ global.test$method == "minP" ] = min(p.adj.minP)
-  }
-  
-  if ( "Wstep" %in% method ) {
-    p.adj.stepdown = adj_Wstep( samp.res$pvals, resamps$p.bt )
-    jt.rej.Wstep = any( p.adj.stepdown < alpha.fam )
-    
-    # store results
-    global.test$reject[ global.test$method == "Wstep" ] = jt.rej.Wstep
-    global.test$pval[ global.test$method == "Wstep" ] = min(p.adj.stepdown)
-  }
-  
-  ######## Romano ########
-
-  if ("romano" %in% method ) {
-  
-    # test stats are already centered
-    rom = FWERkControl( samp.res$tvals, as.matrix( resamps$t.bt ), k = 1, alpha = alpha.fam )
-    jt.rej.Romano = sum(rom$Reject) > 0
-    
-    # store results
-    global.test$reject[ global.test$method == "romano" ] = jt.rej.Romano
-  }
-  
-  ######## Return Stuff ########
-  
-  # for global tests, concantante them and their names to a new vector
-  
-  
-  return( list( samp.res = samp.res,
-                nrej.bt = resamps$rej.bt,
-                null.int = c(bt.lo, bt.hi), # ours
-                excess.hits = as.numeric( samp.res$rej - bt.hi ), # ours
-                global.test = global.test # dataframe of all user-specified methods with their names
-                ) )
-}
-
-# # BOOKMARK
-# corr_tests( d = attitude,
-#           X = "complaints",
-#           C = c("privileges", "learning"),
-#           Ys = c("rating", "raises"),
-#           B=50,
-#           cores = 8,
-#           alpha = 0.05,
-#           alpha.fam = 0.05,
-#           method = c( "nreject", "bonferroni", "holm", "minP", "Wstep", "romano" ) )
 
 
 ######################## FNS FOR WESTFALL's SINGLE-STEP ########################

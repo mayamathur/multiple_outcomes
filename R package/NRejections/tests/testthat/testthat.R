@@ -3,6 +3,8 @@ library(devtools)
 
 ###################### TEST FNS FOR APPLYING OUR METRICS ###################### 
 
+# fit_model doesn't need a test because we test it through the dataset_result tests
+
 # without centering test stats
 test_that("dataset_result #1", {
 
