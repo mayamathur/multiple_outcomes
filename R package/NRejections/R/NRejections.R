@@ -17,17 +17,17 @@ fit_model = function( X,
                       alpha = 0.05 ) {
 
   # all covariates, including the one of interest
-  if ( is.na(C) ) covars = X
+  if ( all( is.na(C) ) ) covars = X
   else covars = c( X, C )
   
-  if ( is.na(C) ) m = lm( d[[Y]] ~ d[[X]] )
+  if ( all( is.na(C) ) ) m = lm( d[[Y]] ~ d[[X]] )
   # https://stackoverflow.com/questions/6065826/how-to-do-a-regression-of-a-series-of-variables-without-typing-each-variable-nam
   else m = lm( d[[Y]] ~ ., data = d[ , covars] )
   
   #browser()
   
   # stats for covariate of interest
-  if ( is.na(C) ) m.stats = summary(m)$coefficients[ 2, ]
+  if ( all( is.na(C) ) ) m.stats = summary(m)$coefficients[ 2, ]
   else m.stats = summary(m)$coefficients[ X, ]
     
   # should we center stats by the original-sample estimates?
@@ -109,11 +109,11 @@ dataset_result = function( d,
                            Ys,  # all outcome names
                            alpha = 0.05,
                            center.stats = TRUE,
-                           bhat.orig = NA ) {  
+                           bhat.orig = NA ) { 
   
   # for each outcome, fit regression model
   # see if each has p < alpha for covariate of interest
-  if ( is.na(C) ) covars = X
+  if ( any( all( is.na(C) ) ) ) covars = X
   else covars = c( X, C )
   
   # get the correct bhat for the outcome we're using
@@ -157,7 +157,6 @@ dataset_result = function( d,
                 pvals = pvals,
                 resid = resid ) )
 }
-
 
 
 
@@ -206,7 +205,7 @@ resample_resid = function( d,
                            B=20,
                            cores = NULL ) {
   
-  if ( is.na(C) ) covars = X
+  if ( all( is.na(C) ) ) covars = X
   else covars = c( X, C )
   
   # compute Y-hat using residuals
@@ -214,7 +213,7 @@ resample_resid = function( d,
   
   # fix the existing covariates
   Xs = as.data.frame( d[ , covars ] )
-  if( is.na(C) ) names(Xs) = X
+  if( all( is.na(C) ) ) names(Xs) = X
   
   # run all bootstrap iterates
   library(doParallel)
@@ -296,6 +295,7 @@ corr_tests = function( d,
   # ~~~ TO DO:
   # discard incomplete cases and warn user
   # check to exclude any weird lm() specifications that we can't handle
+  # check that all covariates are mean-centered; if not, do it ourselves
   
   # fit models to original data
   samp.res = dataset_result( X = X,
@@ -432,31 +432,6 @@ corr_tests = function( d,
 ######################## FNS FOR WESTFALL's SINGLE-STEP ########################
 
 #' Adjust p-values using minP
-#' 
-#' Returns minP-adjusted p-values (single-step). See Westfall text, pg. 48. 
-#' @param p Original dataset p-values (W-vector) 
-#' @param p.bt Bootstrapped p-values (an W X B matrix)
-#' @export
-
-adjust_minP = function( p, p.bt ) {
-  
-  n.boot = ncol(p.bt)
-  
-  # keep only minimum p-value in each resample
-  minP.bt = apply( p.bt, MARGIN = 2, FUN = min )
-  
-  # for each element of p, get the proportion of resamples
-  #  whose minP was less than the present p-value
-  p.adj = unlist( lapply( p, FUN = function(x) sum( minP.bt <= x ) / n.boot ) )
-  
-  return(p.adj)
-}
-
-
-
-######################## FNS FOR WESTFALL's SINGLE-STEP ########################
-
-#' Return ordered critical values for Wstep
 #' 
 #' Returns minP-adjusted p-values (single-step). See Westfall text, pg. 48. 
 #' @param p Original dataset p-values (W-vector) 

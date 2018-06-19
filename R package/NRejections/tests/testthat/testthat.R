@@ -1,6 +1,68 @@
 library(testthat)
 library(devtools)
 
+###################### TEST FNS FOR APPLYING OUR METRICS ###################### 
+
+# without centering test stats
+test_that("dataset_result #1", {
+
+  cor = make_corr_mat( nX = 5,
+                       nY = 2,
+                       rho.XX = -0.06,
+                       rho.YY = 0.1,
+                       rho.XY = -0.1,
+                       prop.corr = 8/40 )
+  
+  d = sim_data( n = 50, cor = cor )
+  
+  # try to confuse fn by choosing a different X as covariate of interest
+  Ys = names(d)[ grep( "Y", names(d) ) ]
+  X = "X2"
+  all.covars = names(d)[ grep( "X", names(d) ) ]
+  C = all.covars[ !all.covars == X ]
+  
+
+  # do analysis manually
+  alpha = 0.05
+  
+  rej.man = 0
+  tvals.man = c()
+  bhats.man = c()
+  pvals.man = c()
+  resid.man = matrix( NA, nrow = 50, ncol = 2 )
+  
+  for ( i in 1:length(Ys) ) {
+    m = lm( d[[ Ys[i] ]] ~ X1 + X2 + X3 + X4 + X5, data = d )
+    bhats.man[i] = coef(m)[[X]]
+    tvals.man[i] = summary(m)$coefficients[X,"t value"]
+    pvals.man[i] = summary(m)$coefficients[X, "Pr(>|t|)"]
+    resid.man[,i] = residuals(m)
+    
+    # did we reject it?
+    if ( summary(m)$coefficients[X, "Pr(>|t|)"] < alpha ) rej.man = rej.man + 1
+  
+  }  
+  
+  # with function
+  samp.res = dataset_result( d = d,
+                             X = X,
+                             C = C,
+                             Ys = Ys,  # all outcome names
+                             alpha = alpha,
+                             center.stats = FALSE,
+                             bhat.orig = NA )
+  
+  resid.man = as.data.frame(resid.man)
+  names(resid.man) = Ys
+  
+  expect_equal( rej.man, samp.res$rej )
+  expect_equal( bhats.man, samp.res$bhat )
+  expect_equal( tvals.man, samp.res$tvals )
+  expect_equal( pvals.man, samp.res$pvals )
+  
+  expect_equal( as.matrix(resid.man), as.matrix(samp.res$resid) )
+} )
+
 ###################### TEST FNS FOR SIMULATING DATA ###################### 
 
 test_that("cell_corr #1", {
