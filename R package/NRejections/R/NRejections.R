@@ -9,16 +9,15 @@
 
 ########################### CHECK FOR BAD USER INPUT ###########################
 
-
 #' Fix bad user input
 #' 
-#' Checks for and fixes (with warnings) bad user input: missing data on analysis variables,
-#' datasets containing extraneous variables, datasets containing covariates that are not
+#' Warns about and fixes bad user input: missing data on analysis variables,
+#' datasets containing extraneous variables, or datasets containing covariates that are not
 #' mean-centered.
-#' @param d Dataframe 
 #' @param X Single quoted name of covariate of interest
 #' @param C Vector of quoted covariate names
 #' @param Ys Vector of quoted outcome names
+#' @param d Dataframe 
 #' @export
 
 fix_input = function( X, 
@@ -26,10 +25,14 @@ fix_input = function( X,
                       Ys,
                       d ) {
   
+  # all covariates, including the one of interest
+  if ( all( is.na(C) ) ) covars = X
+  else covars = c( X, C )
+  
   ##### Missing Data #####
   # remove subjects missing any outcome or covariate (to have same sample size for all regressions)
   # also remove any non-analysis variables from dataset
-  has.analysis.vars = complete.cases( d[ , c(X, C, Ys) ] ) 
+  has.analysis.vars = complete.cases( d[ , c(covars, Ys) ] ) 
   d = d[ has.analysis.vars, ]
   dropped = sum( has.analysis.vars == FALSE )
   if (dropped > 0) warning( paste( dropped,
@@ -39,7 +42,7 @@ fix_input = function( X,
   
   ##### Extraneous Variables #####
   # remove non-analysis variables from dataset
-  analysis.vars = c(X, C, Ys)
+  analysis.vars = c(covars, Ys)
   extras = names(d)[ ! names(d) %in% analysis.vars ]
   if ( length(extras) > 0 ){ 
     warning( paste( "The following variables were removed from the dataset because they are not in X, C, or Ys: ",
@@ -49,10 +52,10 @@ fix_input = function( X,
   }
   
   ##### Mean-Centered Covariates #####
-  covars = c(X, C)
   tolerance = .Machine$double.eps ^ 0.5
-  
-  diffs = abs( colMeans(d[ , covars ]) - rep(0, length(covars)) )
+  zero = rep( 0, length(covars) )
+  # as.matrix handles case where there is only 1 covariate
+  diffs = abs( apply( as.matrix(d[ , covars ]), 2, mean ) - zero )
   
   # indices of non-centered covariates
   not.cent = which( diffs > tolerance )
@@ -61,16 +64,27 @@ fix_input = function( X,
     warning( paste( "The following covariates have been mean-centered, with implications for model interpretation: ", 
                     paste( covars[not.cent], collapse = ", " ), 
                     sep = "" ) )
-    d = apply( d, 2, function(col) col - mean(col) )
+    d = as.data.frame( apply( d, 2, function(col) col - mean(col) ) )
   }
 }
 
 
 ########################### WRAPPER FN: ESTIMATE OUR METRICS ###########################
 
-# Bookmark: Work on this
 
-#' Our metrics
+# # mean-center 
+# d = as.data.frame( apply( attitude, 2, function(col) col - mean(col) ) )
+# 
+#  corr_tests( d = attitude,
+#            X = "complaints",
+#            C = c("privileges", "learning"),
+#            Ys = c("rating", "raises"),
+#            B=50,
+#            alpha = 0.05,
+#            alpha.fam = 0.05,
+#            method = c( "nreject", "bonferroni", "holm", "minP", "Wstep", "romano" ) )
+
+#' Global evidence strength across correlated tests
 #' 
 #' XXX 
 #' @param d Dataframe 
@@ -78,19 +92,26 @@ fix_input = function( X,
 #' @param C Vector of quoted covariate names
 #' @param Ys Vector of quoted outcome names
 #' @param B Number of resamples to generate
-#' @param alpha Vector of alpha levels
+#' @param cores Number of cores to use for parallelization. Defaults to number available.
+#' @param alpha Alpha level for individual hypothesis test
+#' @param alpha.fam Alpha level for global test
 #' @param method Which methods to report (ours, Westfall's two methods, Bonferroni, Holm, Romano)
+#' @import
+#' StepwiseTest
+#' stats
 #' @export
 #' @examples
-#' corr_tests( d = attitude,
-#'           X = "complaints",
-#'           C = c("privileges", "learning"),
-#'           Ys = c("rating", "raises"),
-#'           B=50,
-#'           cores = 8,
-#'           alpha = 0.05,
-#'           alpha.fam = 0.05,
-#'           method = c( "nreject", "bonferroni", "holm", "minP", "Wstep", "romano" ) )
+#'  corr_tests( d = attitude,
+#' X = "complaints",
+#' C = c("privileges", "learning"),
+#' Ys = c("rating", "raises"),
+#' B=50,
+#' cores=1,
+#' alpha = 0.05,
+#' alpha.fam = 0.05,
+#' method = c( "nreject", "bonferroni", "holm", "minP", "Wstep", "romano" ) )
+
+
 
 corr_tests = function( d,
                        X,
@@ -102,16 +123,11 @@ corr_tests = function( d,
                        alpha.fam = 0.05,
                        method = "nreject" ) {
   
-  # ~~~ TO DO:
-  # check to exclude any weird lm() specifications that we can't handle
-  # warn about small sample sizes and small B
-
-  
+  # check for and fix bad user input
   d = fix_input( X = X,
                  C = C,
                  Ys = Ys,
                  d = d )
-  
   
   # fit models to original data
   samp.res = dataset_result( X = X,
@@ -187,9 +203,7 @@ corr_tests = function( d,
   }
   
   ######## Westfall's single-step and step-down ########
-  
-  library(StepwiseTest)
-  
+
   if ( "minP" %in% method ) {
     p.adj.minP = adjust_minP( samp.res$pvals, resamps$p.bt )
     jt.rej.minP = any( p.adj.minP < alpha.fam )
@@ -241,7 +255,8 @@ corr_tests = function( d,
 #' @param d Dataframe 
 #' @param X Single quoted name of covariate of interest
 #' @param C Vector of quoted covariate names
-#' @param Ys Vector of quoted outcome names
+#' @param Y Quoted name of single outcome for which model should be fit
+#' @param Ys Vector of all quoted outcome names
 #' @param alpha Alpha level for individual tests
 #' @param center.stats Should test statistics be centered by original-sample estimates to enforce
 #' global null?
@@ -249,12 +264,6 @@ corr_tests = function( d,
 #' Can be left NA for non-centered stats. 
 #' @export
 #' @examples
-#' raw.res = fit_model(  Y.name = outcomes[1],
-#'             X.name = "A1SEPA_z",
-#'             .d = d,
-#'             .covars = covars,
-#'             .center.stats = FALSE )
-#'
 #' data(attitude)
 #' fit_model( X = "complaints",
 #'            C = c("privileges", "learning"),
@@ -265,6 +274,7 @@ corr_tests = function( d,
 #'            bhat.orig = NA,  # bhat.orig is a single value now for just the correct Y
 #'            alpha = 0.05 )
 
+
 fit_model = function( X,
                       C = NA,
                       Y,
@@ -274,6 +284,7 @@ fit_model = function( X,
                       bhat.orig = NA,  # bhat.orig is a single value now for just the correct Y
                       alpha = 0.05 ) {
 
+  #browser()
   # all covariates, including the one of interest
   if ( all( is.na(C) ) ) covars = X
   else covars = c( X, C )
@@ -312,7 +323,6 @@ fit_model = function( X,
   return( list( stats = stats,
                 resids = residuals(m) ) )
 }
-
 
 
 ########################### FN: GIVEN DATASET, RETURN STATS ###########################
@@ -411,12 +421,19 @@ dataset_result = function( d,
 #' @param bhat.orig Estimated coefficients for covariate of interest in original sample (W-vector)
 #' @param B Number of resamples to generate
 #' @param cores Number of cores available for parallelization
+#' @import
+#' doParallel
+#' foreach
 #' @export
 #' @examples
+#' 
+#' # mean-center the covariates
+#' d = as.data.frame( apply( attitude, 2, function(col) col - mean(col) ) )
+#' 
 #' samp.res = dataset_result( X = "complaints",
 #'                 C = c("privileges", "learning"),
 #'                 Ys = c("rating", "raises"),
-#'                 d = attitude,
+#'                 d = d,
 #'                 center.stats = FALSE,
 #'                 bhat.orig = NA,  # bhat.orig is a single value now for just the correct Y
 #'                 alpha = 0.05 )
@@ -424,12 +441,12 @@ dataset_result = function( d,
 #' resamps = resample_resid(  X = "complaints",
 #'                   C = c("privileges", "learning"),
 #'                   Ys = c("rating", "raises"),
-#'                   d = attitude,
+#'                   d = d,
 #'                   alpha = 0.05,
 #'                   resid = samp.res$resid,
 #'                   bhat.orig = samp.res$b,
 #'                   B=20,
-#'                   cores = 8)
+#'                   cores = 2)
 
 resample_resid = function( d,
                           X,
@@ -444,9 +461,6 @@ resample_resid = function( d,
   if ( all( is.na(C) ) ) covars = X
   else covars = c( X, C )
   
-  
-  # ~~~~~ NEED TO CHECK THIS!!!
-  
   ##### Check for Bad Input
   # warn about too-small N or B
   if ( nrow(d) < 100 ) warning("Sample size is too small to ensure good asymptotic behavior of resampling.")
@@ -454,7 +468,8 @@ resample_resid = function( d,
   
   # warn about covariates that aren't mean-centered
   tolerance = .Machine$double.eps ^ 0.5
-  diffs = abs( colMeans(d[ , covars ]) - rep(0, length(covars)) )
+  zero = rep(0, length(covars))
+  diffs = abs( apply( as.matrix( d[ , covars ] ), 2, mean ) - zero )
   
   # indices of non-centered covariates
   not.cent = which( diffs > tolerance )
@@ -463,6 +478,7 @@ resample_resid = function( d,
     stop( paste( "The following covariates need to be mean-centered to proceed: ", 
                     paste( covars[not.cent], collapse = ", " ), 
                     sep = "" ) )
+  }
   ##### end checks for bad input
   
   
@@ -474,7 +490,6 @@ resample_resid = function( d,
   if( all( is.na(C) ) ) names(Xs) = X
   
   # run all bootstrap iterates
-  library(doParallel)
   registerDoParallel(cores=cores) 
   
   # run all resamples: takes ~10 min
@@ -546,7 +561,6 @@ adjust_minP = function( p, p.bt ) {
   
   return(p.adj)
 }
-
 
 
 
@@ -643,6 +657,8 @@ get_crit = function( p.dat, col.p ) {
 #' @param rho.YY Correlation between all pairs of Ys
 #' @param rho.XY Correlation between pairs of X-Y that are not null (see below)
 #' @param prop.corr Proportion of X-Y pairs that are non-null (non-nulls will be first .prop.corr * .nY pairs)
+#' @import
+#' matrixcalc
 #' @export
 
 make_corr_mat = function( nX,
@@ -771,12 +787,14 @@ cell_corr = function( vname.1,
 #' Simulates 1 dataset with MVN(0,1) correlated covariates and outcomes
 #' @param n Number of covariates, including the one of interest 
 #' @param cor Correlation matrix (e.g., from make_corr_mat)
+#' @import
+#' mvtnorm
 #' @export
 
 sim_data = function( n, cor ) {
   
   # variable names
-  vnames = names( cor )
+  vnames = names(cor)
   
   # simulate the dataset
   # everything is a standard Normal

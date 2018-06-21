@@ -3,58 +3,102 @@ library(devtools)
 
 ###################### TEST FNS FOR APPLYING OUR METRICS ###################### 
 
+
+# fix_input with extra covariates
+test_that("fix_input #2", {
+  cor = make_corr_mat( nX = 1,
+                       nY = 4,
+                       rho.XX = 0,
+                       rho.YY = 0.25,
+                       rho.XY = 0,
+                       prop.corr = 1 )
+  
+  d = sim_data( n = 20, cor = cor )
+  all.covars = names(d)[ grep( "X", names(d) ) ]
+  C = all.covars[ !all.covars == "X1" ]
+  
+  ##### Add Bad Input ######
+  # insert missing data
+  d[1,4] = NA
+  
+  # insert a decoy variable that should be removed in analysis
+  d$X20 = rnorm( n = nrow(d) )
+  d$X21 = rnorm( n = nrow(d) )
+  
+  # make one of the covariates not mean-centered
+  d$X1 = d$X1 + 2
+  
+  d = fix_input( X="X1",
+                 C=NA,
+                 Ys=names(d)[ grep( "Y", names(d) ) ],
+                 d = d )
+  
+  # check that it caught bad input
+  expect_equal( as.numeric( colMeans(d) ),
+                rep(0, ncol(d) ) )
+  
+  expect_equal( c( "X20", "X21" ) %in% names(d), 
+                c(FALSE, FALSE) )
+  
+  expect_equal( any( is.na(d) ), 
+                FALSE )
+} )
+
+
+
+# fix_input with extra covariates
 test_that("fix_input #1", {
-cor = make_corr_mat( nX = 5,
-                     nY = 10,
-                     rho.XX = -0.06,
-                     rho.YY = 0.1,
-                     rho.XY = -0.1,
-                     prop.corr = 8/40 )
-
-d = sim_data( n = 20, cor = cor )
-all.covars = names(d)[ grep( "X", names(d) ) ]
-C = all.covars[ !all.covars == "X1" ]
-
-##### Add Bad Input ######
-# insert missing data
-d[1,4] = NA
-
-# insert a decoy variable that should be removed in analysis
-d$X20 = rnorm( n = nrow(d) )
-d$X21 = rnorm( n = nrow(d) )
-
-# make one of the covariates not mean-centered
-d$X5 = d$X5 + 2
-
-d = fix_input( X="X1",
-           C=C,
-           Ys=names(d)[ grep( "Y", names(d) ) ],
-           d = d )
-
-# check that it caught bad input
-expect_equal( as.numeric( colMeans(d) ),
-              rep(0, ncol(d) ) )
-
-expect_equal( c( "X20", "X21" ) %in% names(d), 
-              c(FALSE, FALSE) )
-
-expect_equal( any( is.na(d) ), 
-              FALSE )
+  cor = make_corr_mat( nX = 5,
+                       nY = 10,
+                       rho.XX = -0.06,
+                       rho.YY = 0.1,
+                       rho.XY = -0.1,
+                       prop.corr = 8/40 )
+  
+  d = sim_data( n = 20, cor = cor )
+  all.covars = names(d)[ grep( "X", names(d) ) ]
+  C = all.covars[ !all.covars == "X1" ]
+  
+  ##### Add Bad Input ######
+  # insert missing data
+  d[1,4] = NA
+  
+  # insert a decoy variable that should be removed in analysis
+  d$X20 = rnorm( n = nrow(d) )
+  d$X21 = rnorm( n = nrow(d) )
+  
+  # make one of the covariates not mean-centered
+  d$X5 = d$X5 + 2
+  
+  d = fix_input( X="X1",
+             C=C,
+             Ys=names(d)[ grep( "Y", names(d) ) ],
+             d = d )
+  
+  # check that it caught bad input
+  expect_equal( as.numeric( colMeans(d) ),
+                rep(0, ncol(d) ) )
+  
+  expect_equal( c( "X20", "X21" ) %in% names(d), 
+                c(FALSE, FALSE) )
+  
+  expect_equal( any( is.na(d) ), 
+                FALSE )
 } )
 
 
 
 
 
-res = corr_tests( d,
-                  X = "X1",
-                  C = C,
-                  Ys = names(d)[ grep( "Y", names(d) ) ],
-                  B=5,
-                  cores,
-                  alpha = 0.05,
-                  alpha.fam = 0.05,
-                  method = "nreject" )
+# res = corr_tests( d,
+#                   X = "X1",
+#                   C = C,
+#                   Ys = names(d)[ grep( "Y", names(d) ) ],
+#                   B=5,
+#                   cores,
+#                   alpha = 0.05,
+#                   alpha.fam = 0.05,
+#                   method = "nreject" )
 
 
 
@@ -367,7 +411,7 @@ test_that("adjust_Wstep #1", {
   sort(pvals)
   r = c(1,3,2)
   
-  qstar = matrix( NA, nrow = B, ncol = 3)
+  qstar = matrix( NA, nrow = nrow(p.bt), ncol = ncol(p.bt) )
   
   for (i in 1:nrow(p.bt)) {
     qstar[i,3] = p.bt[ i, r[3] ]
@@ -388,7 +432,7 @@ test_that("adjust_Wstep #1", {
   # put back in original order
   p.adj = p.tilde.sort[r]
   
-  expect_equal( p.adj, adj_Wstep( p = pvals, p.bt = resamps$p.bt) )
+  expect_equal( p.adj, adj_Wstep( p = pvals, p.bt = t(p.bt) ) )
 })
 
 
@@ -416,7 +460,10 @@ test_that("resample_resid #1", {
                        prop.corr = 1 )
   
   d = sim_data( n = 1000, cor = cor )
+  # mean-center them
+  d = as.data.frame( apply( d, 2, function(col) col - mean(col) ) )
   
+  # bookmark
   samp.res = dataset_result( X = "X1",
                              C = NA,
                              Ys = c("Y1", "Y2", "Y3"), 
@@ -441,6 +488,38 @@ test_that("resample_resid #1", {
 } )
 
 
+# test a case where things aren't mean-centered
+
+test_that("resample_resid #2", {
+  # Sanity Check
+  nX = 1
+  nY = 3
+  B = 5
+  
+  library(matrixcalc)
+  library(mvtnorm)
+  
+  cor = make_corr_mat( nX = nX,
+                       nY = nY,
+                       rho.XX = 0,
+                       rho.YY = 0.25,
+                       rho.XY = 0.05,
+                       prop.corr = 1 )
+  
+  d = sim_data( n = 500, cor = cor )
+  d = d + 1
+  
+  # should give error because not mean-centered
+  expect_error( resample_resid( X = "X1",
+                            C = NA,
+                            Ys = c("Y1", "Y2", "Y3"),
+                            d = d,
+                            alpha = 0.05,
+                            resid = samp.res$resid,
+                            bhat.orig = samp.res$bhats,
+                            B=5000,
+                            cores = 8 ) )
+} )
 
 
 
