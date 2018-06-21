@@ -5,9 +5,70 @@
 # library(NRejections)
 # test()
 
+
+
+########################### CHECK FOR BAD USER INPUT ###########################
+
+
+#' Fix bad user input
+#' 
+#' Checks for and fixes (with warnings) bad user input: missing data on analysis variables,
+#' datasets containing extraneous variables, datasets containing covariates that are not
+#' mean-centered.
+#' @param d Dataframe 
+#' @param X Single quoted name of covariate of interest
+#' @param C Vector of quoted covariate names
+#' @param Ys Vector of quoted outcome names
+#' @export
+
+fix_input = function( X, 
+                      C, 
+                      Ys,
+                      d ) {
+  
+  ##### Missing Data #####
+  # remove subjects missing any outcome or covariate (to have same sample size for all regressions)
+  # also remove any non-analysis variables from dataset
+  has.analysis.vars = complete.cases( d[ , c(X, C, Ys) ] ) 
+  d = d[ has.analysis.vars, ]
+  dropped = sum( has.analysis.vars == FALSE )
+  if (dropped > 0) warning( paste( dropped,
+                                   " observations were dropped from analysis because they were
+                                   missing at least one analysis variable", 
+                                   sep = "") )
+  
+  ##### Extraneous Variables #####
+  # remove non-analysis variables from dataset
+  analysis.vars = c(X, C, Ys)
+  extras = names(d)[ ! names(d) %in% analysis.vars ]
+  if ( length(extras) > 0 ){ 
+    warning( paste( "The following variables were removed from the dataset because they are not in X, C, or Ys: ",
+                    paste( extras, collapse = ", " ), 
+                    sep = "" ) )
+    d = d[ , analysis.vars ]
+  }
+  
+  ##### Mean-Centered Covariates #####
+  covars = c(X, C)
+  tolerance = .Machine$double.eps ^ 0.5
+  
+  diffs = abs( colMeans(d[ , covars ]) - rep(0, length(covars)) )
+  
+  # indices of non-centered covariates
+  not.cent = which( diffs > tolerance )
+  
+  if ( length(not.cent) > 0 ) {
+    warning( paste( "The following covariates have been mean-centered, with implications for model interpretation: ", 
+                    paste( covars[not.cent], collapse = ", " ), 
+                    sep = "" ) )
+    d = apply( d, 2, function(col) col - mean(col) )
+  }
+}
+
+
 ########################### WRAPPER FN: ESTIMATE OUR METRICS ###########################
 
-# bookmark: work on this
+# Bookmark: Work on this
 
 #' Our metrics
 #' 
@@ -15,26 +76,42 @@
 #' @param d Dataframe 
 #' @param X Single quoted name of covariate of interest
 #' @param C Vector of quoted covariate names
-#' @param Y Vector of quoted outcome names
+#' @param Ys Vector of quoted outcome names
 #' @param B Number of resamples to generate
 #' @param alpha Vector of alpha levels
 #' @param method Which methods to report (ours, Westfall's two methods, Bonferroni, Holm, Romano)
 #' @export
+#' @examples
+#' corr_tests( d = attitude,
+#'           X = "complaints",
+#'           C = c("privileges", "learning"),
+#'           Ys = c("rating", "raises"),
+#'           B=50,
+#'           cores = 8,
+#'           alpha = 0.05,
+#'           alpha.fam = 0.05,
+#'           method = c( "nreject", "bonferroni", "holm", "minP", "Wstep", "romano" ) )
 
 corr_tests = function( d,
                        X,
                        C,
                        Ys,
-                       B=20,
+                       B=2000,
                        cores,
                        alpha = 0.05,
                        alpha.fam = 0.05,
                        method = "nreject" ) {
   
   # ~~~ TO DO:
-  # discard incomplete cases and warn user
   # check to exclude any weird lm() specifications that we can't handle
-  # check that all covariates are mean-centered; if not, do it ourselves
+  # warn about small sample sizes and small B
+
+  
+  d = fix_input( X = X,
+                 C = C,
+                 Ys = Ys,
+                 d = d )
+  
   
   # fit models to original data
   samp.res = dataset_result( X = X,
@@ -48,7 +125,7 @@ corr_tests = function( d,
   resamps = resample_resid(  X = X,
                              C = C,
                              Ys = Ys,
-                             d = attitude,
+                             d = d,
                              alpha = alpha,
                              resid = samp.res$resid,
                              bhat.orig = samp.res$b,
@@ -144,11 +221,7 @@ corr_tests = function( d,
   }
   
   ######## Return Stuff ########
-  
-  # for global tests, concantante them and their names to a new vector
-  
-  
-  return( list( samp.res = samp.res,
+    return( list( samp.res = samp.res,
                 nrej.bt = resamps$rej.bt,
                 null.int = c(bt.lo, bt.hi), # ours
                 excess.hits = as.numeric( samp.res$rej - bt.hi ), # ours
@@ -156,16 +229,7 @@ corr_tests = function( d,
   ) )
 }
 
-# # BOOKMARK
-# corr_tests( d = attitude,
-#           X = "complaints",
-#           C = c("privileges", "learning"),
-#           Ys = c("rating", "raises"),
-#           B=50,
-#           cores = 8,
-#           alpha = 0.05,
-#           alpha.fam = 0.05,
-#           method = c( "nreject", "bonferroni", "holm", "minP", "Wstep", "romano" ) )
+
 
 
 ########################### FN: FIT ONE OUTCOME MODEL (OLS) ###########################
@@ -374,11 +438,33 @@ resample_resid = function( d,
                            alpha,
                            resid,
                            bhat.orig,
-                           B=20,
+                           B=2000,
                            cores = NULL ) {
   
   if ( all( is.na(C) ) ) covars = X
   else covars = c( X, C )
+  
+  
+  # ~~~~~ NEED TO CHECK THIS!!!
+  
+  ##### Check for Bad Input
+  # warn about too-small N or B
+  if ( nrow(d) < 100 ) warning("Sample size is too small to ensure good asymptotic behavior of resampling.")
+  if ( B < 1000 ) warning("Number of resamples is too small to ensure good asymptotic behavior of resampling.")
+  
+  # warn about covariates that aren't mean-centered
+  tolerance = .Machine$double.eps ^ 0.5
+  diffs = abs( colMeans(d[ , covars ]) - rep(0, length(covars)) )
+  
+  # indices of non-centered covariates
+  not.cent = which( diffs > tolerance )
+  
+  if ( length(not.cent) > 0 ) {
+    stop( paste( "The following covariates need to be mean-centered to proceed: ", 
+                    paste( covars[not.cent], collapse = ", " ), 
+                    sep = "" ) )
+  ##### end checks for bad input
+  
   
   # compute Y-hat using residuals
   Yhat = d[, Ys] - resid
@@ -550,7 +636,7 @@ get_crit = function( p.dat, col.p ) {
 
 #' Makes correlation matrix to simulate data
 #' 
-#' If correlation matrix isn't positive definite, try reducing some of the correlations
+#' If correlation matrix isn't positive definite, try reducing the correlation magnitudes.
 #' @param nX Number of covariates, including the one of interest 
 #' @param nY Number of outcomes
 #' @param rho.XX Correlation between all pairs of Xs

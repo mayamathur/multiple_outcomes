@@ -3,6 +3,61 @@ library(devtools)
 
 ###################### TEST FNS FOR APPLYING OUR METRICS ###################### 
 
+test_that("fix_input #1", {
+cor = make_corr_mat( nX = 5,
+                     nY = 10,
+                     rho.XX = -0.06,
+                     rho.YY = 0.1,
+                     rho.XY = -0.1,
+                     prop.corr = 8/40 )
+
+d = sim_data( n = 20, cor = cor )
+all.covars = names(d)[ grep( "X", names(d) ) ]
+C = all.covars[ !all.covars == "X1" ]
+
+##### Add Bad Input ######
+# insert missing data
+d[1,4] = NA
+
+# insert a decoy variable that should be removed in analysis
+d$X20 = rnorm( n = nrow(d) )
+d$X21 = rnorm( n = nrow(d) )
+
+# make one of the covariates not mean-centered
+d$X5 = d$X5 + 2
+
+d = fix_input( X="X1",
+           C=C,
+           Ys=names(d)[ grep( "Y", names(d) ) ],
+           d = d )
+
+# check that it caught bad input
+expect_equal( as.numeric( colMeans(d) ),
+              rep(0, ncol(d) ) )
+
+expect_equal( c( "X20", "X21" ) %in% names(d), 
+              c(FALSE, FALSE) )
+
+expect_equal( any( is.na(d) ), 
+              FALSE )
+} )
+
+
+
+
+
+res = corr_tests( d,
+                  X = "X1",
+                  C = C,
+                  Ys = names(d)[ grep( "Y", names(d) ) ],
+                  B=5,
+                  cores,
+                  alpha = 0.05,
+                  alpha.fam = 0.05,
+                  method = "nreject" )
+
+
+
 # fit_model doesn't need a test because we test it through the dataset_result tests
 
 # without centering test stats
