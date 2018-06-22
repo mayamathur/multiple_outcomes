@@ -5,7 +5,7 @@
 # library(NRejections)
 # test()
 
-
+# PROBLEM: DO WE REALLY NEED MEAN-CENTERING? WHAT ABOUT CATEGORICAL COVARIATES?
 
 ########################### CHECK FOR BAD USER INPUT ###########################
 
@@ -51,21 +51,22 @@ fix_input = function( X,
     d = d[ , analysis.vars ]
   }
   
+  # ~~~~ REMOVED THIS
   ##### Mean-Centered Covariates #####
-  tolerance = .Machine$double.eps ^ 0.5
-  zero = rep( 0, length(covars) )
-  # as.matrix handles case where there is only 1 covariate
-  diffs = abs( apply( as.matrix(d[ , covars ]), 2, mean ) - zero )
-  
-  # indices of non-centered covariates
-  not.cent = which( diffs > tolerance )
-  
-  if ( length(not.cent) > 0 ) {
-    warning( paste( "The following covariates have been mean-centered, with implications for model interpretation: ", 
-                    paste( covars[not.cent], collapse = ", " ), 
-                    sep = "" ) )
-    d = as.data.frame( apply( d, 2, function(col) col - mean(col) ) )
-  }
+  # tolerance = .Machine$double.eps ^ 0.5
+  # zero = rep( 0, length(covars) )
+  # # as.matrix handles case where there is only 1 covariate
+  # diffs = abs( apply( as.matrix(d[ , covars ]), 2, mean ) - zero )
+  # 
+  # # indices of non-centered covariates
+  # not.cent = which( diffs > tolerance )
+  # 
+  # if ( length(not.cent) > 0 ) {
+  #   warning( paste( "The following covariates have been mean-centered, with implications for model interpretation: ", 
+  #                   paste( covars[not.cent], collapse = ", " ), 
+  #                   sep = "" ) )
+  #   d = as.data.frame( apply( d, 2, function(col) col - mean(col) ) )
+  # }
 }
 
 
@@ -122,6 +123,8 @@ corr_tests = function( d,
                        alpha = 0.05,
                        alpha.fam = 0.05,
                        method = "nreject" ) {
+  
+  #browser()
   
   # check for and fix bad user input
   d = fix_input( X = X,
@@ -284,7 +287,6 @@ fit_model = function( X,
                       bhat.orig = NA,  # bhat.orig is a single value now for just the correct Y
                       alpha = 0.05 ) {
 
-  #browser()
   # all covariates, including the one of interest
   if ( all( is.na(C) ) ) covars = X
   else covars = c( X, C )
@@ -466,19 +468,20 @@ resample_resid = function( d,
   if ( nrow(d) < 100 ) warning("Sample size is too small to ensure good asymptotic behavior of resampling.")
   if ( B < 1000 ) warning("Number of resamples is too small to ensure good asymptotic behavior of resampling.")
   
-  # warn about covariates that aren't mean-centered
-  tolerance = .Machine$double.eps ^ 0.5
-  zero = rep(0, length(covars))
-  diffs = abs( apply( as.matrix( d[ , covars ] ), 2, mean ) - zero )
-  
-  # indices of non-centered covariates
-  not.cent = which( diffs > tolerance )
-  
-  if ( length(not.cent) > 0 ) {
-    stop( paste( "The following covariates need to be mean-centered to proceed: ", 
-                    paste( covars[not.cent], collapse = ", " ), 
-                    sep = "" ) )
-  }
+  # ~~~ REMOVED THIS
+  # # warn about covariates that aren't mean-centered
+  # tolerance = .Machine$double.eps ^ 0.5
+  # zero = rep(0, length(covars))
+  # diffs = abs( apply( as.matrix( d[ , covars ] ), 2, mean ) - zero )
+  # 
+  # # indices of non-centered covariates
+  # not.cent = which( diffs > tolerance )
+  # 
+  # if ( length(not.cent) > 0 ) {
+  #   stop( paste( "The following covariates need to be mean-centered to proceed: ", 
+  #                   paste( covars[not.cent], collapse = ", " ), 
+  #                   sep = "" ) )
+  # }
   ##### end checks for bad input
   
   
