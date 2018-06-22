@@ -81,7 +81,7 @@ A[2,1]; c1 * ( -S1 + X1[1]*N )
 # RHS of first line after "the regularity condition concerns the term"
 # vs. the next line
 
-c2 = 1 / ( N * S2^2 - 2 * S2 * S1^2 + (S2 / N) )
+c2 = 1 / ( N * S2^2 - 2 * S2 * S1^2 + (S1^4 / N) )
 #c2 = 1 / ( N * S2^2 - 2 * S2 * S1^2 + (S2 / N) )
 term = sum( ( (N * X1) - S1 )^2 )
 
@@ -89,23 +89,30 @@ N * sum( A[2,]^2 ); c2 * term
 # yes :) 
 # ~~~~~ DOESN'T WORK IF NOT MEAN-CENTERED
 
-### keep simplifying
+
+### keep simplifying the sum term
 # pull sum through
 ( N^2 * S2 - 2 * N * S1^2 + N*S1^2 ) * c2
 
-# final result
-(N^2 * S2 - N*S1^2 ) / (N * S2^2 - 2 * S2*S1^2 + S2/N )
+# penultimate
+(N^2 * S2 - N*S1^2 ) / (N * S2^2 - 2 * S2*S1^2 + (S1^4)/N )
 # still matches!! :D
+
+# last line
+num = (S2/N - S1^2/(N^2) )
+denom =  ( S2^2/(N^2) - 2 * (S2/N) * S1^2/(N^2) + (S1^4)/(N^4) )
+num/denom
+# still matches!! :D
+
 
 # if mean-centered, should approach this as n -> infty
 1/varX
 
-
+# if not mean-centered
+varX; num
+varX^2; denom
 
 ### understand what happens with mean-centering
-# last line
-(S2/N - S1^2/(N^2) ) / ( S2^2/(N^2) - 2 * (S2/N) * S1^2/(N^2) + S2/(N^4) )
-# numerator goes to Var(X)
 
 # if Var(X) = (E(X))^2, then denom goes to 0 becasue:
 ( E.X2 = varX + mean^2 )
