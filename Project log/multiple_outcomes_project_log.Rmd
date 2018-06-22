@@ -391,6 +391,14 @@ Resampling-based procedures for FWER control.
 
 \section{Resolved questions}
 
+$\ast$: good for defense
+
+\section{Resolved questions}
+
+\subsection{Why did we use a complicated distance metric instead of a simpler argument regarding convergence in probability?}
+
+Because the Wasserstein metric permits a valid triangle inequality while also having direct relationships with standard notions of convergence. 
+
 \subsection{Why doesn't MICE idea work?}
 
 MICE thing doesn't work because we're regressing $Y_2$ on $Y_1$, and if data are generated under $H_A$, these are correlated because both outcomes are correlated with $X$. This remains true even if we leave $X$ out of the imputation model. 
