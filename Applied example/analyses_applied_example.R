@@ -63,9 +63,6 @@ outcomes = c("flourish_z",
              "B1SPWBU1z",
              "B1SPWBS1z")
 
-# # make codebook saying variable values
-# library(dataMaid)
-# makeCodebook(d)
 
 ############################## APPENDIX TABLE E.3: DEMOGRAPHICS ##############################
 
@@ -76,6 +73,7 @@ cb = read.xlsx(file="Analysis dataset codebook.xlsx",
                sheetName="codebook",
                header=TRUE)
 
+# for now, only keep variables needed for table
 temp = d[ , covars ]
 names(temp) = cb$Long.name[ cb$Variable. %in% names(temp) ]
 
@@ -123,15 +121,19 @@ for( i in 1:length(outcomes) ) {
   resids[,i] = raw.res$resids
 }
 
-# sanity check: fit one model manually
+# housekeeping
+names(stats) = names(raw.res$stats)
+stats$outcome = outcomes  # gets turned into "1" for some reason
+ 
+
+# # sanity check: fit one model manually
 # m = lm( flourish_z ~ A1SEPA_z + A1PAGE_M2 + A1PRSEX + raceA + A1SE2 + A1SE3 + A1SE4 + A1PC1 + sibling + CEDUC4cat + A1PC14 + A1SE9 + A1SE7 + A1SE8c + mom_smk + dad_smk + B1PA58 + A1SE6,
 #     data = d)
 # summary(m)
 # confint(m)
+# # compare: 
+# stats[1,]
 
-# housekeeping
-names(stats) = names(raw.res$stats)
-stats$outcome = outcomes  # gets turned into "1" for some reason
 
 # observed rejections
 ( th.0.05 = sum(stats$reject.0.05) )
@@ -153,6 +155,8 @@ stats.pretty$outcome = cb$Long.name[ cb$Variable. %in% stats.pretty$outcome ]
 
 print( xtable(stats.pretty), include.rownames = FALSE )
 
+
+# BOOKMARK: STOPPED HERE
 
 # ############################## BOOTSTRAPPING ##############################
 # 

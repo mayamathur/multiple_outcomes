@@ -5,13 +5,12 @@ library(rprojroot)
 root.path = rprojroot::find_rstudio_root_file()
 setwd(root.path)
 
-# # this part takes FOREVER, so is commented out
+# ##### This part takes ~5-10 min to run, so is commented out #####
 # # read in SAS data from Ying
-# # N = 2773
 # setwd("Prepped data")
 # library(sas7bdat)
 # d = read.sas7bdat("flourish_ying.sas7bdat")
-# nrow(d)
+# nrow(d) # should be 2,773
 # 
 # # sanity check for inclusion criteria in beginning of Ying's SAS file 9
 # # should always be 2
@@ -24,8 +23,8 @@ setwd(root.path)
 
 # read in Ying's data as csv to avoid SAS conversion process
 setwd("Prepped data")
-read.csv("flourish_ying.csv", header = TRUE); nrow(d)
-
+d = read.csv("flourish_ying.csv", header = TRUE); nrow(d)
+# should be 2,773 still
 
 
 
@@ -40,11 +39,13 @@ source("helper_applied_example.R")
 d2 = d
 
 # recode some categoricals
+# see the file "00. Parental warmth and flourishing_data step.sas"
+# also see MIDUS codebooks or "Analysis dataset codebook" for the original source
 d2$A1PRSEX = recode( d2$A1PRSEX, " 1='a.Male'; 2='b.Female' ")
 table(d$A1PRSEX, d2$A1PRSEX)
 
-d2$raceA = recode( d2$race, " 'White'='a.White'; 'Black'='b.Black'; 'others'='c.Others' ")
-table(d$race, d2$raceA)
+d2$raceA = recode( d2$raceA, " 1='a.White'; 2='b.Black'; 3='c.Others' ")
+table(d$raceA, d2$raceA)
 
 d2$CEDUC4cat = recode( d2$CEDUC4cat, " 1='a.Less than high school'; 2='b.High school'; 3='c.Some college'; 4='d.College degree or more' ")
 table(d$CEDUC4cat, d2$CEDUC4cat)
@@ -55,8 +56,10 @@ table(d$A1SE7, d2$A1SE7)
 d2$A1SE6 = recode( d2$A1SE6, " 1='a.Very important'; 2='b.Somewhat important'; 3='c.Not very important'; 4='d.Not at all important'; 7='e.Unsure' ")
 table(d$A1SE6, d2$A1SE6)
 
-# recode binaries from 1/2 to 0/1 scheme
+# recode binaries from yes=1 / no=2 to 0/1 scheme
 recode_binary( c( "A1SE2", "A1SE3", "A1SE4", "A1PC1", "B1PA58", "A1PC14" ) )
+# look at one as an example
+table(d$A1SE2, d2$A1SE2)
 
 # check results
 library(tableone)
@@ -115,9 +118,11 @@ d2 = d2[ has.analysis.vars, ]
 dim(d2)
 # should be N = 2697
 
+
+
 ############################## SAVE PREPPED DATA ############################## 
 
-setwd("Prepped data")
+setwd(root.path); setwd("Prepped data")
 write.csv(d2, "flourish_prepped.csv")
 
 
