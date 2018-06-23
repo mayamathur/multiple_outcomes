@@ -13,12 +13,12 @@ X = as.matrix( data.frame( int = rep(1, N),
 
 ##### Scenario 2: not mean-centered ##### 
 
-set.seed(451)
+#set.seed(451)
 mean = 5
-varX = mean^2
+varX = mean*3
 X = as.matrix( data.frame( int = rep(1, N), 
-                           X1 = rnorm(N, mean=mean, sd=sqrt(varX)) ) )
-#  X2 = rnorm(N, mean=0, sd = 10) ) )
+                           X1 = rnorm( N, mean=mean, sd=sqrt(varX) ),
+                           X2 = rnorm(N, mean=mean, sd = 20) ) )
 
 
 t(X) %*% X
@@ -105,12 +105,9 @@ num/denom
 # still matches!! :D
 
 
-# if mean-centered, should approach this as n -> infty
+# should approach this as n -> infty
 1/varX
 
-# if not mean-centered
-varX; num
-varX^2; denom
 
 ### understand what happens with mean-centering
 

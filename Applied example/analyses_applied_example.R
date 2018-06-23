@@ -63,9 +63,6 @@ outcomes = c("flourish_z",
              "B1SPWBU1z",
              "B1SPWBS1z")
 
-# # make codebook saying variable values
-# library(dataMaid)
-# makeCodebook(d)
 
 ############################## APPENDIX TABLE E.3: DEMOGRAPHICS ##############################
 
@@ -76,6 +73,7 @@ cb = read.xlsx(file="Analysis dataset codebook.xlsx",
                sheetName="codebook",
                header=TRUE)
 
+# for now, only keep variables needed for table
 temp = d[ , covars ]
 names(temp) = cb$Long.name[ cb$Variable. %in% names(temp) ]
 
@@ -123,15 +121,19 @@ for( i in 1:length(outcomes) ) {
   resids[,i] = raw.res$resids
 }
 
-# sanity check: fit one model manually
+# housekeeping
+names(stats) = names(raw.res$stats)
+stats$outcome = outcomes  # gets turned into "1" for some reason
+ 
+
+# # sanity check: fit one model manually
 # m = lm( flourish_z ~ A1SEPA_z + A1PAGE_M2 + A1PRSEX + raceA + A1SE2 + A1SE3 + A1SE4 + A1PC1 + sibling + CEDUC4cat + A1PC14 + A1SE9 + A1SE7 + A1SE8c + mom_smk + dad_smk + B1PA58 + A1SE6,
 #     data = d)
 # summary(m)
 # confint(m)
+# # compare: 
+# stats[1,]
 
-# housekeeping
-names(stats) = names(raw.res$stats)
-stats$outcome = outcomes  # gets turned into "1" for some reason
 
 # observed rejections
 ( th.0.05 = sum(stats$reject.0.05) )
@@ -152,6 +154,21 @@ stats.pretty = data.frame( outcome = stats$outcome,
 stats.pretty$outcome = cb$Long.name[ cb$Variable. %in% stats.pretty$outcome ]
 
 print( xtable(stats.pretty), include.rownames = FALSE )
+
+
+# # sanity check - check the ones with exactly duplicated results
+# # positive affect
+# m1 = lm( B1SPOSAFz ~ A1SEPA_z + A1PAGE_M2 + A1PRSEX + raceA + A1SE2 + A1SE3 + A1SE4 + A1PC1 + sibling + CEDUC4cat + A1PC14 + A1SE9 + A1SE7 + A1SE8c + mom_smk + dad_smk + B1PA58 + A1SE6,
+#     data = d)
+# summary(m1)
+# confint(m1)
+# 
+# # life satisfaction
+# m2 = lm( B1SQ1z ~ A1SEPA_z + A1PAGE_M2 + A1PRSEX + raceA + A1SE2 + A1SE3 + A1SE4 + A1PC1 + sibling + CEDUC4cat + A1PC14 + A1SE9 + A1SE7 + A1SE8c + mom_smk + dad_smk + B1PA58 + A1SE6,
+#         data = d)
+# summary(m2)
+# confint(m2)
+  
 
 
 # ############################## BOOTSTRAPPING ##############################
@@ -322,12 +339,6 @@ qbinom( .975, size=17, prob=0.01)
 ( pval.binom = .05^17 )
 
 
-############################## SAVE ANALYSIS OBJECTS ##############################
-
-# setwd(root.path)
-# setwd("Analysis objects for manuscript")
-# save.image(file = "analysis_objects.rds")
-
 
 ############################## SANITY CHECK: USE OUR R PACKAGE INSTEAD ##############################
 
@@ -339,41 +350,32 @@ library(matrixcalc)
 library(doParallel)
 library(foreach)
 
-# # only use numerical covariates because of mean-centering issue
-# factor.covars = c( 
-#                    "A1PRSEX",
-#                    "CEDUC4cat",
-# 
-#                    "A1SE7",
-#                    "A1SE6" )
-# d = d[ , ! names(d) %in% factor.covars]
-# 
-# C = names(d)[ !names(d) %in% c("X", "A1SEPA_z", outcomes) ]
 
 X = "A1SEPA_z"
 C = covars[ !covars == "A1SEPA_z" ]
 
-res.0.05 = corr_tests( d = d, 
-            X = X,
-            C = C,
-            Ys = outcomes,
-            B = 5000,
-            cores = 8,
-            alpha = 0.05, 
-            alpha.fam = 0.05,
-            method = c( "nreject", "bonferroni", "holm", "minP", "Wstep", "romano" )
-            )
-
-res.0.01 = corr_tests( d = d, 
-                       X = X,
-                       C = C,
-                       Ys = outcomes,
-                       B = 5000,
-                       cores = 8,
-                       alpha = 0.01, 
-                       alpha.fam = 0.05,
-                       method = c( "nreject", "bonferroni", "holm", "minP", "Wstep", "romano" )
-)
+# # commented out because it takes a long time
+# res.0.05 = corr_tests( d = d, 
+#             X = X,
+#             C = C,
+#             Ys = outcomes,
+#             B = 5000,
+#             cores = 8,
+#             alpha = 0.05, 
+#             alpha.fam = 0.05,
+#             method = c( "nreject", "bonferroni", "holm", "minP", "Wstep", "romano" )
+#             )
+# 
+# res.0.01 = corr_tests( d = d, 
+#                        X = X,
+#                        C = C,
+#                        Ys = outcomes,
+#                        B = 5000,
+#                        cores = 8,
+#                        alpha = 0.01, 
+#                        alpha.fam = 0.05,
+#                        method = c( "nreject", "bonferroni", "holm", "minP", "Wstep", "romano" )
+# )
 
 # check package results against manual results above
 # bootstrap results allowed to be off by 1 rejection at max because of randomness
@@ -393,6 +395,6 @@ expect_equal( res.0.01$excess.hits, as.numeric(excess.hits.0.01) )
 
 ############################## SAVE ANALYSIS OBJECTS ##############################
 
-setwd(root.path)
-setwd("Analysis objects for manuscript")
-save.image(file = "analysis_objects.rds")
+# setwd(root.path)
+# setwd("Analysis objects for manuscript")
+# save.image(file = "analysis_objects.rds")
