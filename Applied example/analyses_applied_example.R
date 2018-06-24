@@ -170,7 +170,6 @@ print( xtable(stats.pretty), include.rownames = FALSE )
 # confint(m2)
   
 
-
 # ############################## BOOTSTRAPPING ##############################
 # 
 # # commented out because takes a long time
