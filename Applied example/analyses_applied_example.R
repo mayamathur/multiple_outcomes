@@ -307,7 +307,7 @@ table( stats$pval <= alpha.bonf )
 # in order of reporting in manuscript
 
 # sample size
-N = nrow(d)
+( N = nrow(d) )
 
 # average correlation magnitude
 d.outs = d[, outcomes]
@@ -327,8 +327,12 @@ stats.pretty[ stats.pretty$outcome == "Overall flourishing (continuous)", ]
 # mean effect size
 mean(stats$b)
 
+# null intervals
+null.int.0.05
+null.int.0.01
+
 # exact binomial distribution inference (alpha = 0.05)
-qbinom( .025, size=1, prob=0.05)
+qbinom( .025, size=17, prob=0.05)
 qbinom( .975, size=17, prob=0.05)
 # prob of rejecting all 18
 ( pval.binom = .05^17 )
