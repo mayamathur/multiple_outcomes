@@ -3,8 +3,8 @@ library(devtools)
 
 ###################### TEST FNS FOR APPLYING OUR METRICS ###################### 
 
-
 # fix_input with extra covariates
+# X1 is extra and should be removed
 test_that("fix_input #2", {
   cor = make_corr_mat( nX = 1,
                        nY = 4,
@@ -34,9 +34,6 @@ test_that("fix_input #2", {
                  d = d )
   
   # check that it caught bad input
-  expect_equal( as.numeric( colMeans(d) ),
-                rep(0, ncol(d) ) )
-  
   expect_equal( c( "X20", "X21" ) %in% names(d), 
                 c(FALSE, FALSE) )
   
@@ -76,18 +73,12 @@ test_that("fix_input #1", {
              d = d )
   
   # check that it caught bad input
-  expect_equal( as.numeric( colMeans(d) ),
-                rep(0, ncol(d) ) )
-  
   expect_equal( c( "X20", "X21" ) %in% names(d), 
                 c(FALSE, FALSE) )
   
   expect_equal( any( is.na(d) ), 
                 FALSE )
 } )
-
-
-
 
 
 # res = corr_tests( d,
@@ -335,7 +326,7 @@ test_that("make_corr_mat #1", {
 
 ###################### TEST WESTFALL FNS ###################### 
 
-test_that("adjust_minp #1", {
+test_that("adj_minP #1", {
   # sanity check
   B = 200
   n.tests = 10
@@ -346,7 +337,7 @@ test_that("adjust_minp #1", {
   # generate fake p-values from real dataset
   p = runif( n.tests, 0, .1)
 
-  p.adj = adjust_minP( p, p.bt )
+  p.adj = adj_minP( p, p.bt )
   #plot(p, p.adj)
 
   # manually adjust second p-value

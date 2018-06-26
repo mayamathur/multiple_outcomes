@@ -5,13 +5,11 @@
 # library(NRejections)
 # test()
 
-# PROBLEM: DO WE REALLY NEED MEAN-CENTERING? WHAT ABOUT CATEGORICAL COVARIATES?
-
 ########################### CHECK FOR BAD USER INPUT ###########################
 
 #' Fix bad user input
 #' 
-#' Warns about and fixes bad user input: missing data on analysis variables,
+#' The user does not need to call this function. Warns about and fixes bad user input: missing data on analysis variables,
 #' datasets containing extraneous variables, or datasets containing covariates that are not
 #' mean-centered.
 #' @param X Single quoted name of covariate of interest
@@ -50,59 +48,59 @@ fix_input = function( X,
                     sep = "" ) )
     d = d[ , analysis.vars ]
   }
-  
-  # ~~~~ REMOVED THIS
-  ##### Mean-Centered Covariates #####
-  # tolerance = .Machine$double.eps ^ 0.5
-  # zero = rep( 0, length(covars) )
-  # # as.matrix handles case where there is only 1 covariate
-  # diffs = abs( apply( as.matrix(d[ , covars ]), 2, mean ) - zero )
-  # 
-  # # indices of non-centered covariates
-  # not.cent = which( diffs > tolerance )
-  # 
-  # if ( length(not.cent) > 0 ) {
-  #   warning( paste( "The following covariates have been mean-centered, with implications for model interpretation: ", 
-  #                   paste( covars[not.cent], collapse = ", " ), 
-  #                   sep = "" ) )
-  #   d = as.data.frame( apply( d, 2, function(col) col - mean(col) ) )
-  # }
 }
 
 
 ########################### WRAPPER FN: ESTIMATE OUR METRICS ###########################
 
-
-# # mean-center 
-# d = as.data.frame( apply( attitude, 2, function(col) col - mean(col) ) )
-# 
-#  corr_tests( d = attitude,
-#            X = "complaints",
-#            C = c("privileges", "learning"),
-#            Ys = c("rating", "raises"),
-#            B=50,
-#            alpha = 0.05,
-#            alpha.fam = 0.05,
-#            method = c( "nreject", "bonferroni", "holm", "minP", "Wstep", "romano" ) )
-
 #' Global evidence strength across correlated tests
 #' 
-#' XXX 
+#' This is the main wrapper function for the user to call. For an arbitrary number of outcome variables, regresses the outcome
+#' on an exposure of interest (\code{X}) and adjusted covariates (\code{C}). Returns the results of the original sample
+#' (statistics and inference corresponding to X for each model, along with the observed number of rejections),
+#' a 100*(1 - \code{alpha.fam}) percent null interval for the
+#' number of rejections in samples generated under the global null, the excess hits
+#' (the difference between the observed number of rejections and the upper null interval limit), 
+#' and results of a test of the global null hypothesis at \code{alpha.fam} of the global null. The global test 
+#' can be conducted based on the number of rejections or based on various FWER-control methods (see References).
 #' @param d Dataframe 
 #' @param X Single quoted name of covariate of interest
 #' @param C Vector of quoted covariate names
 #' @param Ys Vector of quoted outcome names
 #' @param B Number of resamples to generate
 #' @param cores Number of cores to use for parallelization. Defaults to number available.
-#' @param alpha Alpha level for individual hypothesis test
-#' @param alpha.fam Alpha level for global test
+#' @param alpha Alpha level for individual hypothesis tests
+#' @param alpha.fam Alpha level for global test and null interval
 #' @param method Which methods to report (ours, Westfall's two methods, Bonferroni, Holm, Romano)
+#' @return \code{samp.res} is a list containing the number of observed rejections (\code{rej}), 
+#' the coefficient estimates of interest for each outcome model (\code{bhats}), their t-values
+#' (\code{tvals}), and their uncorrected p-values at level \code{alpha} (\code{pvals}).
+#' 
+#' \code{nrej.bt} contains the number of rejections in each bootstrap resample. 
+#' 
+#' \code{null.int} contains the lower and upper limits of a 100*(1 - \code{alpha.fam}) percent null interval.
+#' 
+#' \code{excess.hits} is the difference between the observed rejections and the upper limit of the null interval.
+#' 
+#' \code{global.test} is a dataframe containing global test results for each user-specified method, including
+#' an indicator for whether the test rejects the global null at \code{alpha.fam} (\code{reject}), the p-value
+#' of the global test where possible (\code{reject}), and the critical value of the global test based on the number
+#' of rejections (\code{crit}).
 #' @import
 #' StepwiseTest
 #' stats
+#' @references 
+#' Mathur, M.B., & VanderWeele, T.J. (in preparation). New metrics for multiple testing with correlated
+#' outcomes.
+#' 
+#' Romano, J. P., & Wolf, M. (2007). Control of generalized error rates in multiple testing. The
+#' Annals of Statistics, 1378-1408.
+#' 
+#' Westfall, P. H., & Young, S. S. (1993). Resampling-based multiple testing: Examples and
+#' methods for p-value adjustment. Taylor & Francis Group.
 #' @export
 #' @examples
-#'  corr_tests( d = attitude,
+#' corr_tests( d = attitude,
 #' X = "complaints",
 #' C = c("privileges", "learning"),
 #' Ys = c("rating", "raises"),
@@ -111,8 +109,6 @@ fix_input = function( X,
 #' alpha = 0.05,
 #' alpha.fam = 0.05,
 #' method = c( "nreject", "bonferroni", "holm", "minP", "Wstep", "romano" ) )
-
-
 
 corr_tests = function( d,
                        X,
@@ -123,9 +119,7 @@ corr_tests = function( d,
                        alpha = 0.05,
                        alpha.fam = 0.05,
                        method = "nreject" ) {
-  
-  #browser()
-  
+
   # check for and fix bad user input
   d = fix_input( X = X,
                  C = C,
@@ -208,7 +202,7 @@ corr_tests = function( d,
   ######## Westfall's single-step and step-down ########
 
   if ( "minP" %in% method ) {
-    p.adj.minP = adjust_minP( samp.res$pvals, resamps$p.bt )
+    p.adj.minP = adj_minP( samp.res$pvals, resamps$p.bt )
     jt.rej.minP = any( p.adj.minP < alpha.fam )
     
     # store results
@@ -253,7 +247,7 @@ corr_tests = function( d,
 
 #' Fit OLS model for a single outcome
 #' 
-#' Fits OLS model for a single outcome with or without centering the test statistics
+#' The user does not need to call this function. Fits OLS model for a single outcome with or without centering the test statistics
 #' to enforce the global null. 
 #' @param d Dataframe 
 #' @param X Single quoted name of covariate of interest
@@ -274,7 +268,7 @@ corr_tests = function( d,
 #'            Ys = c("rating", "raises"),
 #'            d = attitude,
 #'            center.stats = FALSE,
-#'            bhat.orig = NA,  # bhat.orig is a single value now for just the correct Y
+#'            bhat.orig = NA,  
 #'            alpha = 0.05 )
 
 
@@ -331,17 +325,22 @@ fit_model = function( X,
 
 #' Fit all models for a single dataset
 #' 
-#' Fits all W OLS models for a single dataset, with or without centering the test statistics
+#' The user does not need to call this function. For a single dataset, fits separate OLS models for W outcomes with or without centering the test statistics
 #' to enforce the global null. 
 #' @param d Dataframe 
 #' @param X Single quoted name of covariate of interest
 #' @param C Vector of quoted covariate names
-#' @param Ys Vector of quoted outcome names
+#' @param Ys W-vector of quoted outcome names
 #' @param alpha Alpha level for individual tests
 #' @param center.stats Should test statistics be centered by original-sample estimates to enforce
 #' global null?
 #' @param bhat.orig Estimated coefficients for covariate of interest in original sample (W-vector).
 #' Can be left NA for non-centered stats. 
+#' @return Returns a list containing the number of observed rejections (\code{rej}), 
+#' the coefficient estimates of interest for each outcome model (\code{bhats}), their t-values
+#' (\code{tvals}), their uncorrected p-values at level \code{alpha} (\code{pvals}), and a matrix of
+#' residuals from each model (\code{resid}). The latter is used for residual resampling under the 
+#' global null. 
 #' @export
 #' @examples
 #' samp.res = dataset_result( X = "complaints",
@@ -413,7 +412,9 @@ dataset_result = function( d,
 
 #' Resample residuals for OLS
 #' 
-#' XXX 
+#' Implements the residual resampling OLS algorithm described in Mathur & VanderWeele (in preparation). 
+#' Specifically, the design matrix is fixed while the resampled outcomes are set equal to the original fitted values
+#' plus a vector of residuals sampled with replacement. 
 #' @param d Dataframe 
 #' @param X Single quoted name of covariate of interest
 #' @param C Vector of quoted covariate names
@@ -423,19 +424,20 @@ dataset_result = function( d,
 #' @param bhat.orig Estimated coefficients for covariate of interest in original sample (W-vector)
 #' @param B Number of resamples to generate
 #' @param cores Number of cores available for parallelization
+#' @return Returns a list containing the number of rejections in each resample, a matrix of p-values
+#' in the resamples, and a matrix of t-statistics in the resamples.
 #' @import
 #' doParallel
 #' foreach
+#' @references 
+#' Mathur, M.B., & VanderWeele, T.J. (in preparation). New metrics for multiple testing with correlated
+#' outcomes.
 #' @export
 #' @examples
-#' 
-#' # mean-center the covariates
-#' d = as.data.frame( apply( attitude, 2, function(col) col - mean(col) ) )
-#' 
 #' samp.res = dataset_result( X = "complaints",
 #'                 C = c("privileges", "learning"),
 #'                 Ys = c("rating", "raises"),
-#'                 d = d,
+#'                 d = attitude,
 #'                 center.stats = FALSE,
 #'                 bhat.orig = NA,  # bhat.orig is a single value now for just the correct Y
 #'                 alpha = 0.05 )
@@ -443,7 +445,7 @@ dataset_result = function( d,
 #' resamps = resample_resid(  X = "complaints",
 #'                   C = c("privileges", "learning"),
 #'                   Ys = c("rating", "raises"),
-#'                   d = d,
+#'                   d = attitude,
 #'                   alpha = 0.05,
 #'                   resid = samp.res$resid,
 #'                   bhat.orig = samp.res$b,
@@ -467,23 +469,6 @@ resample_resid = function( d,
   # warn about too-small N or B
   if ( nrow(d) < 100 ) warning("Sample size is too small to ensure good asymptotic behavior of resampling.")
   if ( B < 1000 ) warning("Number of resamples is too small to ensure good asymptotic behavior of resampling.")
-  
-  # ~~~ REMOVED THIS
-  # # warn about covariates that aren't mean-centered
-  # tolerance = .Machine$double.eps ^ 0.5
-  # zero = rep(0, length(covars))
-  # diffs = abs( apply( as.matrix( d[ , covars ] ), 2, mean ) - zero )
-  # 
-  # # indices of non-centered covariates
-  # not.cent = which( diffs > tolerance )
-  # 
-  # if ( length(not.cent) > 0 ) {
-  #   stop( paste( "The following covariates need to be mean-centered to proceed: ", 
-  #                   paste( covars[not.cent], collapse = ", " ), 
-  #                   sep = "" ) )
-  # }
-  ##### end checks for bad input
-  
   
   # compute Y-hat using residuals
   Yhat = d[, Ys] - resid
@@ -546,12 +531,29 @@ resample_resid = function( d,
 
 #' Adjust p-values using minP
 #' 
-#' Returns minP-adjusted p-values (single-step). See Westfall text, pg. 48. 
+#' Returns minP-adjusted p-values (single-step). See Westfall & Young (1993), pg. 48. 
 #' @param p Original dataset p-values (W-vector) 
-#' @param p.bt Bootstrapped p-values (an W X B matrix)
+#' @param p.bt Bootstrapped p-values (a W X B matrix)
+#' @references 
+#' Westfall, P. H., & Young, S. S. (1993). Resampling-based multiple testing: Examples and
+#' methods for p-value adjustment. Taylor & Francis Group.
 #' @export
+#' @examples
+#' # observed p-values for 3 tests
+#'  pvals = c(0.00233103655078803, 0.470366742594242, 0.00290278216035089
+#')
+#'
+#' # bootstrapped p-values for 5 resamples
+#'p.bt = t( structure(c(0.308528665936264, 0.517319402377912, 0.686518314693482,
+#'                   0.637306248855186, 0.106805510862352, 0.116705315041494, 0.0732076817175753,
+#'                   0.770308936364482, 0.384405349738909, 0.0434358213611965, 0.41497067850141,
+#'                   0.513471489744384, 0.571213377144122, 0.628054979652722, 0.490196884985226
+#'), .Dim = c(5L, 3L)) )
+#'
+#'# adjust the p-values
+#'adj_minP( p = pvals, p.bt = p.bt )
 
-adjust_minP = function( p, p.bt ) {
+adj_minP = function( p, p.bt ) {
   
   n.boot = ncol(p.bt)
   
@@ -572,10 +574,27 @@ adjust_minP = function( p, p.bt ) {
 
 #' Return Wstep-adjusted p-values
 #' 
-#' Returns Wstep-adjusted p-values. See Westfall text, pg. 66-67. 
+#' Returns p-values adjusted based on Westfall & Young (1993)'s step-down algorithm (see pg. 66-67). 
 #' @param p Original dataset p-values (W-vector) 
 #' @param p.bt Bootstrapped p-values (an W X B matrix)
+#' @references 
+#' Westfall, P. H., & Young, S. S. (1993). Resampling-based multiple testing: Examples and
+#' methods for p-value adjustment. Taylor & Francis Group.
 #' @export
+#' @examples 
+#' # observed p-values for 3 tests
+#'  pvals = c(0.00233103655078803, 0.470366742594242, 0.00290278216035089
+#')
+#'
+#' # bootstrapped p-values for 5 resamples
+#'p.bt = t( structure(c(0.308528665936264, 0.517319402377912, 0.686518314693482,
+#'                   0.637306248855186, 0.106805510862352, 0.116705315041494, 0.0732076817175753,
+#'                   0.770308936364482, 0.384405349738909, 0.0434358213611965, 0.41497067850141,
+#'                   0.513471489744384, 0.571213377144122, 0.628054979652722, 0.490196884985226
+#'), .Dim = c(5L, 3L)) )
+#'
+#'# adjust the p-values
+#'adj_Wstep( p = pvals, p.bt = p.bt )
 
 adj_Wstep = function( p, p.bt ) {
   
@@ -618,7 +637,6 @@ adj_Wstep = function( p, p.bt ) {
   p.dat = p.dat[ order( p.dat$ind, decreasing = FALSE ), ]
   
   return( p.dat$p.adj )
-  #plot( p.dat$p, p.dat$p.adj )
 }
 
 
@@ -628,6 +646,8 @@ adj_Wstep = function( p, p.bt ) {
 
 #' Return ordered critical values for Wstep
 #' 
+#' The user does not need to call this function. This is an internal function for use by 
+#' \code{adj_minP} and \code{adj_Wstep}.  
 #' @param p.dat p-values from dataset (W-vector?) 
 #' @param col.p Column of resampled p-values (for the single p-value for which we're
 #   getting the critical value)?
@@ -653,16 +673,25 @@ get_crit = function( p.dat, col.p ) {
 
 #' Makes correlation matrix to simulate data
 #' 
-#' If correlation matrix isn't positive definite, try reducing the correlation magnitudes.
+#' Simulates a dataset with a specified number of standard MVN covariates and outcomes
+#' with a specified correlation structure. If correlation matrix isn't positive definite,
+#' try reducing the correlation magnitudes.
 #' @param nX Number of covariates, including the one of interest 
 #' @param nY Number of outcomes
 #' @param rho.XX Correlation between all pairs of Xs
 #' @param rho.YY Correlation between all pairs of Ys
 #' @param rho.XY Correlation between pairs of X-Y that are not null (see below)
-#' @param prop.corr Proportion of X-Y pairs that are non-null (non-nulls will be first .prop.corr * .nY pairs)
+#' @param prop.corr Proportion of X-Y pairs that are non-null (non-nulls will be first \code{prop.corr} * \code{nY} pairs)
 #' @import
 #' matrixcalc
 #' @export
+#' @examples
+#' make_corr_mat( nX = 1,
+#' nY = 4,
+#' rho.XX = 0,
+#' rho.YY = 0.25,
+#' rho.XY = 0,
+#' prop.corr = 0.8 )
 
 make_corr_mat = function( nX,
                           nY,
@@ -708,7 +737,8 @@ make_corr_mat = function( nX,
 
 #' Cell correlation for simulating data
 #' 
-#' Assumes X1 is the covariate of interest and that none of the covariates is associated with any outcomes. 
+#' The user does not need to call this function. This internal function is called by \code{make_corr_mat}
+#' and populates a single cell. Assumes X1 is the covariate of interest and that none of the covariates is associated with any outcomes. 
 #' @param vname.1 Quoted name of first variable 
 #' @param vname.2 Quoted name of second variable
 #' @param rho.XX Correlation between pairs of Xs
@@ -717,6 +747,7 @@ make_corr_mat = function( nX,
 #' @param nY Number of outcomes
 #' @param prop.corr Proportion of X-Y pairs that are non-null (non-nulls will be first .prop.corr * .nY pairs)
 #' @export
+
 
 cell_corr = function( vname.1,
                       vname.2,
@@ -787,12 +818,21 @@ cell_corr = function( vname.1,
 
 #' Simulate MVN data
 #' 
-#' Simulates 1 dataset with MVN(0,1) correlated covariates and outcomes
+#' Simulates one dataset with standard MVN correlated covariates and outcomes.
 #' @param n Number of covariates, including the one of interest 
 #' @param cor Correlation matrix (e.g., from make_corr_mat)
 #' @import
 #' mvtnorm
 #' @export
+#' @examples 
+#' cor = make_corr_mat( nX = 5,
+#'nY = 2,
+#'rho.XX = -0.06,
+#'rho.YY = 0.1,
+#'rho.XY = -0.1,
+#'prop.corr = 8/40 )
+#'
+#' d = sim_data( n = 50, cor = cor )
 
 sim_data = function( n, cor ) {
   
