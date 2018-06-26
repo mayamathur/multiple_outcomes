@@ -5,6 +5,18 @@
 # library(NRejections)
 # test()
 
+
+# try on another arbitrary dataset
+data(rock)
+
+
+corr_tests( d = rock,
+                       X = c("area", "peri", "shape"),
+                       C = NA,
+                       Ys = "perm",
+                       B=20,
+                       method = "nreject" )
+
 ########################### CHECK FOR BAD USER INPUT ###########################
 
 #' Fix bad user input
@@ -125,6 +137,7 @@ corr_tests = function( d,
                  C = C,
                  Ys = Ys,
                  d = d )
+  if ( length(X) > 1 ) stop("X must have length 1")
   
   # fit models to original data
   samp.res = dataset_result( X = X,
@@ -280,6 +293,8 @@ fit_model = function( X,
                       center.stats = FALSE,
                       bhat.orig = NA,  # bhat.orig is a single value now for just the correct Y
                       alpha = 0.05 ) {
+  
+  if ( length(X) > 1 ) stop("X must have length 1")
 
   # all covariates, including the one of interest
   if ( all( is.na(C) ) ) covars = X
@@ -358,6 +373,8 @@ dataset_result = function( d,
                            alpha = 0.05,
                            center.stats = TRUE,
                            bhat.orig = NA ) { 
+  
+  if ( length(X) > 1 ) stop("X must have length 1")
   
   # for each outcome, fit regression model
   # see if each has p < alpha for covariate of interest
@@ -461,6 +478,8 @@ resample_resid = function( d,
                            bhat.orig,
                            B=2000,
                            cores = NULL ) {
+  
+  if ( length(X) > 1 ) stop("X must have length 1")
   
   if ( all( is.na(C) ) ) covars = X
   else covars = c( X, C )
