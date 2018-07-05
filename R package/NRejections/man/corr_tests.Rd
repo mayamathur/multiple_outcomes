@@ -62,6 +62,19 @@ cores=1,
 alpha = 0.05,
 alpha.fam = 0.05,
 method = c( "nreject", "bonferroni", "holm", "minP", "Wstep", "romano" ) )
+
+\dontrun{
+data(rock)
+
+res = corr_tests( d = rock,
+                 X = c("area"),
+                 C = NA,
+                 Ys = c("perm", "peri", "shape"),
+                 method = "nreject" )
+
+# mean rejections in resamples
+# should be close to 0.05 * 3 = 0.15
+mean( as.numeric(res$nrej.bt) ) }
 }
 \references{
 Mathur, M.B., & VanderWeele, T.J. (in preparation). New metrics for multiple testing with correlated

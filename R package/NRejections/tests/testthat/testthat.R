@@ -1,7 +1,36 @@
 library(testthat)
 library(devtools)
+library(doParallel)
+library(StepwiseTest)
+library(matrixcalc)
+library(foreach)
+library(mvtnorm)
+
+# example with a much larger (simulated) dataset
+
+cor = make_corr_mat( nX = 1,
+  nY = 40,
+  rho.XX = 0,
+  rho.YY = 0.15,
+  rho.XY = 0.08,
+  prop.corr = .8 )
+
+d = sim_data( n = 1000, cor = cor )
+
+# may take 5-10 min to run on standard personal computer
+res = corr_tests( d,
+                  X = "X1",
+                  Ys = names(d)[ grep( "Y", names(d) ) ],
+                  B = 1000,
+                  method = "nreject" )
+
+# look at the main results
+res$null.int
+res$excess.hits
+res$global.test
 
 ###################### TEST FNS FOR APPLYING OUR METRICS ###################### 
+
 
 # fix_input with extra covariates
 # X1 is extra and should be removed
@@ -80,16 +109,6 @@ test_that("fix_input #1", {
                 FALSE )
 } )
 
-
-# res = corr_tests( d,
-#                   X = "X1",
-#                   C = C,
-#                   Ys = names(d)[ grep( "Y", names(d) ) ],
-#                   B=5,
-#                   cores,
-#                   alpha = 0.05,
-#                   alpha.fam = 0.05,
-#                   method = "nreject" )
 
 
 

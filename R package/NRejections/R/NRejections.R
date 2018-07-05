@@ -6,17 +6,6 @@
 # test()
 
 
-# try on another arbitrary dataset
-data(rock)
-
-
-corr_tests( d = rock,
-                       X = c("area", "peri", "shape"),
-                       C = NA,
-                       Ys = "perm",
-                       B=20,
-                       method = "nreject" )
-
 ########################### CHECK FOR BAD USER INPUT ###########################
 
 #' Fix bad user input
@@ -34,7 +23,7 @@ fix_input = function( X,
                       C, 
                       Ys,
                       d ) {
-  
+
   # all covariates, including the one of interest
   if ( all( is.na(C) ) ) covars = X
   else covars = c( X, C )
@@ -60,6 +49,7 @@ fix_input = function( X,
                     sep = "" ) )
     d = d[ , analysis.vars ]
   }
+  return(d)
 }
 
 
@@ -112,6 +102,7 @@ fix_input = function( X,
 #' methods for p-value adjustment. Taylor & Francis Group.
 #' @export
 #' @examples
+#' # uses a too-small number of resamples as a toy example
 #' corr_tests( d = attitude,
 #' X = "complaints",
 #' C = c("privileges", "learning"),
@@ -121,17 +112,57 @@ fix_input = function( X,
 #' alpha = 0.05,
 #' alpha.fam = 0.05,
 #' method = c( "nreject", "bonferroni", "holm", "minP", "Wstep", "romano" ) )
+#' 
+#' \dontrun{
+#' data(rock)
+#'
+#'res = corr_tests( d = rock,
+#'                  X = c("area"),
+#'                  C = NA,
+#'                  Ys = c("perm", "peri", "shape"),
+#'                  method = "nreject" )
+#'
+#'# mean rejections in resamples
+#'# should be close to 0.05 * 3 = 0.15
+#'mean( as.numeric(res$nrej.bt) ) }
+#'
+#'\dontrun{
+#' cor = make_corr_mat( nX = 10,
+#'nY = 20,
+#'rho.XX = 0.10,
+#'rho.YY = 0.5,
+#'rho.XY = 0.1,
+#'prop.corr = .4 )
+#'
+#'d = sim_data( n = 300, cor = cor )
+#'
+#'# X1 is the covariate of interest, and all other X variables are adjusted
+#'all.covars = names(d)[ grep( "X", names(d) ) ]
+#'C = all.covars[ !all.covars == "X1" ]
+#'
+#'# may take 10 min to run
+#'res = corr_tests( d,
+#'                  X = "X1",
+#'                  C = C,
+#'                  Ys = names(d)[ grep( "Y", names(d) ) ],
+#'                  method = "nreject" )
+#'
+#'# look at the main results
+#'res$null.int
+#'res$excess.hits
+#'res$global.test
+#' }
 
 corr_tests = function( d,
                        X,
-                       C,
+                       C = NA,
                        Ys,
                        B=2000,
                        cores,
                        alpha = 0.05,
                        alpha.fam = 0.05,
                        method = "nreject" ) {
-
+  
   # check for and fix bad user input
   d = fix_input( X = X,
                  C = C,
@@ -478,7 +509,6 @@ resample_resid = function( d,
                            bhat.orig,
                            B=2000,
                            cores = NULL ) {
-  
   if ( length(X) > 1 ) stop("X must have length 1")
   
   if ( all( is.na(C) ) ) covars = X
