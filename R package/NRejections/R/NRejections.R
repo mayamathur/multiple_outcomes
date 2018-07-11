@@ -1,4 +1,6 @@
 
+# copy-paste this to check and test package, but make sure
+# to comment it back in and save the file so that devtools doesn't try to run it
 # library(devtools)
 # setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/git_multiple_outcomes/R package/NRejections")
 # document()
@@ -208,7 +210,7 @@ corr_tests = function( d,
     crit = quantile( resamps$rej.bt, 1 - alpha.fam )
     
     # p-values for observed rejections
-    jt.pval = sum( resamps$rej.bt >= samp.res$n.rej ) /
+    jt.pval = sum( resamps$rej.bt >= samp.res$rej ) /
       length( resamps$rej.bt )
     
     # did joint tests reject?
