@@ -4,8 +4,8 @@
 \alias{corr_tests}
 \title{Global evidence strength across correlated tests}
 \usage{
-corr_tests(d, X, C, Ys, B = 2000, cores, alpha = 0.05, alpha.fam = 0.05,
-  method = "nreject")
+corr_tests(d, X, C = NA, Ys, B = 2000, cores, alpha = 0.05,
+  alpha.fam = 0.05, method = "nreject")
 }
 \arguments{
 \item{d}{Dataframe}
@@ -53,6 +53,7 @@ and results of a test of the global null hypothesis at \code{alpha.fam} of the g
 can be conducted based on the number of rejections or based on various FWER-control methods (see References).
 }
 \examples{
+# uses a too-small number of resamples as a toy example
 corr_tests( d = attitude,
 X = "complaints",
 C = c("privileges", "learning"),
@@ -75,6 +76,33 @@ res = corr_tests( d = rock,
 # mean rejections in resamples
 # should be close to 0.05 * 3 = 0.15
 mean( as.numeric(res$nrej.bt) ) }
+
+\dontrun{
+cor = make_corr_mat( nX = 10,
+nY = 20,
+rho.XX = 0.10,
+rho.YY = 0.5,
+rho.XY = 0.1,
+prop.corr = .4 )
+
+d = sim_data( n = 300, cor = cor )
+
+# X1 is the covariate of interest, and all other X variables are adjusted
+all.covars = names(d)[ grep( "X", names(d) ) ]
+C = all.covars[ !all.covars == "X1" ]
+
+# may take 10 min to run
+res = corr_tests( d,
+                 X = "X1",
+                 C = C,
+                 Ys = names(d)[ grep( "Y", names(d) ) ],
+                 method = "nreject" )
+
+# look at the main results
+res$null.int
+res$excess.hits
+res$global.test
+}
 }
 \references{
 Mathur, M.B., & VanderWeele, T.J. (in preparation). New metrics for multiple testing with correlated

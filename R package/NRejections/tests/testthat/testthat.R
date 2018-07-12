@@ -6,28 +6,162 @@ library(matrixcalc)
 library(foreach)
 library(mvtnorm)
 
-# example with a much larger (simulated) dataset
+# THIS TEST TAKES A WHILE BECAUSE IT RUNS 500 RESAMPLES
+# COMMENT IT OUT IF YOU WANT TO AVOID IT
+# test that increasing the correlation between outcomes increases width of null interval
+test_that("corr_tests #2", {
+  
+  ######## Low Correlation Between Outcomes ######## 
+  cor = make_corr_mat( nX = 3,
+                       nY = 100,
+                       rho.XX = 0,
+                       rho.YY = 0.05,
+                       rho.XY = 0,
+                       prop.corr = 1 )
+  
+  d = sim_data( n = 20, cor = cor )
+  all.covars = names(d)[ grep( "X", names(d) ) ]
+  C = all.covars[ !all.covars == "X1" ]
+  Y = names(d)[ grep( "Y", names(d) ) ]
+  
+  res1 = corr_tests( d,
+                    X = "X1",
+                    C = C,
+                    Ys = Y,
+                    B = 500,
+                    alpha = 0.1,
+                    alpha.fam=0.1,
+                    method = c( "nreject", "bonferroni", "holm", "minP", "Wstep", "romano" ) )
+  
+  ######## Higher Correlation Between Outcomes ######## 
+  cor = make_corr_mat( nX = 3,
+                       nY = 100,
+                       rho.XX = 0,
+                       rho.YY = 0.25,
+                       rho.XY = 0,
+                       prop.corr = 1 )
+  
+  d = sim_data( n = 20, cor = cor )
+  all.covars = names(d)[ grep( "X", names(d) ) ]
+  C = all.covars[ !all.covars == "X1" ]
+  Y = names(d)[ grep( "Y", names(d) ) ]
+  
+  res2 = corr_tests( d,
+                     X = "X1",
+                     C = C,
+                     Ys = Y,
+                     B = 500,
+                     alpha = 0.1,
+                     alpha.fam = 0.1,
+                     method = c( "nreject", "bonferroni", "holm", "minP", "Wstep", "romano" ) )
+  
+  
+  ######## Tests ######## 
+  # null interval should be wider for the second one
+  expect_equal( as.logical( res2$null.int[2] >= res1$null.int[2] ), TRUE )
+  
+  # p-value should be larger for the second one
+  expect_equal( as.logical( res2$global.test$pval[ res2$global.test$method == "nreject" ] >= res1$global.test$pval[ res1$global.test$method == "nreject" ] ), TRUE )
+  
+  
+  
+  ######## Check Results of First Sample ########
+  # check inference: excess hits
+  expect_equal( as.numeric(res1$samp.res$rej) - as.numeric(res1$null.int[2]),
+                res1$excess.hits )
+  
+  # check inference: critical value from global test
+  expect_equal( as.numeric( quantile( res1$nrej.bt, 1-0.1 ) ),
+                as.numeric(res1$global.test$crit) )
+  
+  # check p-value of global test
+  expect_equal( sum( res1$nrej.bt >= res1$samp.res$rej ) / length( res1$nrej.bt ),
+                res1$global.test$pval )
+  
+  
+  # check results from original sample
+  # do analysis manually
+  alpha = 0.1
+  
+  rej.man = 0
+  tvals.man = c()
+  bhats.man = c()
+  pvals.man = c()
+  resid.man = matrix( NA, nrow = nrow(d), ncol = length(Y) )
+  
+  for ( i in 1:length(Y) ) {
+    m = lm( d[[ Y[i] ]] ~ X1 + X2 + X3, data = d )
+    bhats.man[i] = coef(m)[["X1"]]
+    tvals.man[i] = summary(m)$coefficients["X1","t value"]
+    pvals.man[i] = summary(m)$coefficients["X1", "Pr(>|t|)"]
+    resid.man[,i] = residuals(m)
+    
+    # did we reject it?
+    if ( summary(m)$coefficients["X1", "Pr(>|t|)"] < alpha ) rej.man = rej.man + 1
+  }  
+  
+  # check bhats
+  expect_equal( bhats.man, res1$samp.res$bhats )
+  expect_equal( tvals.man, res1$samp.res$tvals )
+  expect_equal( pvals.man, res1$samp.res$pvals )
+  expect_equal( as.numeric(as.matrix(resid.man)),
+                as.numeric(as.matrix(res1$samp.res$resid)) )
+  
+  expect_equal( sum( pvals.man < alpha ),
+                sum( res1$samp.res$rej ) )
+  
+  # check other global tests
+  expect_equal( res1$global.test$pval[ res1$global.test$method == "Wstep" ], 
+             min( adj_Wstep( p = res1$samp.res$pvals, p.bt = res1$pvals.bt ) ) )
+  
+  expect_equal( res1$global.test$pval[ res1$global.test$method == "minP" ], 
+                min( adj_minP( p = res1$samp.res$pvals, p.bt = res1$pvals.bt ) ) )
+  
+  expect_equal( res1$global.test$pval[ res1$global.test$method == "bonferroni" ], 
+                min( p.adjust( res1$samp.res$pvals, method="bonferroni" ) ) )
+  
+  expect_equal( res1$global.test$pval[ res1$global.test$method == "holm" ], 
+                min( p.adjust( res1$samp.res$pvals, method="holm" ) ) )
+  
+  expect_equal( res1$global.test$reject[ res1$global.test$method == "romano" ], 
+                any( FWERkControl( res1$samp.res$tvals, as.matrix( res1$tvals.bt ), k = 1, alpha = .1 )$Reject == 1 ) )
+} )
 
-cor = make_corr_mat( nX = 1,
-  nY = 40,
-  rho.XX = 0,
-  rho.YY = 0.15,
-  rho.XY = 0.08,
-  prop.corr = .8 )
 
-d = sim_data( n = 1000, cor = cor )
 
-# may take 5-10 min to run on standard personal computer
-res = corr_tests( d,
-                  X = "X1",
-                  Ys = names(d)[ grep( "Y", names(d) ) ],
-                  B = 1000,
-                  method = "nreject" )
+# only checks a few things: 
+# two of the global tests
+# and the average number of rejections in resamples
+test_that( "corr_tests #1", {
+  library(carData)
+  data(Soils)
+  
+  X = "pH"
+  C = c("Na", "Conduc")
+  Y = c("N", "Dens", "P", "Ca", "Mg", "K")
+  
+  res = corr_tests( Soils,
+                    X = X,
+                    Ys = Y,
+                    B = 200,
+                    alpha = 0.1,
+                    method = c( "nreject", "bonferroni", "holm", "minP", "Wstep", "romano" ) )
+  
+  # should be about equal
+  expect_equal( mean(res$nrej.bt),
+                .10*length(Y),
+                tolerance = 0.1 )
+  
+  # Bonferroni: should be exactly equal
+  expect_equal( min( res$samp.res$pvals * length(Y) ),
+                res$global.test$pval[2] )
+  
+  # Holm: should be exactly equal
+  expect_equal( min( p.adjust( res$samp.res$pvals, method = "holm" ) ),
+                res$global.test$pval[3] )
+} )
 
-# look at the main results
-res$null.int
-res$excess.hits
-res$global.test
+
 
 ###################### TEST FNS FOR APPLYING OUR METRICS ###################### 
 
@@ -107,6 +241,7 @@ test_that("fix_input #1", {
   
   expect_equal( any( is.na(d) ), 
                 FALSE )
+
 } )
 
 
@@ -450,6 +585,7 @@ test_that("adjust_Wstep #1", {
 
 ###################### TEST RESAMPLE_RESID ###################### 
 
+# generate data NOT under null and
 # check that mean p-value is .5 in resamples
 # and that we have the expected number of rejections
 
@@ -498,38 +634,7 @@ test_that("resample_resid #1", {
 } )
 
 
-# test a case where things aren't mean-centered
 
-test_that("resample_resid #2", {
-  # Sanity Check
-  nX = 1
-  nY = 3
-  B = 5
-  
-  library(matrixcalc)
-  library(mvtnorm)
-  
-  cor = make_corr_mat( nX = nX,
-                       nY = nY,
-                       rho.XX = 0,
-                       rho.YY = 0.25,
-                       rho.XY = 0.05,
-                       prop.corr = 1 )
-  
-  d = sim_data( n = 500, cor = cor )
-  d = d + 1
-  
-  # should give error because not mean-centered
-  expect_error( resample_resid( X = "X1",
-                            C = NA,
-                            Ys = c("Y1", "Y2", "Y3"),
-                            d = d,
-                            alpha = 0.05,
-                            resid = samp.res$resid,
-                            bhat.orig = samp.res$bhats,
-                            B=5000,
-                            cores = 8 ) )
-} )
 
 
 

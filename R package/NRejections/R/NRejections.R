@@ -280,6 +280,8 @@ corr_tests = function( d,
   ######## Return Stuff ########
     return( list( samp.res = samp.res,
                 nrej.bt = resamps$rej.bt,
+                pvals.bt = resamps$p.bt,
+                tvals.bt = resamps$t.bt,
                 null.int = c(bt.lo, bt.hi), # ours
                 excess.hits = as.numeric( samp.res$rej - bt.hi ), # ours
                 global.test = global.test # dataframe of all user-specified methods with their names
