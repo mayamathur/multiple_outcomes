@@ -18,7 +18,7 @@ resample_resid(d, X, C = NA, Ys, alpha, resid, bhat.orig, B = 2000,
 
 \item{alpha}{Alpha level for individual tests}
 
-\item{resid}{Residuals from original sample (XXX matrix)}
+\item{resid}{Residuals from original sample (W X B matrix)}
 
 \item{bhat.orig}{Estimated coefficients for covariate of interest in original sample (W-vector)}
 

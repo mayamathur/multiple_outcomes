@@ -7,9 +7,9 @@
 sim_data(n, cor)
 }
 \arguments{
-\item{n}{Number of covariates, including the one of interest}
+\item{n}{Number of rows to simulate}
 
-\item{cor}{Correlation matrix (e.g., from make_corr_mat)}
+\item{cor}{Correlation matrix (e.g., from \code{make_corr_mat})}
 }
 \description{
 Simulates one dataset with standard MVN correlated covariates and outcomes.

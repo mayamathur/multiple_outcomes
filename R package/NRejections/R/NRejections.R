@@ -12,9 +12,8 @@
 
 #' Fix bad user input
 #' 
-#' The user does not need to call this function. Warns about and fixes bad user input: missing data on analysis variables,
-#' datasets containing extraneous variables, or datasets containing covariates that are not
-#' mean-centered.
+#' The user does not need to call this function. Warns about and fixes bad user input: missing data on analysis variables or
+#' datasets containing extraneous variables.
 #' @param X Single quoted name of covariate of interest
 #' @param C Vector of quoted covariate names
 #' @param Ys Vector of quoted outcome names
@@ -78,9 +77,14 @@ fix_input = function( X,
 #' @param method Which methods to report (ours, Westfall's two methods, Bonferroni, Holm, Romano)
 #' @return \code{samp.res} is a list containing the number of observed rejections (\code{rej}), 
 #' the coefficient estimates of interest for each outcome model (\code{bhats}), their t-values
-#' (\code{tvals}), and their uncorrected p-values at level \code{alpha} (\code{pvals}).
+#' (\code{tvals}), their uncorrected p-values at level \code{alpha} (\code{pvals}), and an N X W matrix of 
+#' residuals for each model (\code{resid}).
 #' 
 #' \code{nrej.bt} contains the number of rejections in each bootstrap resample. 
+#' 
+#' \code{tvals.bt} is a W X B matrix containing t-values for the resamples.
+#' 
+#' \code{pvals.bt} is a W X B matrix containing p-values for the resamples.
 #' 
 #' \code{null.int} contains the lower and upper limits of a 100*(1 - \code{alpha.fam}) percent null interval.
 #' 
@@ -472,7 +476,7 @@ dataset_result = function( d,
 #' @param C Vector of quoted covariate names
 #' @param Ys Vector of quoted outcome names
 #' @param alpha Alpha level for individual tests
-#' @param resid Residuals from original sample (XXX matrix)
+#' @param resid Residuals from original sample (W X B matrix)
 #' @param bhat.orig Estimated coefficients for covariate of interest in original sample (W-vector)
 #' @param B Number of resamples to generate
 #' @param cores Number of cores available for parallelization
@@ -556,6 +560,9 @@ resample_resid = function( d,
           tvals = bt.res$tvals )
     
   } ###### end r-loop (parallelized bootstrap)
+   
+  # close cluster to avoid Windows issues with CRAN submission
+  stopImplicitCluster()
   
   # resampled p-value matrix for Westfall
   # rows = Ys
@@ -701,7 +708,7 @@ adj_Wstep = function( p, p.bt ) {
 #' 
 #' The user does not need to call this function. This is an internal function for use by 
 #' \code{adj_minP} and \code{adj_Wstep}.  
-#' @param p.dat p-values from dataset (W-vector?) 
+#' @param p.dat p-values from dataset (W-vector) 
 #' @param col.p Column of resampled p-values (for the single p-value for which we're
 #   getting the critical value)?
 #' @export
@@ -727,7 +734,8 @@ get_crit = function( p.dat, col.p ) {
 #' Makes correlation matrix to simulate data
 #' 
 #' Simulates a dataset with a specified number of standard MVN covariates and outcomes
-#' with a specified correlation structure. If correlation matrix isn't positive definite,
+#' with a specified correlation structure. If the function returns an error stating that
+#' the correlation matrix is not positive definite,
 #' try reducing the correlation magnitudes.
 #' @param nX Number of covariates, including the one of interest 
 #' @param nY Number of outcomes
@@ -791,7 +799,7 @@ make_corr_mat = function( nX,
 #' Cell correlation for simulating data
 #' 
 #' The user does not need to call this function. This internal function is called by \code{make_corr_mat}
-#' and populates a single cell. Assumes X1 is the covariate of interest and that none of the covariates is associated with any outcomes. 
+#' and populates a single cell. Assumes X1 is the covariate of interest.
 #' @param vname.1 Quoted name of first variable 
 #' @param vname.2 Quoted name of second variable
 #' @param rho.XX Correlation between pairs of Xs
@@ -872,8 +880,8 @@ cell_corr = function( vname.1,
 #' Simulate MVN data
 #' 
 #' Simulates one dataset with standard MVN correlated covariates and outcomes.
-#' @param n Number of covariates, including the one of interest 
-#' @param cor Correlation matrix (e.g., from make_corr_mat)
+#' @param n Number of rows to simulate
+#' @param cor Correlation matrix (e.g., from \code{make_corr_mat})
 #' @import
 #' mvtnorm
 #' @export

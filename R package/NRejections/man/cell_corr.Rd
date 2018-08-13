@@ -23,5 +23,5 @@ cell_corr(vname.1, vname.2, rho.XX, rho.YY, rho.XY, nY, prop.corr = 1)
 }
 \description{
 The user does not need to call this function. This internal function is called by \code{make_corr_mat}
-and populates a single cell. Assumes X1 is the covariate of interest and that none of the covariates is associated with any outcomes.
+and populates a single cell. Assumes X1 is the covariate of interest.
 }

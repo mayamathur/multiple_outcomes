@@ -16,7 +16,6 @@ fix_input(X, C, Ys, d)
 \item{d}{Dataframe}
 }
 \description{
-The user does not need to call this function. Warns about and fixes bad user input: missing data on analysis variables,
-datasets containing extraneous variables, or datasets containing covariates that are not
-mean-centered.
+The user does not need to call this function. Warns about and fixes bad user input: missing data on analysis variables or
+datasets containing extraneous variables.
 }

@@ -7,7 +7,7 @@
 get_crit(p.dat, col.p)
 }
 \arguments{
-\item{p.dat}{p-values from dataset (W-vector?)}
+\item{p.dat}{p-values from dataset (W-vector)}
 
 \item{col.p}{Column of resampled p-values (for the single p-value for which we're}
 }

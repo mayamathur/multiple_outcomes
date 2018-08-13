@@ -21,7 +21,8 @@ make_corr_mat(nX, nY, rho.XX, rho.YY, rho.XY, prop.corr = 1)
 }
 \description{
 Simulates a dataset with a specified number of standard MVN covariates and outcomes
-with a specified correlation structure. If correlation matrix isn't positive definite,
+with a specified correlation structure. If the function returns an error stating that
+the correlation matrix is not positive definite,
 try reducing the correlation magnitudes.
 }
 \examples{

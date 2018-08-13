@@ -29,9 +29,14 @@ corr_tests(d, X, C = NA, Ys, B = 2000, cores, alpha = 0.05,
 \value{
 \code{samp.res} is a list containing the number of observed rejections (\code{rej}), 
 the coefficient estimates of interest for each outcome model (\code{bhats}), their t-values
-(\code{tvals}), and their uncorrected p-values at level \code{alpha} (\code{pvals}).
+(\code{tvals}), their uncorrected p-values at level \code{alpha} (\code{pvals}), and an N X W matrix of 
+residuals for each model (\code{resid}).
 
 \code{nrej.bt} contains the number of rejections in each bootstrap resample. 
+
+\code{tvals.bt} is a W X B matrix containing t-values for the resamples.
+
+\code{pvals.bt} is a W X B matrix containing p-values for the resamples.
 
 \code{null.int} contains the lower and upper limits of a 100*(1 - \code{alpha.fam}) percent null interval.
 

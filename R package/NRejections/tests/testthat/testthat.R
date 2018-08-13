@@ -6,126 +6,128 @@ library(matrixcalc)
 library(foreach)
 library(mvtnorm)
 
-# THIS TEST TAKES A WHILE BECAUSE IT RUNS 500 RESAMPLES
-# COMMENT IT OUT IF YOU WANT TO AVOID IT
-# test that increasing the correlation between outcomes increases width of null interval
-test_that("corr_tests #2", {
-  
-  ######## Low Correlation Between Outcomes ######## 
-  cor = make_corr_mat( nX = 3,
-                       nY = 100,
-                       rho.XX = 0,
-                       rho.YY = 0.05,
-                       rho.XY = 0,
-                       prop.corr = 1 )
-  
-  d = sim_data( n = 20, cor = cor )
-  all.covars = names(d)[ grep( "X", names(d) ) ]
-  C = all.covars[ !all.covars == "X1" ]
-  Y = names(d)[ grep( "Y", names(d) ) ]
-  
-  res1 = corr_tests( d,
-                    X = "X1",
-                    C = C,
-                    Ys = Y,
-                    B = 500,
-                    alpha = 0.1,
-                    alpha.fam=0.1,
-                    method = c( "nreject", "bonferroni", "holm", "minP", "Wstep", "romano" ) )
-  
-  ######## Higher Correlation Between Outcomes ######## 
-  cor = make_corr_mat( nX = 3,
-                       nY = 100,
-                       rho.XX = 0,
-                       rho.YY = 0.25,
-                       rho.XY = 0,
-                       prop.corr = 1 )
-  
-  d = sim_data( n = 20, cor = cor )
-  all.covars = names(d)[ grep( "X", names(d) ) ]
-  C = all.covars[ !all.covars == "X1" ]
-  Y = names(d)[ grep( "Y", names(d) ) ]
-  
-  res2 = corr_tests( d,
-                     X = "X1",
-                     C = C,
-                     Ys = Y,
-                     B = 500,
-                     alpha = 0.1,
-                     alpha.fam = 0.1,
-                     method = c( "nreject", "bonferroni", "holm", "minP", "Wstep", "romano" ) )
-  
-  
-  ######## Tests ######## 
-  # null interval should be wider for the second one
-  expect_equal( as.logical( res2$null.int[2] >= res1$null.int[2] ), TRUE )
-  
-  # p-value should be larger for the second one
-  expect_equal( as.logical( res2$global.test$pval[ res2$global.test$method == "nreject" ] >= res1$global.test$pval[ res1$global.test$method == "nreject" ] ), TRUE )
-  
-  
-  
-  ######## Check Results of First Sample ########
-  # check inference: excess hits
-  expect_equal( as.numeric(res1$samp.res$rej) - as.numeric(res1$null.int[2]),
-                res1$excess.hits )
-  
-  # check inference: critical value from global test
-  expect_equal( as.numeric( quantile( res1$nrej.bt, 1-0.1 ) ),
-                as.numeric(res1$global.test$crit) )
-  
-  # check p-value of global test
-  expect_equal( sum( res1$nrej.bt >= res1$samp.res$rej ) / length( res1$nrej.bt ),
-                res1$global.test$pval )
-  
-  
-  # check results from original sample
-  # do analysis manually
-  alpha = 0.1
-  
-  rej.man = 0
-  tvals.man = c()
-  bhats.man = c()
-  pvals.man = c()
-  resid.man = matrix( NA, nrow = nrow(d), ncol = length(Y) )
-  
-  for ( i in 1:length(Y) ) {
-    m = lm( d[[ Y[i] ]] ~ X1 + X2 + X3, data = d )
-    bhats.man[i] = coef(m)[["X1"]]
-    tvals.man[i] = summary(m)$coefficients["X1","t value"]
-    pvals.man[i] = summary(m)$coefficients["X1", "Pr(>|t|)"]
-    resid.man[,i] = residuals(m)
-    
-    # did we reject it?
-    if ( summary(m)$coefficients["X1", "Pr(>|t|)"] < alpha ) rej.man = rej.man + 1
-  }  
-  
-  # check bhats
-  expect_equal( bhats.man, res1$samp.res$bhats )
-  expect_equal( tvals.man, res1$samp.res$tvals )
-  expect_equal( pvals.man, res1$samp.res$pvals )
-  expect_equal( as.numeric(as.matrix(resid.man)),
-                as.numeric(as.matrix(res1$samp.res$resid)) )
-  
-  expect_equal( sum( pvals.man < alpha ),
-                sum( res1$samp.res$rej ) )
-  
-  # check other global tests
-  expect_equal( res1$global.test$pval[ res1$global.test$method == "Wstep" ], 
-             min( adj_Wstep( p = res1$samp.res$pvals, p.bt = res1$pvals.bt ) ) )
-  
-  expect_equal( res1$global.test$pval[ res1$global.test$method == "minP" ], 
-                min( adj_minP( p = res1$samp.res$pvals, p.bt = res1$pvals.bt ) ) )
-  
-  expect_equal( res1$global.test$pval[ res1$global.test$method == "bonferroni" ], 
-                min( p.adjust( res1$samp.res$pvals, method="bonferroni" ) ) )
-  
-  expect_equal( res1$global.test$pval[ res1$global.test$method == "holm" ], 
-                min( p.adjust( res1$samp.res$pvals, method="holm" ) ) )
-  
-  expect_equal( res1$global.test$reject[ res1$global.test$method == "romano" ], 
-                any( FWERkControl( res1$samp.res$tvals, as.matrix( res1$tvals.bt ), k = 1, alpha = .1 )$Reject == 1 ) )
-} )
+# # THIS TEST TAKES A WHILE BECAUSE IT RUNS 500 RESAMPLES
+# # COMMENT IT OUT IF YOU WANT TO AVOID IT
+# # test that increasing the correlation between outcomes increases width of null interval
+# test_that("corr_tests #2", {
+#   
+#   ######## Low Correlation Between Outcomes ######## 
+#   N = 250
+#   
+#   cor = make_corr_mat( nX = 3,
+#                        nY = 100,
+#                        rho.XX = 0,
+#                        rho.YY = 0.05,
+#                        rho.XY = 0,
+#                        prop.corr = 1 )
+#   
+#   d = sim_data( n = N, cor = cor )
+#   all.covars = names(d)[ grep( "X", names(d) ) ]
+#   C = all.covars[ !all.covars == "X1" ]
+#   Y = names(d)[ grep( "Y", names(d) ) ]
+#   
+#   res1 = corr_tests( d,
+#                     X = "X1",
+#                     C = C,
+#                     Ys = Y,
+#                     B = 500,
+#                     alpha = 0.1,
+#                     alpha.fam=0.1,
+#                     method = c( "nreject", "bonferroni", "holm", "minP", "Wstep", "romano" ) )
+#   
+#   ######## Check Results of First Sample ########
+#   # check inference: excess hits
+#   expect_equal( as.numeric(res1$samp.res$rej) - as.numeric(res1$null.int[2]),
+#                 res1$excess.hits )
+#   
+#   # check inference: critical value from global test
+#   expect_equal( as.numeric( quantile( res1$nrej.bt, 1-0.1 ) ),
+#                 as.numeric( res1$global.test$crit[ res1$global.test$method == "nreject"] ) )
+#   
+#   # check p-value of global test
+#   expect_equal( sum( res1$nrej.bt >= res1$samp.res$rej ) / length( res1$nrej.bt ),
+#                 res1$global.test$pval[ res1$global.test$method == "nreject"] )
+#   
+#   
+#   # check results from original sample
+#   # do analysis manually
+#   alpha = 0.1
+#   
+#   rej.man = 0
+#   tvals.man = c()
+#   bhats.man = c()
+#   pvals.man = c()
+#   resid.man = matrix( NA, nrow = nrow(d), ncol = length(Y) )
+#   
+#   for ( i in 1:length(Y) ) {
+#     m = lm( d[[ Y[i] ]] ~ X1 + X2 + X3, data = d )
+#     bhats.man[i] = coef(m)[["X1"]]
+#     tvals.man[i] = summary(m)$coefficients["X1","t value"]
+#     pvals.man[i] = summary(m)$coefficients["X1", "Pr(>|t|)"]
+#     resid.man[,i] = residuals(m)
+#     
+#     # did we reject it?
+#     if ( summary(m)$coefficients["X1", "Pr(>|t|)"] < alpha ) rej.man = rej.man + 1
+#   }  
+#   
+#   # check bhats
+#   expect_equal( bhats.man, res1$samp.res$bhats )
+#   expect_equal( tvals.man, res1$samp.res$tvals )
+#   expect_equal( pvals.man, res1$samp.res$pvals )
+#   expect_equal( as.numeric(as.matrix(resid.man)),
+#                 as.numeric(as.matrix(res1$samp.res$resid)) )
+#   
+#   expect_equal( sum( pvals.man < alpha ),
+#                 sum( res1$samp.res$rej ) )
+#   
+#   # check other global tests
+#   expect_equal( res1$global.test$pval[ res1$global.test$method == "Wstep" ], 
+#                 min( adj_Wstep( p = res1$samp.res$pvals, p.bt = res1$pvals.bt ) ) )
+#   
+#   expect_equal( res1$global.test$pval[ res1$global.test$method == "minP" ], 
+#                 min( adj_minP( p = res1$samp.res$pvals, p.bt = res1$pvals.bt ) ) )
+#   
+#   expect_equal( res1$global.test$pval[ res1$global.test$method == "bonferroni" ], 
+#                 min( p.adjust( res1$samp.res$pvals, method="bonferroni" ) ) )
+#   
+#   expect_equal( res1$global.test$pval[ res1$global.test$method == "holm" ], 
+#                 min( p.adjust( res1$samp.res$pvals, method="holm" ) ) )
+#   
+#   expect_equal( res1$global.test$reject[ res1$global.test$method == "romano" ], 
+#                 any( FWERkControl( res1$samp.res$tvals, as.matrix( res1$tvals.bt ), k = 1, alpha = .1 )$Reject == 1 ) )
+#   
+#   ######## Higher Correlation Between Outcomes ######## 
+#   cor = make_corr_mat( nX = 3,
+#                        nY = 100,
+#                        rho.XX = 0,
+#                        rho.YY = 0.25,
+#                        rho.XY = 0,
+#                        prop.corr = 1 )
+#   
+#   d = sim_data( n = N, cor = cor )
+#   all.covars = names(d)[ grep( "X", names(d) ) ]
+#   C = all.covars[ !all.covars == "X1" ]
+#   Y = names(d)[ grep( "Y", names(d) ) ]
+#   
+#   res2 = corr_tests( d,
+#                      X = "X1",
+#                      C = C,
+#                      Ys = Y,
+#                      B = 500,
+#                      alpha = 0.1,
+#                      alpha.fam = 0.1,
+#                      method = c( "nreject", "bonferroni", "holm", "minP", "Wstep", "romano" ) )
+#   
+#   
+#   ######## Tests ######## 
+#   # null interval should be wider for the second one
+#   expect_equal( as.logical( res2$null.int[2] >= res1$null.int[2] ), TRUE )
+#   
+#   # p-value should be larger for the second one
+#   expect_equal( as.logical( res2$global.test$pval[ res2$global.test$method == "nreject" ] >=
+#                               res1$global.test$pval[ res1$global.test$method == "nreject" ] ), TRUE )
+#   
+# } )
 
 
 
