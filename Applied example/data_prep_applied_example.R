@@ -1,25 +1,21 @@
 
 ############################## READ IN SAS DATA ############################## 
 
-library(rprojroot)
-root.path = rprojroot::find_rstudio_root_file()
-setwd(root.path)
+##### This part takes ~5-10 min to run, so is commented out #####
+# read in SAS data from Ying
+setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Private archive components/Prepped MIDUS data")
+library(sas7bdat)
+d = read.sas7bdat("flourish_ying.sas7bdat")
+nrow(d) # should be 2,773
 
-# ##### This part takes ~5-10 min to run, so is commented out #####
-# # read in SAS data from Ying
-# setwd("Prepped data")
-# library(sas7bdat)
-# d = read.sas7bdat("flourish_ying.sas7bdat")
-# nrow(d) # should be 2,773
-# 
-# # sanity check for inclusion criteria in beginning of Ying's SAS file 9
-# # should always be 2
-# table(d$A1STATUS)
-# table(d$B1STATUS)
-# # yes
-# 
-# # write as csv to avoid lengthy read-in process
-# write.csv(d, "flourish_ying.csv")
+# sanity check for inclusion criteria in beginning of Ying's SAS file 9
+# should always be 2
+table(d$A1STATUS)
+table(d$B1STATUS)
+# yes
+
+# write as csv to avoid lengthy read-in process
+write.csv(d, "flourish_ying.csv")
 
 # read in Ying's data as csv to avoid SAS conversion process
 setwd("Prepped data")
@@ -32,7 +28,7 @@ d = read.csv("flourish_ying.csv", header = TRUE); nrow(d)
 
 library(car)
 
-setwd(root.path)
+setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/git_multiple_outcomes/Applied example")
 source("helper_applied_example.R")
 
 # initialize new dataset with recoded variables
@@ -64,6 +60,7 @@ table(d$A1SE2, d2$A1SE2)
 # check results
 library(tableone)
 CreateTableOne(data=d2)
+
 
 ############################## MAKE CODEBOOK ############################## 
 
@@ -111,18 +108,10 @@ outcomes = c("flourish_z",
 keepers = c( covars, outcomes )
 d2 = d2[ , keepers ]
 
-# remove subjects missing any outcome or covariate (to have same sample size for all regressions)
-has.analysis.vars = complete.cases( d2[ , c(outcomes, covars) ] ) 
-table(has.analysis.vars)
-d2 = d2[ has.analysis.vars, ]
-dim(d2)
-# should be N = 2697
-
-
 
 ############################## SAVE PREPPED DATA ############################## 
 
-setwd(root.path); setwd("Prepped data")
+setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Private archive components/Prepped MIDUS data")
 write.csv(d2, "flourish_prepped.csv")
 
 
