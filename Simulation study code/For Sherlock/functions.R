@@ -470,6 +470,7 @@ sim_data = function( .n, .cor ) {
 #   otherwise. Even though fit_model is for only one outcome, .bhat.orig should
 #  have length W (one per outcome). 
 
+
 fit_model = function( Y.name,
                       .dat,
                       .center.stats,
