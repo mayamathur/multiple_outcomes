@@ -1,4 +1,9 @@
 
+
+# Notes to save:
+# - For logistic regression, "tval" things are actually deviances
+
+
 ######### FOR CLUSTER USE #########
 
 # because Sherlock 2.0 restores previous workspace
@@ -137,7 +142,7 @@ for ( j in 1:sim.reps ) {
                        .rho.YY = p$rho.YY,
                        .rho.XY = p$rho.XY,
                        .prop.corr = as.numeric(p$prop.corr) )
-  d = sim_data( .n = p$n, .cor = cor )
+  d = sim_data( .n = p$n, .cor = cor, .varType = p$var.type )
 
   # extract names of outcome variables
   X.names = names(d)[ grep( "X", names(d) ) ]

@@ -442,6 +442,8 @@ sim_data = function( .n,
     d2 = d
   }
   
+  d2 = as.data.frame(d2)
+  
   # sanity check:
   # # compare correlations before and after dichotomization
   # summary( as.numeric( .cor[1,-1] ) )  # true correlations of X1 with Ys
@@ -492,6 +494,17 @@ fit_model = function( Y.name,
                       .center.stats,
                       .bhat.orig ) {
   
+  # # test only
+  # Y.name = "Y1"
+  # .dat = d
+  # .center.stats = FALSE
+  # .bhat.orig = NA
+  
+  #bm
+  
+  # figure out whether outcome is binary or continuous
+  if ( length( unique( .dat[[Y.name]] ) ) <= 2 ) .var.type = "bin" else .var.type = "cont"
+  
   # extract names
   X.names = names( .dat )[ grep( "X", names( .dat ) ) ]
   
@@ -503,29 +516,60 @@ fit_model = function( Y.name,
   RHS = paste(X.names, collapse=" + ")
   formula = paste( c( Y.name, RHS ), collapse = " ~ ")
   
-  # extract p-value for exposure of interest (X1)
-  m = lm( eval( parse(text=formula) ), data=.dat )
   
-  resid.return = residuals(m)
-  sigma.return = summary(m)$sigma
-  intercept.return = coef(m)[["(Intercept)"]]
-  se.return = summary(m)$coefficients["X1", "Std. Error"]
-  
-  # if resampling was done under Ha, center stats by the original-sample estimates
-  if( !.center.stats ) {
-    bhat.return = coef(m)[["X1"]]
-    tval.return = summary(m)$coefficients[ "X1", 3 ]
+  if ( .var.type == "cont" ) {
+    # extract p-value for exposure of interest (X1)
+    m = lm( eval( parse(text=formula) ), data=.dat )
+    
+    resid.return = residuals(m)
+    sigma.return = summary(m)$sigma
+    intercept.return = coef(m)[["(Intercept)"]]
+    se.return = summary(m)$coefficients["X1", "Std. Error"]
+    
+    # if resampling was done under Ha, center stats by the original-sample estimates
+    if( !.center.stats ) {
+      bhat.return = coef(m)[["X1"]]
+      tval.return = summary(m)$coefficients[ "X1", 3 ]
+    }
+    if( .center.stats ) {
+      # pull out the correct beta-hat from the original vector by using the
+      #  Yname that we're regressing on
+      bhat.orig.w = .bhat.orig[ as.numeric( substr( Y.name, 2, nchar(Y.name) ) ) ]
+      bhat.return = coef(m)[["X1"]] - bhat.orig.w
+      tval.return = bhat.return / se.return
+    }
+    
+    df = nrow(.dat) - length(X.names) - 1
+    pval.return = 2 * ( 1 - pt( abs(tval.return), df = df ) )
   }
-  if( .center.stats ) {
-    # pull out the correct beta-hat from the original vector by using the
-    #  Yname that we're regressing on
-    bhat.orig.w = .bhat.orig[ as.numeric( substr( Y.name, 2, nchar(Y.name) ) ) ]
-    bhat.return = coef(m)[["X1"]] - bhat.orig.w
-    tval.return = bhat.return / se.return
-  }
   
-  df = nrow(.dat) - length(X.names) - 1
-  pval.return = 2 * ( 1 - pt( abs(tval.return), df = df ) )
+  if ( .var.type == "bin" ) {
+    
+    m = glm( eval( parse(text=formula) ),
+             data=.dat,
+             family = binomial( link = "logit") )
+    
+    resid.return = NA
+    sigma.return = NA
+    intercept.return = coef(m)[["(Intercept)"]]
+    se.return = summary(m)$coefficients["X1TRUE", "Std. Error"]
+    
+    # @there are no adjusted covariates here, but if there were, we'd fit the null model here
+    # see "logistic_regression.R"
+    
+    # if resampling was done under Ha, center stats by the original-sample estimates
+    if( !.center.stats ) {
+      bhat.return = coef(m)[["X1TRUE"]]
+      LRT = anova(m, test = "LRT")
+      tval.return = LRT$Deviance[2]
+    }
+    if( .center.stats ) {
+      stop( "Not supposed to have .center.stats = TRUE with binary outcomes")
+    }
+    
+    # from chi-square
+    pval.return = LRT$`Pr(>Chi)`[2]
+  }
   
   return( list( pval = pval.return,
                 resid = resid.return,
