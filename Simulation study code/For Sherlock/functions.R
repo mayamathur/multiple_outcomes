@@ -54,7 +54,7 @@ adjust_minP = function( p, p.bt ) {
 #  p.bt: Bootstrapped p-values (a W X B matrix)
 
 adj_Wstep = function( p, p.bt ) {
-
+  
   # attach indices to original p-values
   # to keep track of their original order
   p.dat = data.frame( ind = 1:length(p), p )
@@ -197,9 +197,9 @@ get_crit = function( p.dat, col.p ) {
   
   # sort bootstrapped p-values according to original ones
   col.p.sort = col.p[ p.dat$ind ]
-
+  
   qstar = rep( NA, length(col.p.sort) )
-
+  
   k = length(col.p.sort)
   for ( i in k:1 ) {  # count backwards
     if (i == k) qstar[i] = col.p.sort[k]
@@ -376,7 +376,7 @@ make_corr_mat = function( .nX,
   cor = as.data.frame( matrix( NA, nrow = nVar, ncol = nVar ) )
   names(cor) = vnames
   row.names(cor) = vnames
-   
+  
   # populate each cell 
   for ( r in 1:dim(cor)[1] ) {
     for ( c in 1:dim(cor)[2] ) {
@@ -392,7 +392,7 @@ make_corr_mat = function( .nX,
   
   # check if positive definite
   if( ! is.positive.definite( as.matrix(cor) ) ) stop( "Correlation matrix not positive definite")
-
+  
   return(cor)  # this is still a data.frame in order to keep names
 }
 
@@ -419,9 +419,11 @@ make_corr_mat = function( .nX,
 # Arguments: 
 # .n: sample size
 # .cor: correlation matrix from above function
-
-sim_data = function( .n, .cor ) {
-
+# .varType: "cont" for all continuous vars; "bin" for all binary
+sim_data = function( .n,
+                     .cor,
+                     .varType = "cont" ) {
+  
   # variable names
   vnames = names( .cor )
   
@@ -432,8 +434,22 @@ sim_data = function( .n, .cor ) {
                               sigma = as.matrix(.cor) ) )
   names(d) = vnames
   
+  if ( .varType == "bin" ) {
+    # mean-split the binary variables
+    d2 = apply( d, 2, function(x) x > 0 )
+    round( cor(d2), 2 )
+  } else {
+    d2 = d
+  }
+  
+  # sanity check:
+  # # compare correlations before and after dichotomization
+  # summary( as.numeric( .cor[1,-1] ) )  # true correlations of X1 with Ys
+  # summary( as.numeric( cor(d)[1,-1] ) )  # before dichotomizing
+  # summary( as.numeric( cor(d2)[1,-1] ) )  # after dichotomizing
+  
   # return the dataset
-  return(d)
+  return(d2)
 }
 
 # # test drive
@@ -489,7 +505,7 @@ fit_model = function( Y.name,
   
   # extract p-value for exposure of interest (X1)
   m = lm( eval( parse(text=formula) ), data=.dat )
-
+  
   resid.return = residuals(m)
   sigma.return = summary(m)$sigma
   intercept.return = coef(m)[["(Intercept)"]]
@@ -569,14 +585,14 @@ dataset_result = function( .dat,
                            .alpha,
                            .center.stats = FALSE,
                            .bhat.orig = NA ) {  
-
+  
   # extract names of outcome variables
   X.names = names( .dat )[ grep( "X", names(.dat) ) ]
   Y.names = names( .dat )[ grep( "Y", names(.dat) ) ]
   
   # for each outcome, fit regression model
   # see if each has p < alpha for covariate of interest
-
+  
   # this is a list of lists:
   #  length is equal to number of outcomes
   #  each entry is another list
@@ -590,7 +606,7 @@ dataset_result = function( .dat,
   # "flatten" the list of lists
   u = unlist(lists)
   pvals = as.vector( u[ names(u) == "pval" ] )
-
+  
   # save residuals
   # names of object u are resid.1, resid.2, ..., hence use of grepl 
   mat = matrix( u[ grepl( "resid", names(u) ) ], byrow=FALSE, ncol=length(Y.names) ) 
@@ -606,7 +622,7 @@ dataset_result = function( .dat,
   # returns vector for number of rejections at each alpha level
   # length should match length of .alpha
   n.reject = vapply( X = .alpha, FUN = function(a) sum( pvals < a ), FUN.VALUE=-99 )
-
+  
   # dataframe "rej" has 1 row and a column for each value of .alpha
   # col names are "0.01" and "0.05" if those are the alpha levels
   # values are the number of rejections at that .alpha level
@@ -720,7 +736,7 @@ stitch_files = function(.results.singles.path,
                         .results.stitched.write.path = .results.singles.path,
                         .name.prefix,
                         .stitch.file.name="stitched_model_fit_results.csv") {
-
+  
   # get list of all files in folder
   all.files = list.files(.results.singles.path, full.names=TRUE)
   
@@ -758,8 +774,8 @@ stitch_files = function(.results.singles.path,
 
 sbatch_not_run = function(.results.singles.path,
                           .results.write.path,
-                        .name.prefix,
-                        .max.sbatch.num = NA ) {
+                          .name.prefix,
+                          .max.sbatch.num = NA ) {
   
   # get list of all files in folder
   all.files = list.files(.results.singles.path, full.names=TRUE)
@@ -778,7 +794,7 @@ sbatch_not_run = function(.results.singles.path,
   # give info
   print( paste("The max job number is: ", max(sbatch.nums) ) )
   print( paste( "Number of jobs that weren't run: ",
-        ifelse( length(missed.nums) > 0, length(missed.nums), "none" ) ) )
+                ifelse( length(missed.nums) > 0, length(missed.nums), "none" ) ) )
   
   if( length(missed.nums) > 0 ) {
     setwd(.results.write.path)
@@ -803,7 +819,7 @@ sbatch_not_run = function(.results.singles.path,
 #  WILL SILENTLY IGNORE THE BATCH COMMANDS DUE TO EXTRA WHITESPACE!!
 sbatch_skeleton <- function() {
   return(
-"#!/bin/bash
+    "#!/bin/bash
 #################
 #set a job name  
 #SBATCH --job-name=JOBNAME

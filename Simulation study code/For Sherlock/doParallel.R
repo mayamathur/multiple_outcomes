@@ -42,56 +42,59 @@ registerDoParallel(cores=16)
 ######### END OF CLUSTER PART #########
 
 
-# ######### FOR LOCAL USE #########
-# # setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Sandbox/2018-1-13")
-# # p = read.csv("scen_params.csv")  # should be a single row, I think
-# 
-# # THIS SCENARIO WORKED FINE LOCALLY
-# n = 1000
-# nX = 1
-# nY = 40
-# rho.XX = 0
-# rho.YY = c(0)
-# rho.XY = c(0)  # null hypothesis: 0
-# prop.corr = 1
-# 
-# # bootstrap iterates and type
-# boot.reps = 500
-# sim.reps = 50
-# scen = 1
-# bt.type = c( "ha.resid" )
-# 
-# 
-# # matrix of scenario parameters
-# scen.params = expand.grid( bt.type, n, nX, nY, rho.XX,
-#                            rho.YY, rho.XY, prop.corr )
-# names(scen.params) = c( "bt.type", "n", "nX", "nY", "rho.XX",
-#                         "rho.YY", "rho.XY", "prop.corr" )
-# 
-# # name the scenarios
-# # remove letters that are privileged variables in R
-# letter.names = c(letters, LETTERS)[ ! c(letters, LETTERS) %in% c("i","T","F") ]
-# scen.params$scen.name = letter.names[ 1:dim(scen.params)[1] ]
-# p = scen.params
-# 
-# # add alpha corresponding to Bonferroni as first one
-# # NOTE THAT CODE ASSUMES BONFERRONI IS THE FIRST ONE
-# crit.bonf = 0.05 / p$nY
-# alpha = c( crit.bonf, 0.01, 0.05 )
-# 
-# library(doParallel)
-# library(foreach)
-# library(mvtnorm)
-# library(StepwiseTest)  # Romano
-# library(matrixcalc)
-# 
-# setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/git_multiple_outcomes/R code/For Sherlock")
-# source("functions.R")
-# 
-# # set the number of cores
-# registerDoParallel(cores=16)
-# 
-# ######### END OF LOCAL PART #########
+######### FOR LOCAL USE #########
+# setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Sandbox/2018-1-13")
+# p = read.csv("scen_params.csv")  # should be a single row, I think
+
+# THIS SCENARIO WORKED FINE LOCALLY
+n = 1000
+nX = 1
+nY = 40
+rho.XX = 0
+rho.YY = c(0)
+rho.XY = c(0.1)  # null hypothesis: 0
+prop.corr = 1
+var.type = "bin"  # should all vars be continuous or all binary?
+# if choosing bin, note that the correlations are BEFORE dichotomization
+  
+  
+# bootstrap iterates and type
+boot.reps = 500
+sim.reps = 50
+scen = 1
+bt.type = c( "ha.resid" )
+
+
+# matrix of scenario parameters
+scen.params = expand.grid( bt.type, n, nX, nY, rho.XX,
+                           rho.YY, rho.XY, prop.corr, var.type )
+names(scen.params) = c( "bt.type", "n", "nX", "nY", "rho.XX",
+                        "rho.YY", "rho.XY", "prop.corr", "var.type" )
+
+# name the scenarios
+# remove letters that are privileged variables in R
+letter.names = c(letters, LETTERS)[ ! c(letters, LETTERS) %in% c("i","T","F") ]
+scen.params$scen.name = letter.names[ 1:dim(scen.params)[1] ]
+p = scen.params
+
+# add alpha corresponding to Bonferroni as first one
+# NOTE THAT CODE ASSUMES BONFERRONI IS THE FIRST ONE
+crit.bonf = 0.05 / p$nY
+alpha = c( crit.bonf, 0.01, 0.05 )
+
+library(doParallel)
+library(foreach)
+library(mvtnorm)
+library(StepwiseTest)  # Romano
+library(matrixcalc)
+
+setwd("~/Dropbox/Personal computer/Harvard/THESIS/Thesis paper #2 (MO)/Linked to OSF (MO)/Code git (MO)/Simulation study code/For Sherlock")
+source("functions.R")
+
+# set the number of cores
+registerDoParallel(cores=16)
+
+######### END OF LOCAL PART #########
 
 
 ########################### THIS SCRIPT COMPLETELY RUNS 1 SIMULATION  ###########################
@@ -101,6 +104,7 @@ registerDoParallel(cores=16)
 # writes 1-row csv with number rejected and bootstrap CI
 
 # names of methods that resample under H0 vs. HA
+# used when deciding whether to center test stats
 h0.methods = c("Y", "resid", "h0.parametric", "h0.freedman")
 # **winning algorithm used in paper: ha.resid
 ha.methods = c("fcr", "ha.resid", "ha.resid.2")
