@@ -64,10 +64,11 @@ var.type = "bin"  # should all vars be continuous or all binary?
   
   
 # bootstrap iterates and type
-boot.reps = 500
+boot.reps = 1
 sim.reps = 50
 scen = 1
-bt.type = c( "ha.resid" )
+#bt.type = c( "ha.resid" )  # the one in paper (for OLS)
+bt.type = "fcr"  # for logistic regression
 
 
 # matrix of scenario parameters
@@ -132,7 +133,7 @@ for ( j in 1:sim.reps ) {
   #  }
   # ######## LOCAL PART ENDS HERE  ########
 
-  ##### Bootstrapping Loop ######
+  
   rep.time = system.time( {
 
   # make initial dataset from which to bootstrap
@@ -161,9 +162,9 @@ for ( j in 1:sim.reps ) {
   bhats = samp.res$bhats
   names(n.rej) = paste( "n.rej.", as.character(alpha), sep="" )
 
-  # run all bootstrap iterates
+  ##### Run All Bootstrap Iterates #####
     r = foreach( i = 1:boot.reps, .combine=rbind ) %dopar% {
-      # draw bootstrap sample
+      # draw row IDs with replacement
       ids = sample( 1:nrow(d), replace=TRUE )
 
       ##### Bootstrap Under Null #1 (Resample Y; Fix X) #####
@@ -266,10 +267,26 @@ for ( j in 1:sim.reps ) {
       # important for dataset_result to be able to find the right names
       names(b) = c(X.names, Y.names)
 
-      bt.res = dataset_result( .dat = b,
-                               .alpha = alpha,
-                               .center.stats = ifelse( p$bt.type %in% ha.methods, TRUE, FALSE ),
-                               .bhat.orig = bhats )
+      if ( p$var.type == "cont" ) {
+        bt.res = dataset_result( .dat = b,
+                                 .alpha = alpha,
+                                 .center.stats = ifelse( p$bt.type %in% ha.methods, TRUE, FALSE ),
+                                 .bhat.orig = bhats )
+      }
+      
+      #bm
+      # here, for logistic reg, we DON'T want to center the stats (i.e., deviance) by the one in the original sample
+      #  but rather to have mean E[chi-square on k df] = k = 1 in our case
+      if ( p$var.type == "bin" ) {
+        bt.res = dataset_result( .dat = b,
+                                 .alpha = alpha,
+                                 .center.stats = FALSE,
+                                 .bhat.orig = NA )
+        
+        # "center" the deviances using theoretical expectation under H0
+        # this should actually happen within dataset_result
+      }
+
 
       # return all the things
       list( rej = bt.res$rej,
@@ -288,7 +305,25 @@ for ( j in 1:sim.reps ) {
   } )[3]  # end timer
 
 
-  ###### Data Wrangling for This Simulation Rep #####
+  ###### Data Wrangling for This Simulation Rep ###### 
+  
+  
+  if ( p$var.type == "bin" ) {
+    # "center" the WHOLE distribution of deviances to force the correct expectation under null
+    # these are actually LRTs
+    t.bt = do.call( cbind, r[ , "tvals" ] )
+    
+    # for global null, mean of each row (outcome) should be 1
+    # subtracting different constants from each row preserves their correlations 
+    means = rowMeans(t.bt)
+    
+    t.bt = apply( t.bt, 2, function(col) col - means + 1 )
+    
+    # now all rows have mean 1 because we forced them to be under the nullrowMeans(t.bt)
+    rowMeans(t.bt)
+    # uh-oh...now we have negative deviances, which isn't really possible when testing nested models...
+    
+  }
 
   # organize rejections by alpha level
   u = unlist( r[,"rej"] )

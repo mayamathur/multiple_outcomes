@@ -497,7 +497,7 @@ fit_model = function( Y.name,
   # # test only
   # Y.name = "Y1"
   # .dat = d
-  # .center.stats = FALSE
+  # .center.stats = TRUE
   # .bhat.orig = NA
   
   #bm
@@ -558,17 +558,30 @@ fit_model = function( Y.name,
     # see "logistic_regression.R"
     
     # if resampling was done under Ha, center stats by the original-sample estimates
-    if( !.center.stats ) {
+    if( .center.stats == FALSE ) {
       bhat.return = coef(m)[["X1TRUE"]]
       LRT = anova(m, test = "LRT")
       tval.return = LRT$Deviance[2]
     }
-    if( .center.stats ) {
-      stop( "Not supposed to have .center.stats = TRUE with binary outcomes")
+    if ( .center.stats == TRUE ) {
+      stop("Doesn't make sense to have .center.stats = TRUE for logistic regression")
+      # # here, for logistic reg, we DON'T want to center the stats (i.e., deviance) by the one in the original sample
+      # #  but rather to have mean E[chi-square on k df] = k = 1 in our case
+      # bhat.return = NA
+      # LRT = anova(m, test = "LRT")
+      # tval.return = LRT$Deviance[2]
+      # # "1" below represents expectation of these deviances under H0
+      # # @assumes df=1
+      # # @THIS IS WRONG BECAUSE IT'S FOR A SINGLE STATISTIC
+      # # SHOULD CENTER ONLY AFTER GETTING BT.RES
+      # tval.return = tval.return - mean(tval.return) + 1
     }
     
-    # from chi-square
-    pval.return = LRT$`Pr(>Chi)`[2]
+    # calculate p-value from chi-square(1)
+    # confirmed that this agrees with p-value from anova() above if not centering
+    pval.return = pchisq( q = tval.return,
+                          df = 1, 
+                          lower.tail = FALSE )
   }
   
   return( list( pval = pval.return,
@@ -628,7 +641,7 @@ fit_model = function( Y.name,
 dataset_result = function( .dat,
                            .alpha,
                            .center.stats = FALSE,
-                           .bhat.orig = NA ) {  
+                           .bhat.orig = NA ) {
   
   # extract names of outcome variables
   X.names = names( .dat )[ grep( "X", names(.dat) ) ]
