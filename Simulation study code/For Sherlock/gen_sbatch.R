@@ -122,7 +122,7 @@ sbatch_params <- data.frame(jobname,
                             stringsAsFactors = F,
                             server_sbatch_path = NA)
 
-# generateSbatch(sbatch_params, runfile_path)
+generateSbatch(sbatch_params, runfile_path)
 
 n.files
 

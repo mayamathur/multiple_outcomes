@@ -71,14 +71,29 @@ if ( run.local == FALSE ) {
 # 
 
 if ( run.local == TRUE ) {
-  # THIS SCENARIO WORKED FINE LOCALLY
+  # # THIS SCENARIO WORKED FINE LOCALLY
+  # n = 1000
+  # nX = 1
+  # nY = 40
+  # rho.XX = 0
+  # rho.YY = c(0)
+  # rho.XY = c(0)  # null hypothesis: 0
+  # prop.corr = 1
+  
+  # SCEN IN 1.SBATCH
   n = 1000
   nX = 1
-  nY = 40
+  nY = 200
   rho.XX = 0
   rho.YY = c(0)
-  rho.XY = c(0)  # null hypothesis: 0
-  prop.corr = 1
+  rho.XY = c(0) # null hypothesis: 0
+  prop.corr = c(0.20)  # exchangeable vs. half-correlated matrix
+  
+  
+  # boot.reps = 500
+  # bootstrap iterates and type
+  boot.reps = 1000
+  bt.type = c( "ha.resid" )
   
   # bootstrap iterates and type
   boot.reps = 50
