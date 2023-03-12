@@ -46,51 +46,51 @@ registerDoParallel(cores=16)
 # # setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Sandbox/2018-1-13")
 # # p = read.csv("scen_params.csv")  # should be a single row, I think
 # 
-# # THIS SCENARIO WORKED FINE LOCALLY
-# n = 1000
-# nX = 1
-# nY = 40
-# rho.XX = 0
-# rho.YY = c(0)
-# rho.XY = c(0)  # null hypothesis: 0
-# prop.corr = 1
-# 
-# # bootstrap iterates and type
-# boot.reps = 500
-# sim.reps = 50
-# scen = 1
-# bt.type = c( "ha.resid" )
-# 
-# 
-# # matrix of scenario parameters
-# scen.params = expand.grid( bt.type, n, nX, nY, rho.XX,
-#                            rho.YY, rho.XY, prop.corr )
-# names(scen.params) = c( "bt.type", "n", "nX", "nY", "rho.XX",
-#                         "rho.YY", "rho.XY", "prop.corr" )
-# 
-# # name the scenarios
-# # remove letters that are privileged variables in R
-# letter.names = c(letters, LETTERS)[ ! c(letters, LETTERS) %in% c("i","T","F") ]
-# scen.params$scen.name = letter.names[ 1:dim(scen.params)[1] ]
-# p = scen.params
-# 
-# # add alpha corresponding to Bonferroni as first one
-# # NOTE THAT CODE ASSUMES BONFERRONI IS THE FIRST ONE
-# crit.bonf = 0.05 / p$nY
-# alpha = c( crit.bonf, 0.01, 0.05 )
-# 
-# library(doParallel)
-# library(foreach)
-# library(mvtnorm)
-# library(StepwiseTest)  # Romano
-# library(matrixcalc)
-# 
-# setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/git_multiple_outcomes/R code/For Sherlock")
-# source("functions.R")
-# 
-# # set the number of cores
-# registerDoParallel(cores=16)
-# 
+# THIS SCENARIO WORKED FINE LOCALLY
+n = 1000
+nX = 1
+nY = 40
+rho.XX = 0
+rho.YY = c(0)
+rho.XY = c(0)  # null hypothesis: 0
+prop.corr = 1
+
+# bootstrap iterates and type
+boot.reps = 50
+sim.reps = 1
+scen = 1
+bt.type = c( "ha.resid" )
+
+
+# matrix of scenario parameters
+scen.params = expand.grid( bt.type, n, nX, nY, rho.XX,
+                           rho.YY, rho.XY, prop.corr )
+names(scen.params) = c( "bt.type", "n", "nX", "nY", "rho.XX",
+                        "rho.YY", "rho.XY", "prop.corr" )
+
+# name the scenarios
+# remove letters that are privileged variables in R
+letter.names = c(letters, LETTERS)[ ! c(letters, LETTERS) %in% c("i","T","F") ]
+scen.params$scen.name = letter.names[ 1:dim(scen.params)[1] ]
+p = scen.params
+
+# add alpha corresponding to Bonferroni as first one
+# NOTE THAT CODE ASSUMES BONFERRONI IS THE FIRST ONE
+crit.bonf = 0.05 / p$nY
+alpha = c( crit.bonf, 0.01, 0.05 )
+
+library(doParallel)
+library(foreach)
+library(mvtnorm)
+library(StepwiseTest)  # Romano
+library(matrixcalc)
+
+setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/git_multiple_outcomes/R code/For Sherlock")
+source("functions.R")
+
+# set the number of cores
+registerDoParallel(cores=16)
+
 # ######### END OF LOCAL PART #########
 
 
