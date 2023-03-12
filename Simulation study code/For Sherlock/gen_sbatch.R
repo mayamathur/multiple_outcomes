@@ -11,7 +11,7 @@ setwd(path)
 # setwd(path)
 
 
-# # ~~~~ FOR DEBUGGING ONLY
+###### One Scen for Testing ###### 
 # n = 1000
 # nX = 1
 # nY = 40
@@ -19,10 +19,14 @@ setwd(path)
 # rho.YY = c(0.6)
 # rho.XY = c(0) # null hypothesis: 0
 # prop.corr = c(1)  # exchangeable vs. half-correlated matrix
+# boot.reps = 1000
+# bt.type = c( "ha.resid" )
+###### end full set
 
+###### Full Set of Scens ###### 
 n = 1000
 nX = 1
-nY = 40
+nY = 200
 rho.XX = 0
 rho.YY = c(0, 0.1, 0.3, 0.6)
 rho.XY = c(0, 0.03, 0.05, 0.10, 0.15) # null hypothesis: 0
@@ -33,6 +37,8 @@ prop.corr = c(0.20, 0.5, 1)  # exchangeable vs. half-correlated matrix
 # bootstrap iterates and type
 boot.reps = 1000
 bt.type = c( "ha.resid" )
+###### end full set
+
 
 # matrix of scenario parameters
 scen.params = expand.grid( bt.type, n, nX, nY, rho.XX, rho.YY, rho.XY, prop.corr )
@@ -58,7 +64,7 @@ scen.params = scen.params[ order(scen.params$rho.XY,
 
 ######## Name the Scenarios ########
 # if merging results with other simulations, set this to the last letter already used
-start.at = 1
+start.at = 53
 
 # remove letters that are privileged variables in R
 # letter.names = c(letters, LETTERS, paste(letters, letters, sep="") )
@@ -102,7 +108,7 @@ runfile_path = paste(path, "/testRunFile.R", sep="")
 sbatch_params <- data.frame(jobname,
                             outfile,
                             errorfile,
-                            jobtime = "0:30:00",
+                            jobtime = "02:00:00",  # with nY=40, 0:30:00 was fine
                             quality = "normal",
                             node_number = 1,
                             mem_per_node = 64000,
@@ -116,7 +122,7 @@ sbatch_params <- data.frame(jobname,
                             stringsAsFactors = F,
                             server_sbatch_path = NA)
 
-#generateSbatch(sbatch_params, runfile_path)
+# generateSbatch(sbatch_params, runfile_path)
 
 n.files
 
@@ -124,11 +130,13 @@ n.files
 # max hourly submissions seems to be 300, which is 12 seconds/job
 path = "/home/groups/manishad/multTest"
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in 2340:2600) {
+for (i in 1:1) {
   system( paste("sbatch -p owners /home/groups/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
   Sys.sleep(10)  # delay in seconds
 }
 
+# run just the first one:
+# sbatch -p owners /home/groups/manishad/multTest/sbatch_files/1.sbatch
 
 
 

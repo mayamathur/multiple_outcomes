@@ -4,9 +4,6 @@ run.local = FALSE
 ######### FOR CLUSTER USE #########
 
 if ( run.local == FALSE ) {
-  # because Sherlock 2.0 restores previous workspace
-  rm( list = ls() )
-  
   # load command line arguments
   args = commandArgs(trailingOnly = TRUE)
   jobname = args[1]

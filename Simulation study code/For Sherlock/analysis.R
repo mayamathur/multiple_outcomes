@@ -72,7 +72,9 @@ ci_plot = function(dat) {
 
 ########################### READ IN DATA ###########################
 
-setwd("~/Desktop")
+# as in Frontiers_0 (only W=40)
+setwd("~/Dropbox/Personal computer/Harvard/THESIS/Thesis paper #2 (MO)/Linked to OSF (MO)/Simulation results in paper/2018-6-17 rerun Freedman after fixing bug")
+
 
 # read in scenario parameters
 scen.params = read.csv("scen_params.csv")
@@ -107,7 +109,7 @@ library(magrittr)
 library(tidyr)
 
 # names of joint rejection variables for all methods
-( n.true.names = c( names(s)[ grep( "n.true.", names(s) ) ] ) )
+( n.true.names = c( names(s)[ grep( "n.true.", names(s) ) ] ) )  #@BREAKS
 n.true.names = c("n.rej.0.00125", n.true.names)
 
 # MAKE SURE TO LIST THEM IN SAME ORDER AS names above

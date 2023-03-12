@@ -5,7 +5,7 @@ path = "/home/groups/manishad/multTest"
 setwd(path)
 source("functions.R")
 
-######## FOR STITCHING LONG FILES ########
+######## FOR STITCHING SHORT FILES ########
 
 s = stitch_files(.results.singles.path = "/home/groups/manishad/multTest/sim_results/short",
                  .results.stitched.write.path = "/home/groups/manishad/multTest/sim_results/overall_stitched",
