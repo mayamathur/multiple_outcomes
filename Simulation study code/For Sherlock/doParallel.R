@@ -85,7 +85,7 @@ library(mvtnorm)
 library(StepwiseTest)  # Romano
 library(matrixcalc)
 
-setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/git_multiple_outcomes/R code/For Sherlock")
+setwd("~/Dropbox/Personal computer/Harvard/THESIS/Thesis paper #2 (MO)/Linked to OSF (MO)/Code git (MO)/Simulation study code/For Sherlock")
 source("functions.R")
 
 # set the number of cores
