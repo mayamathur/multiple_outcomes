@@ -841,7 +841,7 @@ sbatch_skeleton <- function() {
 #SBATCH --cpus-per-task=CPUS_PER_TASK
 #now run normal batch commands
     
-ml load R
+ml load R/4.2.0
 srun R -f PATH_TO_R_SCRIPT ARGS_TO_R_SCRIPT")
 }
 
