@@ -1,80 +1,18 @@
 
+setwd("~/Dropbox/Personal computer/Harvard/THESIS/Thesis paper #2 (MO)/Linked to OSF (MO)/Simulation results in paper/2018-6-17 rerun Freedman after fixing bug")
+
+
 
 ########################### HELPER FNS ###########################
 
-# Note that these access global variables for, e.g., method.label
-
-
-ntrues_plot = function(dat, benchmark.line = FALSE) {
-  library(ggplot2)
-  p = ggplot( data = dat, aes( x = rho.YY, y = n.true,
-                           color = method,
-                           label = method ) ) +
-    geom_text( aes( label = method.label) ) +
-    theme_bw() +
-    facet_wrap(~ group, ncol = 3 ) +  # for changing rows/columns
-    ylab("Number of nulls rejected") +
-    scale_color_manual( values = colors) +
-    scale_x_continuous( limits = c( min(x.breaks), max(x.breaks) ), breaks = x.breaks ) +
-    scale_y_continuous( limits = c( min(y.breaks), max(y.breaks) ), breaks = y.breaks ) +
-    xlab( "Correlation between each pair of outcomes" ) +
-    theme(legend.position="none") # remove legend
-  
-  if ( benchmark.line == FALSE) return(p)
-  else return( p + geom_hline( aes(yintercept = benchmark ), color="red", lty=2 ) )
-}
-
-
-
-pwr_plot = function(dat) {
-  library(ggplot2)
-  ggplot( data = dat, aes( x = rho.YY, y = power,
-                           color = method,
-                           label = method ) ) +
-    geom_text( aes( label = method.label) ) +
-    theme_bw() +
-    #facet_wrap( ~group) +
-    facet_wrap(~ group, ncol = 3 ) +  # for changing rows/columns
-    ylab("Power") +
-    scale_color_manual( values = colors) +
-    scale_x_continuous( limits = c( min(x.breaks), max(x.breaks) ), breaks = x.breaks ) +
-    scale_y_continuous( limits = c( min(y.breaks), max(y.breaks) ), breaks = y.breaks ) +
-    xlab( "Correlation between each pair of outcomes" ) +
-    #ggtitle("Power of bootstrapped hypothesis test of joint null") +
-    theme(legend.position="none") # remove legend
-}
-
-ci_plot = function(dat) {
-  library(ggplot2)
-  ggplot( data = dat ) +
-    # bootstrap results
-    geom_point( aes( x = rho.YY, y = n.rej.bt.mn, color = method ), size=2.5 ) +
-    geom_errorbar( aes( x=rho.YY, ymin = bt.lo.mn,
-                        ymax = bt.hi.mn, color = method ), width=0.02, size=1.05 ) +
-    
-    # original dataset results
-    geom_point( aes( x = rho.YY, y = n.rej.mn, shape="the shape" ), color = "black", size=3.5 ) +
-    scale_shape_manual( values = c('the shape' = 4),
-                        name = "Original dataset", guide = 'legend', labels = c("Mean rejections")) +
-    
-    theme_bw() +
-    facet_wrap(~ group, ncol = 3 ) +
-    ylab("Average rejections") +
-    scale_color_manual( name="Joint test", values = colors, labels = legend.labs ) +
-    
-    xlab( "Correlation between each pair of outcomes" ) +
-    #ggtitle("Average CI limits and rejections in resamples and originals") +
-    theme(legend.position="none") # remove legend
-}
-
-
+library(here)
+setwd(here())
+source("helper_analysis.R")
 
 
 ########################### READ IN DATA ###########################
 
-# as in Frontiers_0 (only W=40)
-setwd("~/Dropbox/Personal computer/Harvard/THESIS/Thesis paper #2 (MO)/Linked to OSF (MO)/Simulation results in paper/2018-6-17 rerun Freedman after fixing bug")
-
+setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Simulation results/2018-6-17 rerun Freedman after fixing bug")
 
 # read in scenario parameters
 scen.params = read.csv("scen_params.csv")
@@ -96,96 +34,6 @@ library(gdata)
 s = drop.levels(s)
 
 
-
-########################### DATA PREP: N-TRUE-EFFECTS PLOT ###########################
-
-# need 1 row per scenario-method combination
-# methods are ours, Wstep, bonf.naive, and minP
-
-library(reshape2)
-library(tidyverse)
-library(dplyr)
-library(magrittr)
-library(tidyr)
-
-# names of joint rejection variables for all methods
-( n.true.names = c( names(s)[ grep( "n.true.", names(s) ) ] ) )  #@BREAKS
-n.true.names = c("n.rej.0.00125", n.true.names)
-
-# MAKE SURE TO LIST THEM IN SAME ORDER AS names above
-( method.names = c( "bonf.naive",
-                   "holm",
-                   "minP",
-                   "Wstep",
-                   "Romano",
-                   "ours.0.01",
-                   "ours.0.05") )
-
-# reshape wide to long
-# https://stackoverflow.com/questions/12466493/reshaping-multiple-sets-of-measurement-columns-wide-format-into-single-columns
-lt = reshape( s[ , names(s) %in% c(n.true.names, "scen") ],
-              varying = n.true.names,
-              v.names = "n.true",
-              times = method.names,
-              timevar = "method",  # name to use for the above variable
-              direction="long" )
-
-
-# since each scenario still has multiple rows, take means 
-n.trues = lt %>% group_by(scen, method) %>%
-  summarise( n.true = mean( n.true ) )
-
-# merge in scenario parameters
-n.trues = merge(n.trues, scen.params, by = "scen" )
-
-# for plotting joy
-n.trues$group = as.factor( paste( "X-Y correlation: ", n.trues$rho.XY,
-                              " for ",
-                              n.trues$prop.corr * 100,
-                              "% of pairs", 
-                              sep = "" ) )
-
-# relevel to get facets in correct order
-n.trues = n.trues[ order( n.trues$rho.XY, n.trues$prop.corr, n.trues$rho.YY ), ]
-ordered.levels = unique(n.trues$group)
-# put the strong null scenario last for prettiness
-ordered.levels = c( as.character(ordered.levels), as.character(ordered.levels[1]) )
-ordered.levels = ordered.levels[-1]
-n.trues$group = factor( n.trues$group, levels = ordered.levels )
-levels(n.trues$group)
-
-
-# for more plotting joy
-labels = c("B", "H", "MP", "G1", "G5", "WS", "R")
-n.trues$method.label = NA
-n.trues$method.label[ n.trues$method == "bonf.naive" ] = labels[1]
-n.trues$method.label[ n.trues$method == "holm" ] = labels[2]
-n.trues$method.label[ n.trues$method == "minP" ] = labels[3]
-n.trues$method.label[ n.trues$method == "ours.0.01" ] = labels[4]
-n.trues$method.label[ n.trues$method == "ours.0.05" ] = labels[5]
-n.trues$method.label[ n.trues$method == "Wstep" ] = labels[6]
-n.trues$method.label[ n.trues$method == "Romano" ] = labels[7]
-
-
-# sanity check
-table(n.trues$method, n.trues$method.label)
-
-# set number of true effects identified equal to 0 when excess hits < 0
-n.trues$n.true[ n.trues$n.true < 0 ] = 0
-
-# benchmark value: the actual number of true effects in that scenario
-n.trues$benchmark = n.trues$nY * n.trues$prop.corr
-n.trues$benchmark[ n.trues$prop.corr == 1 & n.trues$rho.XY == 0 ] = 0  # fix the control scenario because it reads as -
-
-##### Save Results #####
-setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Simulation results/2018-8-18 with ntrues plot")
-write.csv( n.trues, "results_ntrues.csv")
-
-write.csv( lt, "results_ntrues_long.csv")
-
-
-
-
 ########################### DATA PREP: FOR POWER PLOT ###########################
 
 # need 1 row per scenario-method combination
@@ -203,12 +51,13 @@ library(tidyr)
 
 # MAKE SURE TO LIST THEM IN SAME ORDER AS JT.REJ.NAMES
 ( method.names = c("bonf.naive",
-                 "holm",
-                 "minP",
-                 "Wstep",
-                 "Romano",
-                 "ours.0.01",
-                 "ours.0.05") )
+                   "holm",
+                   "minP",
+                   "Wstep",
+                   "Romano",
+                   "meanP",
+                   "ours.0.01",
+                   "ours.0.05") )
 
 # reshape wide to long
 # https://stackoverflow.com/questions/12466493/reshaping-multiple-sets-of-measurement-columns-wide-format-into-single-columns
@@ -257,10 +106,10 @@ pwr = merge(pwr, scen.params, by = "scen" )
 
 # for plotting joy
 pwr$group = as.factor( paste( "X-Y correlation: ", pwr$rho.XY,
-                   " for ",
-                   pwr$prop.corr * 100,
-                   "% of pairs", 
-                   sep = "" ) )
+                              " for ",
+                              pwr$prop.corr * 100,
+                              "% of pairs", 
+                              sep = "" ) )
 
 # relevel to get facets in correct order
 pwr = pwr[ order( pwr$rho.XY, pwr$prop.corr, pwr$rho.YY ), ]
@@ -273,23 +122,27 @@ levels(pwr$group)
 
 
 # for more plotting joy
-labels = c("B", "H", "MP", "G1", "G5", "WS", "R")
+labels = c("B", "H", "MP", "LP", "G1", "G5", "WS", "R")
 pwr$method.label = NA
 pwr$method.label[ pwr$method == "bonf.naive" ] = labels[1]
 pwr$method.label[ pwr$method == "holm" ] = labels[2]
 pwr$method.label[ pwr$method == "minP" ] = labels[3]
-pwr$method.label[ pwr$method == "ours.0.01" ] = labels[4]
-pwr$method.label[ pwr$method == "ours.0.05" ] = labels[5]
-pwr$method.label[ pwr$method == "Wstep" ] = labels[6]
-pwr$method.label[ pwr$method == "Romano" ] = labels[7]
+pwr$method.label[ pwr$method == "meanP" ] = labels[4]  # for "log-P"
+pwr$method.label[ pwr$method == "ours.0.01" ] = labels[5]
+pwr$method.label[ pwr$method == "ours.0.05" ] = labels[6]
+pwr$method.label[ pwr$method == "Wstep" ] = labels[7]
+pwr$method.label[ pwr$method == "Romano" ] = labels[8]
 
 # sanity check
-table(pwr$method, pwr$method.label)
+# table(pwr$method, pwr$method.label)
+
+# remove experimental method
+pwr = pwr[ pwr$method != "meanP", ]
 
 
-##### Save Results #####
+##### Save Results ##### 
 pwr2 = pwr
-setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Simulation results/2018-8-18 with ntrues plot")
+setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Simulation results/2018-6-17 rerun Freedman after fixing bug")
 write.csv( pwr2, "results_pwr.csv")
 
 lp2 = lp
@@ -326,10 +179,10 @@ lc = reshape( s,
 
 # average CI limits and rejections in bootstraps
 ci = lc %>% group_by(scen, method) %>%
-  summarise( n.rej.mn = mean( as.numeric( as.character(n.rej) ) ),
-             n.rej.bt.mn = mean( as.numeric( as.character(n.rej.bt) ) ),
-             bt.lo.mn = mean( as.numeric( as.character(bt.lo) ) ),
-             bt.hi.mn = mean( as.numeric( as.character(bt.hi) ) ) )
+  summarise( n.rej.mn = mean(n.rej),
+             n.rej.bt.mn = mean(n.rej.bt),
+             bt.lo.mn = mean(bt.lo),
+             bt.hi.mn = mean(bt.hi) )
 
 ci = merge(ci, scen.params, by = "scen" )
 
@@ -355,44 +208,8 @@ buffer = 0.02
 ci2$rho.YY[ ci2$method == "ours.0.05" ] = ci2$rho.YY[ ci2$method == "ours.0.05" ] + buffer
 
 # save results (unstaggered dataset)
-setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Simulation results/2018-8-18 with ntrues plot")
+setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Simulation results/2018-6-17 rerun Freedman after fixing bug")
 write.csv(ci, "results_null_interval.csv")
-write.csv(lc, "results_null_interval_long.csv")
-
-
-
-
-########################### N TRUE EFFECTS PLOTS ###########################
-
-# for main text: simplify the plot 
-# by removing intermediate effect sizes
-n.trues.short = n.trues[ !n.trues$rho.XY %in% c(0.1, 0.15), ]
-
-# set global variables needed for plotting fn
-x.breaks = c(0, 0.1, 0.3, 0.6)
-colors = c( "#999999", "orange", "#009E73", "black", "#E69F00", "#D55E00", "black", "darkgreen" )
-
-dat = n.trues
-
-y.breaks = seq(0, 40, 10)
-p5 = ntrues_plot(n.trues, benchmark.line = TRUE); p5
-
-y.breaks = seq(0, 10, 2)
-p6 = ntrues_plot(n.trues.short, benchmark.line = FALSE); p6
-
-##### Save Results #####
-setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Simulation results/2018-8-18 with ntrues plot")
-width = 8
-square.size = 8/3 # divide by number of cols
-height = square.size*5  # multiply by number of rows
-ggsave( filename = paste("ntrues_full.png"),
-        plot=p5, path=NULL, width=width, height=height, units="in")
-
-width = 8
-square.size = 8/3  # divide by number of cols
-height = square.size*3  # multiply by number of rows
-ggsave( filename = paste("ntrues_short.png"),
-        plot=p6, path=NULL, width=width, height=height, units="in")
 
 
 
@@ -407,22 +224,23 @@ ggsave( filename = paste("ntrues_short.png"),
 # by removing intermediate effect sizes
 pwr.short = pwr[ !pwr$rho.XY %in% c(0.1, 0.15), ]
 
+
 # set global variables needed for plotting fn
 x.breaks = c(0, 0.1, 0.3, 0.6)
 y.breaks = seq(0, 1, 0.1)
 colors = c( "#999999", "orange", "#009E73", "black", "#E69F00", "#D55E00", "black", "darkgreen" )
 
 
-# for Appendix version, use pwr instead of pwr.short
-p1 = pwr_plot(pwr); p1
-p2 = pwr_plot(pwr.short); p2
+# save different versions of plot (some with only a few scenarios)
+p1 = pwr_plot(pwr); p1  # for Appendix 
+p2 = pwr_plot(pwr.short); p2  # for main text
 
 width = 8
 square.size = 8/3 # divide by number of cols
 height = square.size*5  # multiply by number of rows
 name = "joint_test_full.png"
 ggsave( filename = paste(name),
-       plot=p1, path=NULL, width=width, height=height, units="in")
+        plot=p1, path=NULL, width=width, height=height, units="in")
 
 width = 8
 square.size = 8/3 # divide by number of cols
@@ -439,6 +257,8 @@ ggsave( filename = paste(name),
 # run this, then re-run the above
 ci2.short = ci2[ ci2$rho.XY %in% c(0, 0.05, 0.1, 0.15), ]
 
+# even shorter for slide talk
+ci2.super.short = ci2[ ci2$rho.XY %in% c(0, 0.1, 0.15), ]
 
 ##### Make Plot #####
 
@@ -455,18 +275,25 @@ legend.labs = c( "G1 (alpha = 0.01)", "G5 (alpha = 0.05)" )
 
 p3 = ci_plot(ci2); p3
 p4 = ci_plot(ci2.short); p4
+p5 = ci_plot(ci2.super.short); p5
 
 width = 8
 square.size = 8/3 # divide by number of cols
 height = square.size*5  # multiply by number of rows
 ggsave( filename = paste("null_ci_full.png"),
-         plot=p3, path=NULL, width=width, height=height, units="in")
+        plot=p3, path=NULL, width=width, height=height, units="in")
 
 width = 8
 square.size = 8/3  # divide by number of cols
 height = square.size*4  # multiply by number of rows
 ggsave( filename = paste("null_ci_short.png"),
-         plot=p4, path=NULL, width=width, height=height, units="in")
+        plot=p4, path=NULL, width=width, height=height, units="in")
+
+width = 8
+square.size = 8/3  # divide by number of cols
+height = square.size*3  # multiply by number of rows
+ggsave( filename = paste("null_ci_super_short.png"),
+        plot=p5, path=NULL, width=width, height=height, units="in")
 
 
 
@@ -478,8 +305,8 @@ ggsave( filename = paste("null_ci_short.png"),
 # back to ci dataframe because has unstaggered X-axis
 # upper CI limits under independence vs. moderate correlation
 ( bt.hi = ci %>% filter(method=="ours.0.05") %>%
-  group_by(rho.YY) %>%
-  summarise(bt.hi.mn = mean(bt.hi.mn) ) )
+    group_by(rho.YY) %>%
+    summarise(bt.hi.mn = mean(bt.hi.mn) ) )
 
 print( paste( "...more than twice as high for rhoYY = 0.60 versus rhoYY = 0 (i.e., ",
               round( bt.hi$bt.hi.mn[ bt.hi$rho.YY == 0.60 ], 1 ),
@@ -487,7 +314,7 @@ print( paste( "...more than twice as high for rhoYY = 0.60 versus rhoYY = 0 (i.e
               round( bt.hi$bt.hi.mn[ bt.hi$rho.YY == 0 ], 1 ),
               " rejections; ",
               sep=""
-              ) )
+) )
 
 
 ##### Look at a Particular Scenario #####
@@ -497,24 +324,24 @@ print( paste( "...more than twice as high for rhoYY = 0.60 versus rhoYY = 0 (i.e
 true.ES = 0.05
 # mean rejections
 ( n.rej.mean = ci %>%
-  filter(method=="ours.0.05") %>%
-  filter(rho.XY == true.ES) %>%
-  filter(prop.corr == 1) %>%
-  summarise(n.rej.mn = mean(n.rej.mn) ) )
+    filter(method=="ours.0.05") %>%
+    filter(rho.XY == true.ES) %>%
+    filter(prop.corr == 1) %>%
+    summarise(n.rej.mn = mean(n.rej.mn) ) )
 
 # excess hits at different rho.YY
 print( paste( "...the mean number of observed rejections at alpha = 0.05 (",
               round( n.rej.mean, 1 ),
-       ")",
-       sep=""
-       ) )
+              ")",
+              sep=""
+) )
 
 # "would be only just outside the null interval if..."
 print( paste( round( n.rej.mean, 1 ),
               " - ",
               round( bt.hi$bt.hi.mn[ bt.hi$rho.YY == 0.6 ], 1 ),
               " = ",
-              round( n.rej.mean - bt.hi$bt.hi.mn[ bt.hi$rho.YY == 0.6 ], 2 ),
+              round( n.rej.mean - bt.hi$bt.hi.mn[ bt.hi$rho.YY == 0.6 ], 1 ),
               sep="" ) )
 
 # "...but would be well outside the null interval if"...
@@ -532,29 +359,6 @@ print( paste( round( n.rej.mean, 1 ),
     filter(rho.XY == true.ES) %>%
     filter(prop.corr == 1) %>%
     summarise( n.rej.bonf = mean(n.rej.0.00125) )
-  )
+)
 
-
-##### Number of True Effects Detected #####
-
-n.trues.Romano = n.trues %>% group_by(scen) %>%
-  filter( method == "Romano" ) 
-
-n.trues.ours = n.trues %>% group_by(scen) %>%
-  filter( method == "ours.0.05" )
-
-# "In such scenarios, our proposed methods sometimes rejected as many as 6 more null hypotheses than the next-best method"
-ind = which.max( n.trues.ours$n.true - n.trues.Romano$n.true )
-
-print( paste( "as many as ",
-              signif( n.trues.ours$n.true[ind] - n.trues.Romano$n.true[ind], 3 ),
-              " more null hypotheses",
-              sep="" ) )
-
-# in Discussion
-print( paste( 
-              signif( n.trues.ours$n.true[ind], 3 ),
-              " vs. ",
-              signif( n.trues.Romano$n.true[ind], 3 ),
-              sep="" ) )
 
