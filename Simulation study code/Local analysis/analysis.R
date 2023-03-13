@@ -1,7 +1,4 @@
 
-setwd("~/Dropbox/Personal computer/Harvard/THESIS/Thesis paper #2 (MO)/Linked to OSF (MO)/Simulation results in paper/2018-6-17 rerun Freedman after fixing bug")
-
-
 
 ########################### HELPER FNS ###########################
 
