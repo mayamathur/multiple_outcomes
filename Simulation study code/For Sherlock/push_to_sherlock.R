@@ -69,11 +69,6 @@ scp mmathur@login.sherlock.stanford.edu /home/groups/manishad/multTest/results/o
 
 ####################### CLEAN UP ####################### 
 
-
-  # DELETE ALL LONG RESULTS
-  mkdir /home/groups/manishad/multTest/empty_dir
-rsync -a --delete /home/groups/manishad/multTest/empty_dir/ /home/groups/manishad/multTest/sim_results/long/
-  
   # DELETE ALL SHORT RESULTS
   mkdir /home/groups/manishad/multTest/empty_dir
 rsync -a --delete /home/groups/manishad/multTest/empty_dir/ /home/groups/manishad/multTest/sim_results/short/

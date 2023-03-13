@@ -252,9 +252,6 @@ pwr.short = pwr[ !pwr$rho.XY %in% c(0.1, 0.15), ]
 x.breaks = c(0, 0.1, 0.3, 0.6)
 y.breaks = seq(0, 1, 0.1)
 
-# bar chart needs extra space
-x.breaks.barchart = c(-0.2, 0, 0.1, 0.3, 0.6, 0.8)
-y.breaks.barchart = y.breaks
 
 .colors = c(`Global (alpha=0.01)` = "#ff9900",
   `Global (alpha=0.05)` = "red",

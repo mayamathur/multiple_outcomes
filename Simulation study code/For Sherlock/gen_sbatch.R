@@ -26,7 +26,7 @@ setwd(path)
 ###### Full Set of Scens ###### 
 n = 1000
 nX = 1
-nY = 200
+nY = 40
 rho.XX = 0
 rho.YY = c(0, 0.1, 0.3, 0.6)
 rho.XY = c(0, 0.03, 0.05, 0.10, 0.15) # null hypothesis: 0
@@ -64,7 +64,7 @@ scen.params = scen.params[ order(scen.params$rho.XY,
 
 ######## Name the Scenarios ########
 # if merging results with other simulations, set this to the last letter already used
-start.at = 53
+start.at = 1
 
 # remove letters that are privileged variables in R
 # letter.names = c(letters, LETTERS, paste(letters, letters, sep="") )
@@ -108,7 +108,7 @@ runfile_path = paste(path, "/testRunFile.R", sep="")
 sbatch_params <- data.frame(jobname,
                             outfile,
                             errorfile,
-                            jobtime = "02:00:00",  # with nY=40, 0:30:00 was fine
+                            jobtime = "00:30:00",  # with nY=40, 0:30:00 was fine; for nY=200, try more than 2:00:00
                             quality = "normal",
                             node_number = 1,
                             mem_per_node = 64000,
@@ -130,7 +130,7 @@ n.files
 # max hourly submissions seems to be 300, which is 12 seconds/job
 path = "/home/groups/manishad/multTest"
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in 2:1000) {
+for (i in 1:2600) {
   system( paste("sbatch -p owners /home/groups/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
   Sys.sleep(10)  # delay in seconds
 }
