@@ -31,14 +31,13 @@ pwr_plot = function(dat) {
     theme_bw() +
     facet_wrap(~ group, ncol = 3 ) +  # for changing rows/columns
     ylab("Power") +
-    scale_color_manual( values = colors) +
-    scale_x_continuous( limits = c( min(x.breaks), max(x.breaks) ), breaks = x.breaks ) +
+    #scale_fill_manual( values = colors) +
+    myFillScale + 
+    scale_x_continuous( limits = c( min(x.breaks) - 0.05, max(x.breaks) + 0.05 ), breaks = x.breaks ) +
     scale_y_continuous( limits = c( min(y.breaks), max(y.breaks) ), breaks = y.breaks ) +
-    xlab( "Correlation between each pair of outcomes" ) 
+    xlab( "Correlation between each pair of outcomes" ) +
     #ggtitle("Power of bootstrapped hypothesis test of joint null") +
-    #theme(legend.position="none") # remove legend
-  
-
+    theme(legend.position="bottom") # remove legend
 }
 
 ci_plot = function(dat) {

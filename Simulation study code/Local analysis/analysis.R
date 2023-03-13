@@ -1,15 +1,22 @@
 
 
-########################### HELPER FNS ###########################
+########################### PRELIMINARIES ###########################
 
 library(here)
 setwd(here())
 source("helper_analysis.R")
 
+# previous sims with nY=40
+data.dir.old = "~/Dropbox/Personal computer/Harvard/THESIS/Thesis paper #2 (MO)/Linked to OSF (MO)/Simulation results in paper/2023-03-13 Merge previous sims and higher-W sims/Data from Sherlock/nY=40 results (from 2018-6-17)"
+
+# new sims with nY=200
+data.dir.new = "~/Dropbox/Personal computer/Harvard/THESIS/Thesis paper #2 (MO)/Linked to OSF (MO)/Simulation results in paper/2023-03-13 Merge previous sims and higher-W sims/Data from Sherlock/Results from R"
+
+results.dir = "~/Dropbox/Personal computer/Harvard/THESIS/Thesis paper #2 (MO)/Linked to OSF (MO)/Simulation results in paper/2023-03-13 Merge previous sims and higher-W sims/Results from R"
 
 ########################### READ IN DATA ###########################
 
-setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Simulation results/2018-6-17 rerun Freedman after fixing bug")
+setwd(data.dir.old)
 
 # read in scenario parameters
 scen.params = read.csv("scen_params.csv")
@@ -119,7 +126,14 @@ levels(pwr$group)
 
 
 # for more plotting joy
-labels = c("B", "H", "MP", "LP", "G1", "G5", "WS", "R")
+labels = c("Bonferroni",
+           "Holm",
+           "minP",
+           "meanP",
+           "Global (alpha=0.01)",
+           "Global (alpha=0.05)",
+           "Wstep",
+           "Romano")
 pwr$method.label = NA
 pwr$method.label[ pwr$method == "bonf.naive" ] = labels[1]
 pwr$method.label[ pwr$method == "holm" ] = labels[2]
@@ -136,10 +150,22 @@ pwr$method.label[ pwr$method == "Romano" ] = labels[8]
 # remove experimental method
 pwr = pwr[ pwr$method != "meanP", ]
 
+# set method ordering for plot
+correct.order = rev( c( "Bonferroni",
+                   "Holm",
+                   "minP",
+                   "Romano",
+                   "Wstep",
+                   "Global (alpha=0.01)",
+                   "Global (alpha=0.05)" ) )
+
+
+pwr$method.label = factor(pwr$method.label, levels = rev(correct.order))
+
 
 ##### Save Results ##### 
 pwr2 = pwr
-setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Simulation results/2018-6-17 rerun Freedman after fixing bug")
+setwd(results.dir)
 write.csv( pwr2, "results_pwr.csv")
 
 lp2 = lp
@@ -205,7 +231,7 @@ buffer = 0.02
 ci2$rho.YY[ ci2$method == "ours.0.05" ] = ci2$rho.YY[ ci2$method == "ours.0.05" ] + buffer
 
 # save results (unstaggered dataset)
-setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Simulation results/2018-6-17 rerun Freedman after fixing bug")
+setwd(results.dir)
 write.csv(ci, "results_null_interval.csv")
 
 
@@ -225,7 +251,22 @@ pwr.short = pwr[ !pwr$rho.XY %in% c(0.1, 0.15), ]
 # set global variables needed for plotting fn
 x.breaks = c(0, 0.1, 0.3, 0.6)
 y.breaks = seq(0, 1, 0.1)
-colors = c( "#999999", "orange", "#009E73", "black", "#E69F00", "#D55E00", "black", "darkgreen" )
+
+# bar chart needs extra space
+x.breaks.barchart = c(-0.2, 0, 0.1, 0.3, 0.6, 0.8)
+y.breaks.barchart = y.breaks
+
+.colors = c(`Global (alpha=0.01)` = "#ff9900",
+  `Global (alpha=0.05)` = "red",
+  minP = "#1B9E77",
+  Wstep = "#3399ff",
+  Holm = "#00cc00",
+  Bonferroni = "#016301",
+  Romano = "black")
+
+myFillScale = scale_fill_manual(name = "",
+                                values = .colors)
+
 
 
 # save different versions of plot (some with only a few scenarios)
@@ -237,14 +278,14 @@ square.size = 8/3 # divide by number of cols
 height = square.size*5  # multiply by number of rows
 name = "joint_test_full.png"
 ggsave( filename = paste(name),
-        plot=p1, path=NULL, width=width, height=height, units="in")
+        plot=p1, path=results.dir, width=width, height=height, units="in")
 
 width = 8
 square.size = 8/3 # divide by number of cols
 height = square.size*3  # multiply by number of rows
 name = "joint_test_short.png"
 ggsave( filename = paste(name),
-        plot=p2, path=NULL, width=width, height=height, units="in")
+        plot=p2, path=results.dir, width=width, height=height, units="in")
 
 
 
