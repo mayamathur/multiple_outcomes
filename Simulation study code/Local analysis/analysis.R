@@ -38,6 +38,94 @@ library(gdata)
 s = drop.levels(s)
 
 
+########################### DATA PREP: N-TRUE-EFFECTS PLOT ###########################
+
+# need 1 row per scenario-method combination
+# methods are ours, Wstep, bonf.naive, and minP
+
+library(reshape2)
+library(tidyverse)
+library(dplyr)
+library(magrittr)
+library(tidyr)
+
+# names of joint rejection variables for all methods
+( n.true.names = c( names(s)[ grep( "n.true.", names(s) ) ] ) )
+n.true.names = c("n.rej.0.00125", n.true.names)
+
+# MAKE SURE TO LIST THEM IN SAME ORDER AS names above
+( method.names = c( "bonf.naive",
+                    "holm",
+                    "minP",
+                    "Wstep",
+                    "Romano",
+                    "ours.0.01",
+                    "ours.0.05") )
+
+# reshape wide to long
+# https://stackoverflow.com/questions/12466493/reshaping-multiple-sets-of-measurement-columns-wide-format-into-single-columns
+lt = reshape( s[ , names(s) %in% c(n.true.names, "scen") ],
+              varying = n.true.names,
+              v.names = "n.true",
+              times = method.names,
+              timevar = "method",  # name to use for the above variable
+              direction="long" )
+
+
+# since each scenario still has multiple rows, take means 
+n.trues = lt %>% group_by(scen, method) %>%
+  summarise( n.true = mean( n.true ) )
+
+# merge in scenario parameters
+n.trues = merge(n.trues, scen.params, by = "scen" )
+
+# for plotting joy
+n.trues$group = as.factor( paste( "X-Y correlation: ", n.trues$rho.XY,
+                                  " for ",
+                                  n.trues$prop.corr * 100,
+                                  "% of pairs", 
+                                  sep = "" ) )
+
+# relevel to get facets in correct order
+n.trues = n.trues[ order( n.trues$rho.XY, n.trues$prop.corr, n.trues$rho.YY ), ]
+ordered.levels = unique(n.trues$group)
+# put the strong null scenario last for prettiness
+ordered.levels = c( as.character(ordered.levels), as.character(ordered.levels[1]) )
+ordered.levels = ordered.levels[-1]
+n.trues$group = factor( n.trues$group, levels = ordered.levels )
+levels(n.trues$group)
+
+
+# for more plotting joy
+labels = c("B", "H", "MP", "G1", "G5", "WS", "R")
+n.trues$method.label = NA
+n.trues$method.label[ n.trues$method == "bonf.naive" ] = labels[1]
+n.trues$method.label[ n.trues$method == "holm" ] = labels[2]
+n.trues$method.label[ n.trues$method == "minP" ] = labels[3]
+n.trues$method.label[ n.trues$method == "ours.0.01" ] = labels[4]
+n.trues$method.label[ n.trues$method == "ours.0.05" ] = labels[5]
+n.trues$method.label[ n.trues$method == "Wstep" ] = labels[6]
+n.trues$method.label[ n.trues$method == "Romano" ] = labels[7]
+
+
+# sanity check
+table(n.trues$method, n.trues$method.label)
+
+# set number of true effects identified equal to 0 when excess hits < 0
+n.trues$n.true[ n.trues$n.true < 0 ] = 0
+
+# benchmark value: the actual number of true effects in that scenario
+n.trues$benchmark = n.trues$nY * n.trues$prop.corr
+n.trues$benchmark[ n.trues$prop.corr == 1 & n.trues$rho.XY == 0 ] = 0  # fix the control scenario because it reads as -
+
+##### Save Results #####
+setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Simulation results/2018-8-18 with ntrues plot")
+write.csv( n.trues, "results_ntrues.csv")
+
+write.csv( lt, "results_ntrues_long.csv")
+
+
+
 ########################### DATA PREP: FOR POWER PLOT ###########################
 
 # need 1 row per scenario-method combination
@@ -234,6 +322,39 @@ ci2$rho.YY[ ci2$method == "ours.0.05" ] = ci2$rho.YY[ ci2$method == "ours.0.05" 
 setwd(results.dir)
 write.csv(ci, "results_null_interval.csv")
 
+
+
+########################### N TRUE EFFECTS PLOTS ###########################
+
+# for main text: simplify the plot 
+# by removing intermediate effect sizes
+n.trues.short = n.trues[ !n.trues$rho.XY %in% c(0.1, 0.15), ]
+
+# set global variables needed for plotting fn
+x.breaks = c(0, 0.1, 0.3, 0.6)
+colors = c( "#999999", "orange", "#009E73", "black", "#E69F00", "#D55E00", "black", "darkgreen" )
+
+dat = n.trues
+
+y.breaks = seq(0, 40, 10)
+p5 = ntrues_plot(n.trues, benchmark.line = TRUE); p5
+
+y.breaks = seq(0, 10, 2)
+p6 = ntrues_plot(n.trues.short, benchmark.line = FALSE); p6
+
+##### Save Results #####
+setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Simulation results/2018-8-18 with ntrues plot")
+width = 8
+square.size = 8/3 # divide by number of cols
+height = square.size*5  # multiply by number of rows
+ggsave( filename = paste("ntrues_full.png"),
+        plot=p5, path=NULL, width=width, height=height, units="in")
+
+width = 8
+square.size = 8/3  # divide by number of cols
+height = square.size*3  # multiply by number of rows
+ggsave( filename = paste("ntrues_short.png"),
+        plot=p6, path=NULL, width=width, height=height, units="in")
 
 
 ########################### JOINT TEST POWER PLOTS ###########################
