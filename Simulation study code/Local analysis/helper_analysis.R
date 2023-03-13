@@ -25,19 +25,20 @@ ntrues_plot = function(dat, benchmark.line = FALSE) {
 pwr_plot = function(dat) {
   library(ggplot2)
   ggplot( data = dat, aes( x = rho.YY, y = power,
-                           color = method,
-                           label = method ) ) +
-    geom_text( aes( label = method.label) ) +
+                           fill = method.label ) ) +
+    #geom_text( aes( label = method.label) ) +
+    geom_bar(position = "dodge", stat = "identity") + 
     theme_bw() +
-    #facet_wrap( ~group) +
     facet_wrap(~ group, ncol = 3 ) +  # for changing rows/columns
     ylab("Power") +
     scale_color_manual( values = colors) +
     scale_x_continuous( limits = c( min(x.breaks), max(x.breaks) ), breaks = x.breaks ) +
     scale_y_continuous( limits = c( min(y.breaks), max(y.breaks) ), breaks = y.breaks ) +
-    xlab( "Correlation between each pair of outcomes" ) +
+    xlab( "Correlation between each pair of outcomes" ) 
     #ggtitle("Power of bootstrapped hypothesis test of joint null") +
-    theme(legend.position="none") # remove legend
+    #theme(legend.position="none") # remove legend
+  
+
 }
 
 ci_plot = function(dat) {
