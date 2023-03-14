@@ -27,6 +27,7 @@ if ( run.local == FALSE ) {
   
   ### load packages
   toLoad = c("foreach",
+             "dplyr",
              "doParallel",
              "mvtnorm",
              "StepwiseTest", # Romano
@@ -71,29 +72,23 @@ if ( run.local == FALSE ) {
 # 
 
 if ( run.local == TRUE ) {
-  # # THIS SCENARIO WORKED FINE LOCALLY
-  # n = 1000
-  # nX = 1
-  # nY = 40
-  # rho.XX = 0
-  # rho.YY = c(0)
-  # rho.XY = c(0)  # null hypothesis: 0
-  # prop.corr = 1
-  
-  # SCEN IN 1.SBATCH
+  # THIS SCENARIO WORKED FINE LOCALLY
   n = 1000
   nX = 1
-  nY = 200
+  nY = 40
   rho.XX = 0
   rho.YY = c(0)
-  rho.XY = c(0) # null hypothesis: 0
-  prop.corr = c(0.20)  # exchangeable vs. half-correlated matrix
+  rho.XY = c(0)  # null hypothesis: 0
+  prop.corr = 0.2
   
-  
-  # boot.reps = 500
-  # bootstrap iterates and type
-  boot.reps = 1000
-  bt.type = c( "ha.resid" )
+  # # SCEN IN 1.SBATCH
+  # n = 1000
+  # nX = 1
+  # nY = 200
+  # rho.XX = 0
+  # rho.YY = c(0)
+  # rho.XY = c(0) # null hypothesis: 0
+  # prop.corr = c(0.20)  # exchangeable vs. half-correlated matrix
   
   # bootstrap iterates and type
   boot.reps = 50
@@ -150,22 +145,24 @@ ha.methods = c("fcr", "ha.resid", "ha.resid.2")
 
 # on Sherlock, this for-loop is supposed to receive a single ROW of parameters
 
-for ( j in 1:sim.reps ) {
-  
-  # ######## ONLY FOR LOCAL USE  ########
-  # # monitor progress
-  # cat( "\n\nStarting sim rep", j )
-  #
-  # # occasionally write intermediate results to desktop
-  #  if ( j %% 50 == 0 ) {
-  #    setwd("~/Desktop")
-  #    write.csv(res, "temp_results.csv")
-  #  }
-  # ######## LOCAL PART ENDS HERE  ########
-  
-  ##### Bootstrapping Loop ######
-  rep.time = system.time( {
+# system.time is in seconds
+doParallel.seconds = system.time({
+  rs = foreach( i = 1:sim.reps, .combine = bind_rows ) %dopar% {
+    #for debugging (out file will contain all printed things):
+    #for ( i in 1:1 ) {
     
+    # ######## ONLY FOR LOCAL USE  ########
+    # # monitor progress
+    # cat( "\n\nStarting sim rep", j )
+    #
+    # # occasionally write intermediate results to desktop
+    #  if ( j %% 50 == 0 ) {
+    #    setwd("~/Desktop")
+    #    write.csv(res, "temp_results.csv")
+    #  }
+    # ######## LOCAL PART ENDS HERE  ########
+    
+    ##### Bootstrapping Loop ######
     # make initial dataset from which to bootstrap
     cor = make_corr_mat( .nX = p$nX,
                          .nY = p$nY,
@@ -193,7 +190,8 @@ for ( j in 1:sim.reps ) {
     names(n.rej) = paste( "n.rej.", as.character(alpha), sep="" )
     
     # run all bootstrap iterates
-    r = foreach( i = 1:boot.reps, .combine=rbind ) %dopar% {
+    # no longer parallelized via doparallel
+    r = foreach( i = 1:boot.reps, .combine=rbind )  %do% {
       # draw bootstrap sample
       ids = sample( 1:nrow(d), replace=TRUE )
       
@@ -314,194 +312,211 @@ for ( j in 1:sim.reps ) {
       # one column for each value of alpha
       # r[["0.01"]] is the vector with length boot.reps of number rejected at alpha = 0.01
       
-    } ###### end r-loop (parallelized bootstrap)
+    } ###### end bootstrap
     
-  } )[3]  # end timer
+    
+    
+    
+    ###### Data Wrangling for This Simulation Rep #####
+    
+    # organize rejections by alpha level
+    u = unlist( r[,"rej"] )
+    n.rej.bt.0.05 = u[ grepl( "0.05", names(u) ) ]
+    n.rej.bt.0.01 = u[ grepl( "0.01", names(u) ) ]
+    # n.rej.bt.0.005 = u[ grepl( "0.005", names(u) ) ]
+    
+    # resampled p-value matrix for Westfall
+    # rows = Ys
+    # cols = resamples
+    p.bt = do.call( cbind, r[ , "pvals" ] )
+    
+    # resampled test statistic matrix (centered) for Romano
+    # rows = Ys
+    # cols = resamples
+    t.bt = do.call( cbind, r[ , "tvals" ] )
+    
+    
+    ###### Joint Test Results for This Simulation Rep #####
+    
+    # performance: one-sided rejection of joint null hypothesis
+    # alpha for joint test is set to 0.05 regardless of alpha for individual tests
+    # crit.bonf = quantile( n.rej.bt.0.005, 1 - 0.05 )
+    crit.0.05 = quantile( n.rej.bt.0.05, 1 - 0.05 )
+    crit.0.01 = quantile( n.rej.bt.0.01, 1 - 0.05 )
+    
+    # null interval limits
+    bt.lo.0.01 = quantile( n.rej.bt.0.01, 0.025 )
+    bt.hi.0.01 = quantile( n.rej.bt.0.01, 0.975 )
+    
+    bt.lo.0.05 = quantile( n.rej.bt.0.05, 0.025 )
+    bt.hi.0.05 = quantile( n.rej.bt.0.05, 0.975 )
+    
+    # excess hits
+    n.true.ours.0.05 = n.rej[["n.rej.0.05"]] - bt.hi.0.05
+    n.true.ours.0.01 = n.rej[["n.rej.0.01"]] - bt.hi.0.01
+    
+    # p-values for observed rejections
+    # jt.pval.bonf = sum( n.rej.bt.0.005 >= n.rej[,1] ) / length( n.rej.bt.0.005 )
+    jt.pval.0.01 = sum( n.rej.bt.0.01 >= n.rej[["n.rej.0.01"]] ) /
+      length( n.rej.bt.0.01 )
+    jt.pval.0.05 = sum( n.rej.bt.0.05 >= n.rej[["n.rej.0.05"]] ) /
+      length( n.rej.bt.0.05 )
+    
+    # did joint tests reject?
+    # rej.jt.bonf = jt.pval.bonf < 0.05
+    rej.jt.0.01 = jt.pval.0.01 < 0.05
+    rej.jt.0.05 = jt.pval.0.05 < 0.05
+    
+    ######## Bonferroni joint test ########
+    # Bonferroni test of joint null using just original data
+    # i.e., do we reject at least one outcome using Bonferroni threshold?
+    jt.rej.bonf.naive = n.rej[1] > 0
+    # number of true effects with 95% confidence
+    n.true.bonf = n.rej[1]
+    
+    ######## Holm joint test ########
+    p.adj.holm = p.adjust( p = pvals, method = "holm" )
+    jt.rej.holm = any( p.adj.holm < 0.05 )
+    n.true.holm = sum( p.adj.holm < 0.05 )
+    
+    ######## Westfall's single-step and step-down ########
+    p.adj.minP = adjust_minP( pvals, p.bt )
+    jt.rej.minP = any( p.adj.minP < 0.05 )
+    n.true.minP = sum( p.adj.minP < 0.05 )
+    
+    p.adj.stepdown = adj_Wstep( pvals, p.bt )
+    jt.rej.Wstep = any( p.adj.stepdown < 0.05 )
+    n.true.Wstep = sum( p.adj.stepdown < 0.05 )
+    
+    ######## Romano ########
+    # regular FWER control (not k-FWER)
+    
+    # if we bootstrapped under Ha
+    if ( p$bt.type %in% ha.methods ) {
+      # test stats are already centered
+      res = FWERkControl(tvals, as.matrix(t.bt), k = 1, alpha = 0.05)
+      jt.rej.Romano = sum(res$Reject) > 0
+      n.true.Romano = sum(res$Reject)
+    }
+    
+    # if we bootstrapped under H0
+    if ( p$bt.type %in% h0.methods ) {
+      jt.rej.Romano = NA
+      n.true.Romano = NA
+    }
+    
+    
+    ######## Mean Log-P-Value Joint Test ########
+    # reject if mean log p-value is small compared to those in bootstraps
+    # mean.log.p.bt = colMeans( log(p.bt) )
+    # jt.rej.mean.p = mean( log(pvals) ) < quantile( mean.log.p.bt, 0.025 )
+    
+    ###### Write Results #####
+    
+    # return entire results of this sim rep
+    # with a row for each boot iterate
+    # these variables will be same for each bootstrap iterate
+    # the individual bootstrap results are merged in after this
+    # suppressWarnings because it whines about row names from a short variable
+    rep.res = suppressWarnings( data.frame( scen = rep( scen, boot.reps ),
+                                            bt.iterate = 1:boot.reps,
+                                            #rep.minutes = as.vector(rep.time) / 60,
+                                            
+                                            # rejections in original dataset
+                                            n.rej.bonf = n.rej[1],
+                                            n.rej.0.01 = n.rej[["n.rej.0.01"]],
+                                            n.rej.0.05 = n.rej[["n.rej.0.05"]],
+                                            
+                                            # mean rejections in bootstraps at 2 different alpha levels
+                                            n.rej.bt.0.01.mean = mean(n.rej.bt.0.01),
+                                            n.rej.bt.0.05.mean = mean(n.rej.bt.0.05),
+                                            
+                                            # joint test results for entire study
+                                            jt.rej.bonf.naive = ifelse( as.numeric(jt.rej.bonf.naive) == 1, TRUE, FALSE ),
+                                            jt.rej.holm,
+                                            jt.rej.minP,
+                                            jt.rej.Wstep,
+                                            jt.rej.Romano,
+                                            
+                                            # number of true effects
+                                            n.true.bonf,
+                                            n.true.holm,
+                                            n.true.minP,
+                                            n.true.Wstep,
+                                            n.true.Romano,
+                                            n.true.ours.0.01,
+                                            n.true.ours.0.05,
+                                            
+                                            # crit.bonf
+                                            crit.0.05,
+                                            crit.0.01,
+                                            
+                                            # bt.lo.bonf, bt.hi.bonf
+                                            bt.lo.0.01, bt.hi.0.01,
+                                            bt.lo.0.05, bt.hi.0.05,
+                                            
+                                            # jt.pval.bonf
+                                            jt.pval.0.01,
+                                            jt.pval.0.05,
+                                            
+                                            # rej.jt.bonf
+                                            rej.jt.0.01,
+                                            rej.jt.0.05
+    ) )
+    
+    # all rows are static variables because we're not merging in resample-level
+    #  results
+    
+    
+    # keep only 1 row for this simulation rep (don't keep every boot iterate)
+    rep.res = rep.res[1,]
+    
+    # add in scenario parameters
+    # do NOT use rbind here; bind_cols accommodates possibility that some methods' rep.res
+    #  have more columns than others
+    rep.res = p %>% bind_cols( rep.res )
+    
+    # # add more info
+    # rep.res = rep.res %>% add_column( rep.name = i, .before = 1 )
+    # rep.res = rep.res %>% add_column( scen.name = scen, .before = 1 )
+    # rep.res = rep.res %>% add_column( job.name = jobname, .before = 1 )
+    
+    return(rep.res)
+    
+    # # merge in the individual bootstrap results and parameters
+    # # new.rows = cbind( p, new.rows, n.rej, r )
+    # 
+    # # remove redundant parameters column
+    # new.rows = new.rows[ , !names(new.rows) == "scen.name" ]
+    # 
+    # # add row to output file
+    # if ( j == 1 ) results = new.rows
+    # if ( j > 1 ) results = rbind( results, new.rows )
+    # # results should have boot.reps rows per "j" in the for-loop
+    
+  }  # end loop over j simulation reps
+}) # end timer
+  
+  # results dataframe should now have boot.reps * sim.reps rows
+  
+  # sanity check of results
+  r = results
+  print( mean(r$jt.pval.0.05) )
+  print( mean(r$rej.jt.0.05) )
+  print( mean(r$jt.rej.Romano) )
+  print( mean(r$jt.rej.Wstep) )
   
   
-  ###### Data Wrangling for This Simulation Rep #####
-  
-  # organize rejections by alpha level
-  u = unlist( r[,"rej"] )
-  n.rej.bt.0.05 = u[ grepl( "0.05", names(u) ) ]
-  n.rej.bt.0.01 = u[ grepl( "0.01", names(u) ) ]
-  # n.rej.bt.0.005 = u[ grepl( "0.005", names(u) ) ]
-  
-  # resampled p-value matrix for Westfall
-  # rows = Ys
-  # cols = resamples
-  p.bt = do.call( cbind, r[ , "pvals" ] )
-  
-  # resampled test statistic matrix (centered) for Romano
-  # rows = Ys
-  # cols = resamples
-  t.bt = do.call( cbind, r[ , "tvals" ] )
+  ########################### WRITE LONG RESULTS  ###########################
+  # setwd("/home/groups/manishad/multTest/sim_results/long")
+  # write.csv( results, paste( "long_results", jobname, ".csv", sep="_" ) )
   
   
-  ###### Joint Test Results for This Simulation Rep #####
+  ########################### WRITE SHORT RESULTS ###########################
+  # keep only 1 row per simulation rep
+  #keep.row = rep( c( TRUE, rep(FALSE, boot.reps - 1) ), sim.reps )
   
-  # performance: one-sided rejection of joint null hypothesis
-  # alpha for joint test is set to 0.05 regardless of alpha for individual tests
-  # crit.bonf = quantile( n.rej.bt.0.005, 1 - 0.05 )
-  crit.0.05 = quantile( n.rej.bt.0.05, 1 - 0.05 )
-  crit.0.01 = quantile( n.rej.bt.0.01, 1 - 0.05 )
-  
-  # null interval limits
-  bt.lo.0.01 = quantile( n.rej.bt.0.01, 0.025 )
-  bt.hi.0.01 = quantile( n.rej.bt.0.01, 0.975 )
-  
-  bt.lo.0.05 = quantile( n.rej.bt.0.05, 0.025 )
-  bt.hi.0.05 = quantile( n.rej.bt.0.05, 0.975 )
-  
-  # excess hits
-  n.true.ours.0.05 = n.rej[["n.rej.0.05"]] - bt.hi.0.05
-  n.true.ours.0.01 = n.rej[["n.rej.0.01"]] - bt.hi.0.01
-  
-  # p-values for observed rejections
-  # jt.pval.bonf = sum( n.rej.bt.0.005 >= n.rej[,1] ) / length( n.rej.bt.0.005 )
-  jt.pval.0.01 = sum( n.rej.bt.0.01 >= n.rej[["n.rej.0.01"]] ) /
-    length( n.rej.bt.0.01 )
-  jt.pval.0.05 = sum( n.rej.bt.0.05 >= n.rej[["n.rej.0.05"]] ) /
-    length( n.rej.bt.0.05 )
-  
-  # did joint tests reject?
-  # rej.jt.bonf = jt.pval.bonf < 0.05
-  rej.jt.0.01 = jt.pval.0.01 < 0.05
-  rej.jt.0.05 = jt.pval.0.05 < 0.05
-  
-  ######## Bonferroni joint test ########
-  # Bonferroni test of joint null using just original data
-  # i.e., do we reject at least one outcome using Bonferroni threshold?
-  jt.rej.bonf.naive = n.rej[1] > 0
-  # number of true effects with 95% confidence
-  n.true.bonf = n.rej[1]
-  
-  ######## Holm joint test ########
-  p.adj.holm = p.adjust( p = pvals, method = "holm" )
-  jt.rej.holm = any( p.adj.holm < 0.05 )
-  n.true.holm = sum( p.adj.holm < 0.05 )
-  
-  ######## Westfall's single-step and step-down ########
-  p.adj.minP = adjust_minP( pvals, p.bt )
-  jt.rej.minP = any( p.adj.minP < 0.05 )
-  n.true.minP = sum( p.adj.minP < 0.05 )
-  
-  p.adj.stepdown = adj_Wstep( pvals, p.bt )
-  jt.rej.Wstep = any( p.adj.stepdown < 0.05 )
-  n.true.Wstep = sum( p.adj.stepdown < 0.05 )
-  
-  ######## Romano ########
-  # regular FWER control (not k-FWER)
-  
-  # if we bootstrapped under Ha
-  if ( p$bt.type %in% ha.methods ) {
-    # test stats are already centered
-    res = FWERkControl(tvals, as.matrix(t.bt), k = 1, alpha = 0.05)
-    jt.rej.Romano = sum(res$Reject) > 0
-    n.true.Romano = sum(res$Reject)
-  }
-  
-  # if we bootstrapped under H0
-  if ( p$bt.type %in% h0.methods ) {
-    jt.rej.Romano = NA
-    n.true.Romano = NA
-  }
+  setwd("/home/groups/manishad/multTest/sim_results/short")
+  write.csv( rs, paste( "short_results", jobname, ".csv", sep="_" ) )
   
   
-  ######## Mean Log-P-Value Joint Test ########
-  # reject if mean log p-value is small compared to those in bootstraps
-  # mean.log.p.bt = colMeans( log(p.bt) )
-  # jt.rej.mean.p = mean( log(pvals) ) < quantile( mean.log.p.bt, 0.025 )
-  
-  ###### Write Results #####
-  
-  # return entire results of this sim rep
-  # with a row for each boot iterate
-  # these variables will be same for each bootstrap iterate
-  # the individual bootstrap results are merged in after this
-  # suppressWarnings because it whines about row names from a short variable
-  new.rows = suppressWarnings( data.frame( scen = rep( scen, boot.reps ),
-                                           bt.iterate = 1:boot.reps,
-                                           rep.minutes = as.vector(rep.time) / 60,
-                                           
-                                           # rejections in original dataset
-                                           n.rej.bonf = n.rej[1],
-                                           n.rej.0.01 = n.rej[["n.rej.0.01"]],
-                                           n.rej.0.05 = n.rej[["n.rej.0.05"]],
-                                           
-                                           # mean rejections in bootstraps at 2 different alpha levels
-                                           n.rej.bt.0.01.mean = mean(n.rej.bt.0.01),
-                                           n.rej.bt.0.05.mean = mean(n.rej.bt.0.05),
-                                           
-                                           # joint test results for entire study
-                                           jt.rej.bonf.naive = ifelse( as.numeric(jt.rej.bonf.naive) == 1, TRUE, FALSE ),
-                                           jt.rej.holm,
-                                           jt.rej.minP,
-                                           jt.rej.Wstep,
-                                           jt.rej.Romano,
-                                           
-                                           # number of true effects
-                                           n.true.bonf,
-                                           n.true.holm,
-                                           n.true.minP,
-                                           n.true.Wstep,
-                                           n.true.Romano,
-                                           n.true.ours.0.01,
-                                           n.true.ours.0.05,
-                                           
-                                           # crit.bonf
-                                           crit.0.05,
-                                           crit.0.01,
-                                           
-                                           # bt.lo.bonf, bt.hi.bonf
-                                           bt.lo.0.01, bt.hi.0.01,
-                                           bt.lo.0.05, bt.hi.0.05,
-                                           
-                                           # jt.pval.bonf
-                                           jt.pval.0.01,
-                                           jt.pval.0.05,
-                                           
-                                           # rej.jt.bonf
-                                           rej.jt.0.01,
-                                           rej.jt.0.05
-  ) )
-  
-  # all rows are static variables because we're not merging in resample-level
-  #  results
-  
-  # merge in the individual bootstrap results and parameters
-  # new.rows = cbind( p, new.rows, n.rej, r )
-  
-  # remove redundant parameters column
-  new.rows = new.rows[ , !names(new.rows) == "scen.name" ]
-  
-  # add row to output file
-  if ( j == 1 ) results = new.rows
-  if ( j > 1 ) results = rbind( results, new.rows )
-  # results should have boot.reps rows per "j" in the for-loop
-  
-}  # end loop over j simulation reps
-
-
-# results dataframe should now have boot.reps * sim.reps rows
-
-# sanity check of results
-r = results
-print( mean(r$jt.pval.0.05) )
-print( mean(r$rej.jt.0.05) )
-print( mean(r$jt.rej.Romano) )
-print( mean(r$jt.rej.Wstep) )
-
-
-########################### WRITE LONG RESULTS  ###########################
-setwd("/home/groups/manishad/multTest/sim_results/long")
-write.csv( results, paste( "long_results", jobname, ".csv", sep="_" ) )
-
-
-########################### WRITE SHORT RESULTS ###########################
-# keep only 1 row per simulation rep
-keep.row = rep( c( TRUE, rep(FALSE, boot.reps - 1) ), sim.reps )
-
-setwd("/home/groups/manishad/multTest/sim_results/short")
-write.csv( results[ keep.row, ], paste( "short_results", jobname, ".csv", sep="_" ) )
-
