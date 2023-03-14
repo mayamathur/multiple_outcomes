@@ -23,7 +23,7 @@ if ( run.local == FALSE ) {
   
   # simulation reps to run within this job
   # this need to match n.reps.in.doParallel in the genSbatch script
-  sim.reps = 10
+  sim.reps = 50
   
   ### load packages
   toLoad = c("foreach",
@@ -91,7 +91,7 @@ if ( run.local == TRUE ) {
   # prop.corr = c(0.20)  # exchangeable vs. half-correlated matrix
   
   # bootstrap iterates and type
-  boot.reps = 50
+  boot.reps = 500
   sim.reps = 1
   scen = 1
   bt.type = c( "ha.resid" )
@@ -499,12 +499,7 @@ doParallel.seconds = system.time({
   
   # results dataframe should now have boot.reps * sim.reps rows
   
-  # sanity check of results
-  r = results
-  print( mean(r$jt.pval.0.05) )
-  print( mean(r$rej.jt.0.05) )
-  print( mean(r$jt.rej.Romano) )
-  print( mean(r$jt.rej.Wstep) )
+
   
   
   ########################### WRITE LONG RESULTS  ###########################

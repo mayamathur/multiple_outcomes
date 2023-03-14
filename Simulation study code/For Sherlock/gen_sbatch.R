@@ -84,13 +84,17 @@ write.csv( scen.params, "scen_params.csv" )
 
 ########################### GENERATE SBATCHES ###########################
 
+
+path = "/home/groups/manishad/multTest"
+setwd(path)
+
 # load functions for generating sbatch files
 source("functions.R")
 
 # ~~CHANGED
 # number of sbatches to generate (i.e., iterations within each scenario)
 n.reps.per.scen = 500
-n.reps.in.doParallel = 10
+n.reps.in.doParallel = 50
 # n.reps.per.scen = 500
 # n.reps.in.doParallel = 5
 n.files = ( n.reps.per.scen / n.reps.in.doParallel ) * n.scen
@@ -108,7 +112,7 @@ runfile_path = paste(path, "/testRunFile.R", sep="")
 sbatch_params <- data.frame(jobname,
                             outfile,
                             errorfile,
-                            jobtime = "00:30:00",  # with nY=40, 0:30:00 was fine; for nY=200, try more than 2:00:00
+                            jobtime = "08:00:00",  
                             quality = "normal",
                             node_number = 1,
                             mem_per_node = 64000,
@@ -126,13 +130,12 @@ generateSbatch(sbatch_params, runfile_path)
 
 n.files
 
-# 2600 files
+# 520 files
 # max hourly submissions seems to be 300, which is 12 seconds/job
 path = "/home/groups/manishad/multTest"
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in 1:2600) {
+for (i in 2:520) {
   system( paste("sbatch -p owners /home/groups/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
-  Sys.sleep(10)  # delay in seconds
 }
 
 # run just the first one:
@@ -151,12 +154,12 @@ source("functions.R")
 missed.nums = sbatch_not_run( "/home/groups/manishad/multTest/sim_results/short",
                 "/home/groups/manishad/multTest/sim_results",
                 .name.prefix = "short_results",
-                .max.sbatch.num = 2600 )
+                .max.sbatch.num = 520 )
 
 
 
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in missed.nums[1:1000]) {
+for (i in missed.nums) {
   system( paste("sbatch -p owners /home/groups/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
 }
 
