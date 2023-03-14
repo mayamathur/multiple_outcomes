@@ -3,11 +3,12 @@
 ########################### PRELIMINARIES ###########################
 
 library(here)
+library(data.table)
 setwd(here())
 source("helper_analysis.R")
 
 # previous sims with nY=40
-data.dir.old = "~/Dropbox/Personal computer/Harvard/THESIS/Thesis paper #2 (MO)/Linked to OSF (MO)/Simulation results in paper/2023-03-13 Merge previous sims and higher-W sims/Data from Sherlock/nY=40 results (from 2018-6-17)"
+data.dir.old = "~/Dropbox/Personal computer/Harvard/THESIS/Thesis paper #2 (MO)/Linked to OSF (MO)/Simulation results in paper/2023-03-13 Merge previous sims and higher-W sims/Data from Sherlock/nY=40"
 
 # new sims with nY=200
 data.dir.new = "~/Dropbox/Personal computer/Harvard/THESIS/Thesis paper #2 (MO)/Linked to OSF (MO)/Simulation results in paper/2023-03-13 Merge previous sims and higher-W sims/Data from Sherlock/Results from R"
@@ -21,14 +22,14 @@ setwd(data.dir.old)
 # read in scenario parameters
 scen.params = read.csv("scen_params.csv")
 names(scen.params)[ names(scen.params) == "scen.name" ] = "scen"
-
+#
 # read in stitched data
-s = read.csv("stitched.csv", header=TRUE)
-s = merge(s, scen.params, by = "scen" )
-
-# what percent done are we?
-n.reps.per.scen = 500
-nrow(s) / (500 * nrow(scen.params))
+s = fread("stitched.csv")
+# s = merge(s, scen.params, by = "scen" )
+#
+# # what percent done are we?
+# n.reps.per.scen = 500
+# nrow(s) / (500 * nrow(scen.params))
 
 # how many reps per scenario do we have?
 table( s$scen )
@@ -64,7 +65,9 @@ n.true.names = c("n.rej.0.00125", n.true.names)
 
 # reshape wide to long
 # https://stackoverflow.com/questions/12466493/reshaping-multiple-sets-of-measurement-columns-wide-format-into-single-columns
-lt = reshape( s[ , names(s) %in% c(n.true.names, "scen") ],
+s.small = s %>% select( all_of( c(n.true.names, "scen") ) )
+
+lt = reshape( s.small,
               varying = n.true.names,
               v.names = "n.true",
               times = method.names,
@@ -95,17 +98,25 @@ ordered.levels = ordered.levels[-1]
 n.trues$group = factor( n.trues$group, levels = ordered.levels )
 levels(n.trues$group)
 
-
+#bm
 # for more plotting joy
-labels = c("B", "H", "MP", "G1", "G5", "WS", "R")
+labels = c("Bonferroni",
+           "Holm",
+           "minP",
+           "meanP",
+           "Global (alpha=0.01)",
+           "Global (alpha=0.05)",
+           "Wstep",
+           "Romano")
 n.trues$method.label = NA
 n.trues$method.label[ n.trues$method == "bonf.naive" ] = labels[1]
 n.trues$method.label[ n.trues$method == "holm" ] = labels[2]
 n.trues$method.label[ n.trues$method == "minP" ] = labels[3]
-n.trues$method.label[ n.trues$method == "ours.0.01" ] = labels[4]
-n.trues$method.label[ n.trues$method == "ours.0.05" ] = labels[5]
-n.trues$method.label[ n.trues$method == "Wstep" ] = labels[6]
-n.trues$method.label[ n.trues$method == "Romano" ] = labels[7]
+n.trues$method.label[ n.trues$method == "meanP" ] = labels[4]  # for "log-P"
+n.trues$method.label[ n.trues$method == "ours.0.01" ] = labels[5]
+n.trues$method.label[ n.trues$method == "ours.0.05" ] = labels[6]
+n.trues$method.label[ n.trues$method == "Wstep" ] = labels[7]
+n.trues$method.label[ n.trues$method == "Romano" ] = labels[8]
 
 
 # sanity check
@@ -338,6 +349,9 @@ dat = n.trues
 
 y.breaks = seq(0, 40, 10)
 p5 = ntrues_plot(n.trues, benchmark.line = TRUE); p5
+
+#bm: it's basically working. Just need to edit 
+
 
 y.breaks = seq(0, 10, 2)
 p6 = ntrues_plot(n.trues.short, benchmark.line = FALSE); p6

@@ -4,14 +4,13 @@
 ntrues_plot = function(dat, benchmark.line = FALSE) {
   library(ggplot2)
   p = ggplot( data = dat, aes( x = rho.YY, y = n.true,
-                               color = method,
-                               label = method ) ) +
-    geom_text( aes( label = method.label) ) +
+                               fill = method.label ) ) +
+    geom_bar(position = "dodge", stat = "identity") + 
     theme_bw() +
     facet_wrap(~ group, ncol = 3 ) +  # for changing rows/columns
     ylab("Number of nulls rejected") +
     scale_color_manual( values = colors) +
-    scale_x_continuous( limits = c( min(x.breaks), max(x.breaks) ), breaks = x.breaks ) +
+    scale_x_continuous( limits = c( min(x.breaks) - 0.05, max(x.breaks) + 0.05 ), breaks = x.breaks ) +
     scale_y_continuous( limits = c( min(y.breaks), max(y.breaks) ), breaks = y.breaks ) +
     xlab( "Correlation between each pair of outcomes" ) +
     theme(legend.position="none") # remove legend
