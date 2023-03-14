@@ -156,7 +156,7 @@ missed.nums = sbatch_not_run( "/home/groups/manishad/multTest/sim_results/short"
 
 
 setwd( paste(path, "/sbatch_files", sep="") )
-for (i in missed.nums) {
+for (i in missed.nums[1:1000]) {
   system( paste("sbatch -p owners /home/groups/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
 }
 
