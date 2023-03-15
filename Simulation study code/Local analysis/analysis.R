@@ -38,6 +38,9 @@ if ( sim.set == "old" ) {
   
   n.trues = make_methods_labels(n.trues); table(n.trues$method.label, useNA = "ifany")
   pwr = make_methods_labels(pwr); table(pwr$method.label, useNA = "ifany")
+  
+  n.trues = order_panel_labels(n.trues); levels(n.trues$group)
+  pwr = order_panel_labels(pwr); levels(pwr$group)
 
 }
 
