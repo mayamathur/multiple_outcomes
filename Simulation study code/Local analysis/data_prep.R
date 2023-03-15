@@ -1,4 +1,6 @@
 
+# This script is only needed for the new sims.
+
 ########################### PRELIMINARIES ###########################
 
 library(here)
