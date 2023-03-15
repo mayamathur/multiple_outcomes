@@ -29,6 +29,7 @@ pwr_plot = function(dat) {
     theme_bw() +
     facet_wrap(~ group, ncol = 3 ) +  # for changing rows/columns
     ylab("Power") +
+    myFillScale + 
     scale_x_continuous( limits = c( min(x.breaks) - 0.05, max(x.breaks) + 0.05 ), breaks = x.breaks ) +
     scale_y_continuous( limits = c( min(y.breaks), max(y.breaks) ), breaks = y.breaks ) +
     xlab( "Correlation between each pair of outcomes" ) +
@@ -108,7 +109,20 @@ order_methods_labels = function(dat){
 
 
 
-
+order_panel_labels = function(dat){
+  # set method ordering for plot
+  
+  # relevel to get facets in correct order
+  dat = dat[ order( dat$rho.XY, dat$prop.corr, dat$rho.YY ), ]
+  ordered.levels = unique(dat$group)
+  # put the strong null scenario last for prettiness
+  ordered.levels = c( as.character(ordered.levels), as.character(ordered.levels[1]) )
+  ordered.levels = ordered.levels[-1]
+  dat$group = factor( dat$group, levels = ordered.levels )
+  #levels(dat$group)
+  
+  return(dat)
+}
 
 
 

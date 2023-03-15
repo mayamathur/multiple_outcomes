@@ -18,6 +18,7 @@ data.dir.new = "~/Dropbox/Personal computer/Harvard/THESIS/Thesis paper #2 (MO)/
 
 results.dir = "~/Dropbox/Personal computer/Harvard/THESIS/Thesis paper #2 (MO)/Linked to OSF (MO)/Simulation results in paper/2023-03-13 Merge previous sims and higher-W sims/Results from R"
 
+
 ########################### READ IN PREPPED DATA ###########################
 
 
@@ -100,6 +101,7 @@ ggsave( filename = paste("ntrues_short.png"),
 
 #bm: working!!!! just need to tweak colors in this particular plot.
 # also reorg your local results directories?
+# you also just sent the ny=200 jobs :)
 
 
 # X-axis: Strength of YY correlation

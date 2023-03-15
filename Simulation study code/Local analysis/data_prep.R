@@ -93,14 +93,6 @@ n.trues$group = as.factor( paste( "X-Y correlation: ", n.trues$rho.XY,
                                   "% of pairs", 
                                   sep = "" ) )
 
-# relevel to get facets in correct order
-n.trues = n.trues[ order( n.trues$rho.XY, n.trues$prop.corr, n.trues$rho.YY ), ]
-ordered.levels = unique(n.trues$group)
-# put the strong null scenario last for prettiness
-ordered.levels = c( as.character(ordered.levels), as.character(ordered.levels[1]) )
-ordered.levels = ordered.levels[-1]
-n.trues$group = factor( n.trues$group, levels = ordered.levels )
-levels(n.trues$group)
 
 # for more plotting joy
 labels = c("Bonferroni",
