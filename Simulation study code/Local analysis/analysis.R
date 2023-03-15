@@ -118,6 +118,21 @@ n.trues$method.label[ n.trues$method == "ours.0.05" ] = labels[6]
 n.trues$method.label[ n.trues$method == "Wstep" ] = labels[7]
 n.trues$method.label[ n.trues$method == "Romano" ] = labels[8]
 
+# remove experimental method
+n.trues = n.trues[ n.trues$method != "meanP", ]
+
+# set method ordering for plot
+correct.order = rev( c( "Bonferroni",
+                        "Holm",
+                        "minP",
+                        "Romano",
+                        "Wstep",
+                        "Global (alpha=0.01)",
+                        "Global (alpha=0.05)" ) )
+
+
+n.trues$method.label = factor(n.trues$method.label, levels = rev(correct.order))
+
 
 # sanity check
 table(n.trues$method, n.trues$method.label)
@@ -335,6 +350,20 @@ write.csv(ci, "results_null_interval.csv")
 
 
 
+########################### SHARED FOR ALL PLOTS ###########################
+
+.colors = c(`Global (alpha=0.01)` = "#ff9900",
+            `Global (alpha=0.05)` = "red",
+            minP = "#1B9E77",
+            Wstep = "#3399ff",
+            Holm = "#00cc00",
+            Bonferroni = "#016301",
+            Romano = "black")
+
+myFillScale = scale_fill_manual(name = "",
+                                values = .colors)
+
+
 ########################### N TRUE EFFECTS PLOTS ###########################
 
 # for main text: simplify the plot 
@@ -343,21 +372,17 @@ n.trues.short = n.trues[ !n.trues$rho.XY %in% c(0.1, 0.15), ]
 
 # set global variables needed for plotting fn
 x.breaks = c(0, 0.1, 0.3, 0.6)
-colors = c( "#999999", "orange", "#009E73", "black", "#E69F00", "#D55E00", "black", "darkgreen" )
 
 dat = n.trues
 
 y.breaks = seq(0, 40, 10)
 p5 = ntrues_plot(n.trues, benchmark.line = TRUE); p5
 
-#bm: it's basically working. Just need to edit 
-
-
 y.breaks = seq(0, 10, 2)
 p6 = ntrues_plot(n.trues.short, benchmark.line = FALSE); p6
 
 ##### Save Results #####
-setwd("~/Dropbox/Personal computer/HARVARD/THESIS/Thesis paper #2 (MO)/Simulation results/2018-8-18 with ntrues plot")
+setwd(results.dir)
 width = 8
 square.size = 8/3 # divide by number of cols
 height = square.size*5  # multiply by number of rows
@@ -386,19 +411,6 @@ pwr.short = pwr[ !pwr$rho.XY %in% c(0.1, 0.15), ]
 # set global variables needed for plotting fn
 x.breaks = c(0, 0.1, 0.3, 0.6)
 y.breaks = seq(0, 1, 0.1)
-
-
-.colors = c(`Global (alpha=0.01)` = "#ff9900",
-  `Global (alpha=0.05)` = "red",
-  minP = "#1B9E77",
-  Wstep = "#3399ff",
-  Holm = "#00cc00",
-  Bonferroni = "#016301",
-  Romano = "black")
-
-myFillScale = scale_fill_manual(name = "",
-                                values = .colors)
-
 
 
 # save different versions of plot (some with only a few scenarios)

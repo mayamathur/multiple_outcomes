@@ -113,7 +113,7 @@ runfile_path = paste(path, "/testRunFile.R", sep="")
 sbatch_params <- data.frame(jobname,
                             outfile,
                             errorfile,
-                            jobtime = "08:00:00",  
+                            jobtime = "00:30:00",  
                             quality = "normal",
                             node_number = 1,
                             mem_per_node = 64000,

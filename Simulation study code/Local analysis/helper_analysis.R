@@ -9,11 +9,11 @@ ntrues_plot = function(dat, benchmark.line = FALSE) {
     theme_bw() +
     facet_wrap(~ group, ncol = 3 ) +  # for changing rows/columns
     ylab("Number of nulls rejected") +
-    scale_color_manual( values = colors) +
+    myFillScale + 
     scale_x_continuous( limits = c( min(x.breaks) - 0.05, max(x.breaks) + 0.05 ), breaks = x.breaks ) +
     scale_y_continuous( limits = c( min(y.breaks), max(y.breaks) ), breaks = y.breaks ) +
     xlab( "Correlation between each pair of outcomes" ) +
-    theme(legend.position="none") # remove legend
+    theme(legend.position="bottom")
   
   if ( benchmark.line == FALSE) return(p)
   else return( p + geom_hline( aes(yintercept = benchmark ), color="red", lty=2 ) )
@@ -25,18 +25,14 @@ pwr_plot = function(dat) {
   library(ggplot2)
   ggplot( data = dat, aes( x = rho.YY, y = power,
                            fill = method.label ) ) +
-    #geom_text( aes( label = method.label) ) +
     geom_bar(position = "dodge", stat = "identity") + 
     theme_bw() +
     facet_wrap(~ group, ncol = 3 ) +  # for changing rows/columns
     ylab("Power") +
-    #scale_fill_manual( values = colors) +
-    myFillScale + 
     scale_x_continuous( limits = c( min(x.breaks) - 0.05, max(x.breaks) + 0.05 ), breaks = x.breaks ) +
     scale_y_continuous( limits = c( min(y.breaks), max(y.breaks) ), breaks = y.breaks ) +
     xlab( "Correlation between each pair of outcomes" ) +
-    #ggtitle("Power of bootstrapped hypothesis test of joint null") +
-    theme(legend.position="bottom") # remove legend
+    theme(legend.position="bottom") 
 }
 
 ci_plot = function(dat) {
