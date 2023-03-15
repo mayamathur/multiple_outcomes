@@ -59,3 +59,66 @@ ci_plot = function(dat) {
 }
 
 
+make_methods_labels = function(dat) {
+  
+  
+  # for more plotting joy
+  labels = c("Bonferroni",
+             "Holm",
+             "minP",
+             "meanP",
+             "Global (alpha=0.01)",
+             "Global (alpha=0.05)",
+             "Wstep",
+             "Romano")
+  dat$method.label = NA
+  dat$method.label[ dat$method == "bonf.naive" ] = labels[1]
+  dat$method.label[ dat$method == "holm" ] = labels[2]
+  dat$method.label[ dat$method == "minP" ] = labels[3]
+  dat$method.label[ dat$method == "meanP" ] = labels[4]  # for "log-P"
+  dat$method.label[ dat$method == "ours.0.01" ] = labels[5]
+  dat$method.label[ dat$method == "ours.0.05" ] = labels[6]
+  dat$method.label[ dat$method == "Wstep" ] = labels[7]
+  dat$method.label[ dat$method == "Romano" ] = labels[8]
+  
+  # remove experimental method
+  dat = dat[ dat$method != "meanP", ]
+  
+  dat = order_methods_labels(dat)
+  
+  return(dat)
+}
+
+
+order_methods_labels = function(dat){
+  # set method ordering for plot
+  correct.order = rev( c( "Bonferroni",
+                          "Holm",
+                          "minP",
+                          "Romano",
+                          "Wstep",
+                          "Global (alpha=0.01)",
+                          "Global (alpha=0.05)" ) )
+  
+  
+  dat$method.label = factor(dat$method.label, levels = rev(correct.order))
+  
+  return(dat)
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
