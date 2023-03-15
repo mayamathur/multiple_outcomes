@@ -842,7 +842,7 @@ sbatch_skeleton <- function() {
 #now run normal batch commands
     
 ml load R/4.2.0
-srun R -f PATH_TO_R_SCRIPT ARGS_TO_R_SCRIPT")
+R -f PATH_TO_R_SCRIPT ARGS_TO_R_SCRIPT")
 }
 
 

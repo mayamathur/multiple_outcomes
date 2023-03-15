@@ -88,6 +88,9 @@ write.csv( scen.params, "scen_params.csv" )
 path = "/home/groups/manishad/multTest"
 setwd(path)
 
+scen.params = read.csv("scen_params.csv")
+n.scen = length(unique(scen.params$scen.name))
+
 # load functions for generating sbatch files
 source("functions.R")
 
@@ -99,8 +102,6 @@ n.reps.in.doParallel = 50
 # n.reps.in.doParallel = 5
 n.files = ( n.reps.per.scen / n.reps.in.doParallel ) * n.scen
 
-
-path = "/home/groups/manishad/multTest"
 
 scen.name = rep( scen.params$scen.name, each = ( n.files / n.scen ) )
 jobname = paste("job", 1:n.files, sep="_")
@@ -135,7 +136,7 @@ n.files
 path = "/home/groups/manishad/multTest"
 setwd( paste(path, "/sbatch_files", sep="") )
 for (i in 2:520) {
-  system( paste("sbatch -p owners /home/groups/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
+  system( paste("sbatch -p qsu,owners,normal /home/groups/manishad/multTest/sbatch_files/", i, ".sbatch", sep="") )
 }
 
 # run just the first one:
