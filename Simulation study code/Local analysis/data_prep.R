@@ -8,18 +8,9 @@ library(data.table)
 setwd(here())
 source("helper_analysis.R")
 
-# previous sims with nY=40
-data.dir.old = "~/Dropbox/Personal computer/Harvard/THESIS/Thesis paper #2 (MO)/Linked to OSF (MO)/Simulation results in paper/2023-03-13 Merge previous sims and higher-W sims/Data from Sherlock/nY=40 from 2018-8-18"
-
 # new sims with nY=200
-data.dir.new = "~/Dropbox/Personal computer/Harvard/THESIS/Thesis paper #2 (MO)/Linked to OSF (MO)/Simulation results in paper/2023-03-13 Merge previous sims and higher-W sims/Data from Sherlock/Results from R"
+data.dir.new = "~/Dropbox/Personal computer/Harvard/THESIS/Thesis paper #2 (MO)/Linked to OSF (MO)/Simulation results in paper/2023-03-13 Merge previous sims and higher-W sims/Data from Sherlock/nY=200"
 
-results.dir = "~/Dropbox/Personal computer/Harvard/THESIS/Thesis paper #2 (MO)/Linked to OSF (MO)/Simulation results in paper/2023-03-13 Merge previous sims and higher-W sims/Results from R"
-
-
-
-
-#### BELOW IS FOR NEW SIMS ONLY
 
 ########################### READ IN DATA ###########################
 
@@ -31,14 +22,8 @@ names(scen.params)[ names(scen.params) == "scen.name" ] = "scen"
 #
 # read in stitched data
 s = fread("stitched.csv")
-# s = merge(s, scen.params, by = "scen" )
-#
-# # what percent done are we?
-# n.reps.per.scen = 500
-# nrow(s) / (500 * nrow(scen.params))
-
-# how many reps per scenario do we have?
-table( s$scen )
+table(s$scen.name)
+nuni(s$scen.name) # expect 52
 
 # because of weird row with scen=FALSE
 library(gdata)
@@ -58,7 +43,7 @@ library(tidyr)
 
 # names of joint rejection variables for all methods
 ( n.true.names = c( names(s)[ grep( "n.true.", names(s) ) ] ) )
-n.true.names = c("n.rej.0.00125", n.true.names)
+#n.true.names = c("n.rej.0.00125", n.true.names)
 
 # MAKE SURE TO LIST THEM IN SAME ORDER AS names above
 ( method.names = c( "bonf.naive",
@@ -71,15 +56,22 @@ n.true.names = c("n.rej.0.00125", n.true.names)
 
 # reshape wide to long
 # https://stackoverflow.com/questions/12466493/reshaping-multiple-sets-of-measurement-columns-wide-format-into-single-columns
-s.small = s %>% select( all_of( c(n.true.names, "scen") ) )
+#s.small = s %>% select( all_of( c(n.true.names, "scen") ) )
 
-lt = reshape( s.small,
-              varying = n.true.names,
-              v.names = "n.true",
-              times = method.names,
-              timevar = "method",  # name to use for the above variable
-              direction="long" )
+# lt = reshape( s.small,
+#               varying = n.true.names,
+#               v.names = "n.true",
+#               times = method.names,
+#               timevar = "method",  # name to use for the above variable
+#               direction="long" )
 
+
+# reshape wide to long
+lt = s %>% select( all_of( c(n.true.names, "scen") ) ) %>%
+  filter(!is.na(scen)) %>%
+  pivot_longer( cols = n.true.names,
+                names_to = "method",
+                values_to = "n.true")
 
 # since each scenario still has multiple rows, take means 
 n.trues = lt %>% group_by(scen, method) %>%
@@ -97,38 +89,7 @@ n.trues$group = as.factor( paste( "X-Y correlation: ", n.trues$rho.XY,
 
 
 # for more plotting joy
-labels = c("Bonferroni",
-           "Holm",
-           "minP",
-           "meanP",
-           "Global (alpha=0.01)",
-           "Global (alpha=0.05)",
-           "Wstep",
-           "Romano")
-n.trues$method.label = NA
-n.trues$method.label[ n.trues$method == "bonf.naive" ] = labels[1]
-n.trues$method.label[ n.trues$method == "holm" ] = labels[2]
-n.trues$method.label[ n.trues$method == "minP" ] = labels[3]
-n.trues$method.label[ n.trues$method == "meanP" ] = labels[4]  # for "log-P"
-n.trues$method.label[ n.trues$method == "ours.0.01" ] = labels[5]
-n.trues$method.label[ n.trues$method == "ours.0.05" ] = labels[6]
-n.trues$method.label[ n.trues$method == "Wstep" ] = labels[7]
-n.trues$method.label[ n.trues$method == "Romano" ] = labels[8]
-
-# remove experimental method
-n.trues = n.trues[ n.trues$method != "meanP", ]
-
-# set method ordering for plot
-correct.order = rev( c( "Bonferroni",
-                        "Holm",
-                        "minP",
-                        "Romano",
-                        "Wstep",
-                        "Global (alpha=0.01)",
-                        "Global (alpha=0.05)" ) )
-
-
-n.trues$method.label = factor(n.trues$method.label, levels = rev(correct.order))
+n.trues = order_methods_labels( make_methods_labels(n.trues) )
 
 
 # sanity check
@@ -139,10 +100,17 @@ n.trues$n.true[ n.trues$n.true < 0 ] = 0
 
 # benchmark value: the actual number of true effects in that scenario
 n.trues$benchmark = n.trues$nY * n.trues$prop.corr
-n.trues$benchmark[ n.trues$prop.corr == 1 & n.trues$rho.XY == 0 ] = 0  # fix the control scenario because it reads as -
+n.trues$benchmark[ n.trues$prop.corr == 1 & n.trues$rho.XY == 0 ] = 0  # fix the control scenario because it reads as "-"
+
+# ### DEBUGGING
+# #bm:
+# # this looks fine: 
+# summary(s$n.rej.0.05)
+# head( s %>% filter(rho.XY==0.15 & prop.corr==1) )
+# # maybe something wrong with reshaping?
 
 ##### Save Results #####
-setwd(results.dir)
+setwd(data.dir.new)
 write.csv( n.trues, "results_ntrues.csv")
 
 write.csv( lt, "results_ntrues_long.csv")
@@ -164,24 +132,22 @@ library(tidyr)
 ( jt.rej.names = c( names(s)[ grep( "jt.rej.", names(s) ) ],
                     names(s)[ grep( "rej.jt", names(s) ) ] ) )
 
-# MAKE SURE TO LIST THEM IN SAME ORDER AS JT.REJ.NAMES
+# make sure to retain same order as in jt.rej.names
 ( method.names = c("bonf.naive",
                    "holm",
                    "minP",
                    "Wstep",
                    "Romano",
-                   "meanP",
+                   #"meanP",
                    "ours.0.01",
                    "ours.0.05") )
 
 # reshape wide to long
-# https://stackoverflow.com/questions/12466493/reshaping-multiple-sets-of-measurement-columns-wide-format-into-single-columns
-lp = reshape( s[ , names(s) %in% c(jt.rej.names, "scen") ],
-              varying = jt.rej.names,
-              v.names = "jt.rej",
-              times = method.names,
-              timevar = "method",  # name to use for the above variable
-              direction="long" )
+lp = s %>% select( all_of( c(jt.rej.names, "scen") ) ) %>%
+  filter(!is.na(scen)) %>%
+  pivot_longer( cols = jt.rej.names,
+                names_to = "method",
+                values_to = "jt.rej")
 
 
 # # sanity check
@@ -236,42 +202,23 @@ pwr$group = factor( pwr$group, levels = ordered.levels )
 levels(pwr$group)
 
 
-# for more plotting joy
-labels = c("Bonferroni",
-           "Holm",
-           "minP",
-           "meanP",
-           "Global (alpha=0.01)",
-           "Global (alpha=0.05)",
-           "Wstep",
-           "Romano")
-pwr$method.label = NA
-pwr$method.label[ pwr$method == "bonf.naive" ] = labels[1]
-pwr$method.label[ pwr$method == "holm" ] = labels[2]
-pwr$method.label[ pwr$method == "minP" ] = labels[3]
-pwr$method.label[ pwr$method == "meanP" ] = labels[4]  # for "log-P"
-pwr$method.label[ pwr$method == "ours.0.01" ] = labels[5]
-pwr$method.label[ pwr$method == "ours.0.05" ] = labels[6]
-pwr$method.label[ pwr$method == "Wstep" ] = labels[7]
-pwr$method.label[ pwr$method == "Romano" ] = labels[8]
+# recode
+pwr$method = recode(pwr$method,
+                    "jt.rej.bonf.naive" = "bonf.naive",
+                    "jt.rej.holm" = "holm",
+                    "jt.rej.minP" = "minP",
+                    "jt.rej.Romano" = "Romano",
+                    "jt.rej.Wstep" = "Wstep",
+                    "rej.jt.0.01" = "ours.0.01",
+                    "rej.jt.0.05" = "ours.0.05")
 
-# sanity check
-# table(pwr$method, pwr$method.label)
+# for more plotting joy
+pwr = make_methods_labels(pwr)
+pwr = order_methods_labels(pwr)
+
 
 # remove experimental method
 pwr = pwr[ pwr$method != "meanP", ]
-
-# set method ordering for plot
-correct.order = rev( c( "Bonferroni",
-                        "Holm",
-                        "minP",
-                        "Romano",
-                        "Wstep",
-                        "Global (alpha=0.01)",
-                        "Global (alpha=0.05)" ) )
-
-
-pwr$method.label = factor(pwr$method.label, levels = rev(correct.order))
 
 
 ##### Save Results ##### 
@@ -342,6 +289,6 @@ buffer = 0.02
 ci2$rho.YY[ ci2$method == "ours.0.05" ] = ci2$rho.YY[ ci2$method == "ours.0.05" ] + buffer
 
 # save results (unstaggered dataset)
-setwd(results.dir)
+setwd(data.dir.old)
 write.csv(ci, "results_null_interval.csv")
 

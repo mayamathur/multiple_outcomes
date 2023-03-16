@@ -7,14 +7,14 @@ library(data.table)
 setwd(here())
 source("helper_analysis.R")
 
-sim.set = "old"
+sim.set = "new"
 
 # previous sims with nY=40
 # data.dir.old = "~/Dropbox/Personal computer/Harvard/THESIS/Thesis paper #2 (MO)/Linked to OSF (MO)/Simulation results in paper/2023-03-13 Merge previous sims and higher-W sims/Data from Sherlock/nY=40"
 data.dir.old = "~/Dropbox/Personal computer/Harvard/THESIS/Thesis paper #2 (MO)/Linked to OSF (MO)/Simulation results in paper/2023-03-13 Merge previous sims and higher-W sims/Data from Sherlock/nY=40 from 2018-8-18"
 
 # new sims with nY=200
-data.dir.new = "~/Dropbox/Personal computer/Harvard/THESIS/Thesis paper #2 (MO)/Linked to OSF (MO)/Simulation results in paper/2023-03-13 Merge previous sims and higher-W sims/Data from Sherlock/Results from R"
+data.dir.new = "~/Dropbox/Personal computer/Harvard/THESIS/Thesis paper #2 (MO)/Linked to OSF (MO)/Simulation results in paper/2023-03-13 Merge previous sims and higher-W sims/Data from Sherlock/nY=200"
 
 results.dir = "~/Dropbox/Personal computer/Harvard/THESIS/Thesis paper #2 (MO)/Linked to OSF (MO)/Simulation results in paper/2023-03-13 Merge previous sims and higher-W sims/Results from R"
 
@@ -30,9 +30,7 @@ if ( sim.set == "old" ) {
   setwd(data.dir.old)
 
   n.trues = fread("results_ntrues.csv")
-  #lt = fread("results_ntrues_long.csv")
   pwr = fread("results_pwr.csv")
-  #lp2 = fread("results_pwr_long.csv")
   ci = fread("results_null_interval.csv")
 
   
@@ -43,6 +41,17 @@ if ( sim.set == "old" ) {
   pwr = order_panel_labels(pwr); levels(pwr$group)
 
 }
+
+
+if ( sim.set == "new" ) {
+  
+  setwd(data.dir.new)
+  
+  n.trues = fread("results_ntrues.csv")
+  pwr = fread("results_pwr.csv")
+  #ci = fread("results_null_interval.csv") #bm haven't made this one in data prep script yet
+}
+
 
 # # read in scenario parameters
 # scen.params = read.csv("scen_params.csv")
@@ -79,10 +88,16 @@ n.trues.short = n.trues[ !n.trues$rho.XY %in% c(0.1, 0.15), ]
 # set global variables needed for plotting fn
 x.breaks = c(0, 0.1, 0.3, 0.6)
 
-y.breaks = seq(0, 40, 10)
+
+#bm: was just comparing this to the nY=40 results -- do these res make sense?
+# should we be seeing more rejections overall?
+if ( sim.set == "old" ) y.breaks = seq(0, 40, 10)
+if ( sim.set == "new" ) y.breaks = seq(0, 200, 20)
 p5 = ntrues_plot(n.trues, benchmark.line = TRUE); p5
 
-y.breaks = seq(0, 10, 2)
+#bm
+if ( sim.set == "old" ) y.breaks = seq(0, 10, 2)
+if ( sim.set == "new" ) y.breaks = seq(0, 10, 2)
 p6 = ntrues_plot(n.trues.short, benchmark.line = FALSE); p6
 
 ##### Save Results #####

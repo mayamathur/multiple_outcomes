@@ -126,7 +126,7 @@ order_panel_labels = function(dat){
 
 
 
-
+nuni = function(x) length(unique(x))
 
 
 
