@@ -1,5 +1,7 @@
 
 
+rm(list=ls())
+
 ########################### PRELIMINARIES ###########################
 
 library(here)
@@ -16,7 +18,16 @@ data.dir.old = "~/Dropbox/Personal computer/Harvard/THESIS/Thesis paper #2 (MO)/
 # new sims with nY=200
 data.dir.new = "~/Dropbox/Personal computer/Harvard/THESIS/Thesis paper #2 (MO)/Linked to OSF (MO)/Simulation results in paper/2023-03-13 Merge previous sims and higher-W sims/Data from Sherlock/nY=200"
 
-results.dir = "~/Dropbox/Personal computer/Harvard/THESIS/Thesis paper #2 (MO)/Linked to OSF (MO)/Simulation results in paper/2023-03-13 Merge previous sims and higher-W sims/Results from R"
+
+
+if ( sim.set == "new" ) {
+  results.dir = "~/Dropbox/Personal computer/Harvard/THESIS/Thesis paper #2 (MO)/Linked to OSF (MO)/Simulation results in paper/2023-03-13 Merge previous sims and higher-W sims/Results from R/nY=200"
+}
+
+if ( sim.set == "old" ) {
+  results.dir = "~/Dropbox/Personal computer/Harvard/THESIS/Thesis paper #2 (MO)/Linked to OSF (MO)/Simulation results in paper/2023-03-13 Merge previous sims and higher-W sims/Results from R/nY=40"
+}
+
 
 
 ########################### READ IN PREPPED DATA ###########################
@@ -37,8 +48,7 @@ if ( sim.set == "old" ) {
   n.trues = make_methods_labels(n.trues); table(n.trues$method.label, useNA = "ifany")
   pwr = make_methods_labels(pwr); table(pwr$method.label, useNA = "ifany")
   
-  n.trues = order_panel_labels(n.trues); levels(n.trues$group)
-  pwr = order_panel_labels(pwr); levels(pwr$group)
+
 
 }
 
@@ -49,8 +59,15 @@ if ( sim.set == "new" ) {
   
   n.trues = fread("results_ntrues.csv")
   pwr = fread("results_pwr.csv")
-  #ci = fread("results_null_interval.csv") #bm haven't made this one in data prep script yet
+  ci = fread("results_null_interval.csv") #bm haven't made this one in data prep script yet
 }
+
+
+n.trues = order_methods_labels(n.trues); levels(n.trues$method.label)
+pwr = order_methods_labels(pwr); levels(pwr$method.label)
+
+n.trues = order_panel_labels(n.trues); levels(n.trues$group)
+pwr = order_panel_labels(pwr); levels(pwr$group)
 
 
 # # read in scenario parameters
@@ -89,13 +106,10 @@ n.trues.short = n.trues[ !n.trues$rho.XY %in% c(0.1, 0.15), ]
 x.breaks = c(0, 0.1, 0.3, 0.6)
 
 
-#bm: was just comparing this to the nY=40 results -- do these res make sense?
-# should we be seeing more rejections overall?
 if ( sim.set == "old" ) y.breaks = seq(0, 40, 10)
 if ( sim.set == "new" ) y.breaks = seq(0, 200, 20)
 p5 = ntrues_plot(n.trues, benchmark.line = TRUE); p5
 
-#bm
 if ( sim.set == "old" ) y.breaks = seq(0, 10, 2)
 if ( sim.set == "new" ) y.breaks = seq(0, 10, 2)
 p6 = ntrues_plot(n.trues.short, benchmark.line = FALSE); p6
@@ -173,12 +187,14 @@ library(ggplot2)
 y.breaks = seq(0, 1, 0.1)
 
 colors = c( "#E69F00", "#D55E00" )
-legend.labs = c( "G1 (alpha = 0.01)", "G5 (alpha = 0.05)" )
+#legend.labs = c( "G1 (alpha = 0.01)", "G5 (alpha = 0.05)" )
 
 p3 = ci_plot(ci); p3
 p4 = ci_plot(ci.short); p4
 p5 = ci_plot(ci.super.short); p5
 
+
+setwd(results.dir)
 width = 8
 square.size = 8/3 # divide by number of cols
 height = square.size*5  # multiply by number of rows

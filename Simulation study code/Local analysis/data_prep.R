@@ -25,7 +25,10 @@ s = fread("stitched.csv")
 table(s$scen.name)
 nuni(s$scen.name) # expect 52
 
-# because of weird row with scen=FALSE
+# clean up
+toDrop = names(s)[ names(s) %in% c("V1", "X") ]
+s = s %>% select( -all_of(toDrop) ) %>%
+  filter( !is.na(scen.name) )
 library(gdata)
 s = drop.levels(s)
 
@@ -87,8 +90,13 @@ n.trues$group = as.factor( paste( "X-Y correlation: ", n.trues$rho.XY,
                                   "% of pairs", 
                                   sep = "" ) )
 
+# for plotting joy
+n.trues = order_panel_labels(n.trues)
+table(n.trues$group)
 
-# for more plotting joy
+# for more plotting joy: prettify methods names
+library(stringr)
+n.trues$method = str_remove(n.trues$method, "n.true.")
 n.trues = order_methods_labels( make_methods_labels(n.trues) )
 
 
@@ -102,17 +110,10 @@ n.trues$n.true[ n.trues$n.true < 0 ] = 0
 n.trues$benchmark = n.trues$nY * n.trues$prop.corr
 n.trues$benchmark[ n.trues$prop.corr == 1 & n.trues$rho.XY == 0 ] = 0  # fix the control scenario because it reads as "-"
 
-# ### DEBUGGING
-# #bm:
-# # this looks fine: 
-# summary(s$n.rej.0.05)
-# head( s %>% filter(rho.XY==0.15 & prop.corr==1) )
-# # maybe something wrong with reshaping?
 
 ##### Save Results #####
 setwd(data.dir.new)
 write.csv( n.trues, "results_ntrues.csv")
-
 write.csv( lt, "results_ntrues_long.csv")
 
 
@@ -192,14 +193,9 @@ pwr$group = as.factor( paste( "X-Y correlation: ", pwr$rho.XY,
                               "% of pairs", 
                               sep = "" ) )
 
-# relevel to get facets in correct order
-pwr = pwr[ order( pwr$rho.XY, pwr$prop.corr, pwr$rho.YY ), ]
-ordered.levels = unique(pwr$group)
-# put the strong null scenario last for prettiness
-ordered.levels = c( as.character(ordered.levels), as.character(ordered.levels[1]) )
-ordered.levels = ordered.levels[-1]
-pwr$group = factor( pwr$group, levels = ordered.levels )
-levels(pwr$group)
+# for plotting joy
+pwr = order_panel_labels(pwr)
+table(pwr$group)
 
 
 # recode
