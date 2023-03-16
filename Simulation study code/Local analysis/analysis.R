@@ -217,7 +217,7 @@ ggsave( filename = paste("null_ci_super_short.png"),
 
 ########################### OTHER STATS FOR PAPER ###########################
 
-
+# these are for sim.set.old only
 # "mean upper limit of the null interval was more than twice as high"
 
 # back to ci dataframe because has unstaggered X-axis

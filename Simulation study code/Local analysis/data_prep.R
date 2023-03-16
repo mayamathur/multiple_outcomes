@@ -25,6 +25,14 @@ s = fread("stitched.csv")
 table(s$scen.name)
 nuni(s$scen.name) # expect 52
 
+table(s$rho.XY, s$prop.corr)
+
+# remove scens with <500 iterates, because these are the ones with cor mat 
+#  not necessarily + semidefinite
+s = s %>% group_by(scen.name) %>%
+  mutate( sim.reps.done = n() )
+s = s %>% filter(sim.reps.done == 500)
+
 # clean up
 toDrop = names(s)[ names(s) %in% c("V1", "X") ]
 s = s %>% select( -all_of(toDrop) ) %>%
@@ -246,7 +254,7 @@ method.names = c("ours.0.01", "ours.0.05")
 
 # reshape wide to long
 # https://stackoverflow.com/questions/12466493/reshaping-multiple-sets-of-measurement-columns-wide-format-into-single-columns
-lc = reshape( s,
+lc = reshape( as.data.frame(s),
               varying = list( A = n.rej.names, B = n.rej.bt.names,
                               C = bt.lo.names, D = bt.hi.names ),
               v.names= c( "n.rej", "n.rej.bt", "bt.lo", "bt.hi" ),
@@ -285,6 +293,6 @@ buffer = 0.02
 ci2$rho.YY[ ci2$method == "ours.0.05" ] = ci2$rho.YY[ ci2$method == "ours.0.05" ] + buffer
 
 # save results (unstaggered dataset)
-setwd(data.dir.old)
+setwd(data.dir.new)
 write.csv(ci, "results_null_interval.csv")
 

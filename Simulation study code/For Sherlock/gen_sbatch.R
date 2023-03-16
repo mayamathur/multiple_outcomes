@@ -94,12 +94,9 @@ n.scen = length(unique(scen.params$scen.name))
 # load functions for generating sbatch files
 source("functions.R")
 
-# ~~CHANGED
 # number of sbatches to generate (i.e., iterations within each scenario)
 n.reps.per.scen = 500
 n.reps.in.doParallel = 50
-# n.reps.per.scen = 500
-# n.reps.in.doParallel = 5
 n.files = ( n.reps.per.scen / n.reps.in.doParallel ) * n.scen
 
 
@@ -113,7 +110,7 @@ runfile_path = paste(path, "/testRunFile.R", sep="")
 sbatch_params <- data.frame(jobname,
                             outfile,
                             errorfile,
-                            jobtime = "04:00:00",  
+                            jobtime = "02:00:00",  
                             quality = "normal",
                             node_number = 1,
                             mem_per_node = 64000,
